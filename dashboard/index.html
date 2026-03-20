@@ -212,6 +212,7 @@
       overflow: hidden;
       background: var(--bg);
       cursor: grab;
+      /* clip is needed for pan/zoom, but transform layer handles visibility */
     }
 
     .canvas.grabbing { cursor: grabbing; }
@@ -858,11 +859,12 @@
         const res = await fetch('/api/story');
         if (!res.ok) return;
         const data = await res.json();
-        if (!data.nodes || data.nodes.length === lastStoryLen) return;
+        if (!data.nodes || data.nodes.length === 0) return;
+        if (data.nodes.length === lastStoryLen) return;
         lastStoryLen = data.nodes.length;
         storyData = data;
         renderStoryGraph(data);
-      } catch {}
+      } catch (e) { console.error('fetchStory error:', e); }
     }
 
     function renderStoryGraph(data) {
@@ -1113,7 +1115,7 @@
     }
 
     function resetCanvas() {
-      panX = 0; panY = 0; zoom = 1;
+      panX = 200; panY = 50; zoom = 0.8;
       applyTransform();
     }
 
@@ -1175,7 +1177,8 @@
     });
 
     // Init
-    applyAppUrl();
+    panX = 200; panY = 50; zoom = 0.8;
+    applyTransform();
     restartPolling();
     $('chatInput').focus();
   </script>
