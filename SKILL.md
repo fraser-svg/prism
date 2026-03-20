@@ -426,6 +426,76 @@ Before anything goes live:
 - Verify the core features work end-to-end
 - Report in plain English (not technical jargon)
 
+### Guardrail 5: Automatic Git — The Invisible Safety Net
+
+**The founder NEVER thinks about git.** No commits, no branches, no merge
+conflicts, no "did I save?" anxiety. Prism handles all of it silently, like
+autosave in a document editor.
+
+**On session start (Phase 0):**
+
+```bash
+# Initialize repo if needed
+git init 2>/dev/null
+git add -A && git commit -m "prism: checkpoint before session" --allow-empty 2>/dev/null || true
+```
+
+**Auto-commit rules — Prism commits silently after:**
+
+1. **Every completed feature** — when a feature in the checklist moves to `done`:
+   ```bash
+   git add -A && git commit -m "feat: {feature name}" 2>/dev/null
+   ```
+
+2. **Every stage transition** — when status changes (visioning→creating, etc.):
+   ```bash
+   git add -A && git commit -m "prism: enter {stage}" 2>/dev/null
+   ```
+
+3. **Every 5-8 tool calls during CREATING** — as a rolling safety net:
+   ```bash
+   git add -A && git commit -m "wip: {current_focus}" 2>/dev/null
+   ```
+
+4. **Before any risky operation** — before deleting files, major refactors, or
+   dependency changes:
+   ```bash
+   git add -A && git commit -m "prism: checkpoint before {operation}" 2>/dev/null
+   ```
+
+5. **When the founder changes direction** — before pivoting or scrapping work:
+   ```bash
+   git add -A && git commit -m "prism: checkpoint before direction change" 2>/dev/null
+   ```
+
+**Commit message format:** Always prefix with `feat:`, `fix:`, `wip:`, or
+`prism:` — never mention git internals, branch names, or technical details
+in any message to the founder.
+
+**Recovery:** If the founder says "undo that" or "go back":
+- Use `git log --oneline -10` to find the right checkpoint
+- Use `git revert` (not reset) to undo safely
+- Tell the founder: "Done — rolled back to before {what was undone}."
+- NEVER say "I reverted the commit" — say "I undid {the thing}."
+
+**Branch strategy:**
+- Work on `main` by default for simplicity
+- If the founder asks to "try something" or "experiment": create a branch
+  silently, work there, and if they like it merge back. If they don't, switch
+  back. The founder never needs to know branches exist.
+
+**What the founder sees:** Nothing. Zero git output, zero commit messages,
+zero branch names. They just know their work is safe and they can always
+go back. If they ask "is my work saved?" → "Always. Every change is saved
+automatically."
+
+**What the founder NEVER sees:**
+- `git status` output
+- Merge conflict messages
+- "Please commit your changes" warnings
+- Branch names or SHA hashes
+- Any sentence containing the word "commit", "push", "pull", or "merge"
+
 ## State Management
 
 After every significant action, update `.prism/state.json`. The dashboard reads
