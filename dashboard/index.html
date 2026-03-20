@@ -235,13 +235,8 @@
     }
 
     .canvas-content {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      min-width: 600px;
+      position: relative;
+      padding: 20px;
     }
 
     /* Zoom controls — fixed position */
@@ -288,7 +283,7 @@
 
     /* Stage bar — minimal, top of canvas */
     .stage-bar {
-      padding: 20px 40px 0 440px;
+      padding: 20px 40px 0 20px;
       display: flex;
       align-items: center;
       gap: 20px;
@@ -350,14 +345,15 @@
 
     /* ---- Node Graph — the living canvas ---- */
     .node-graph {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
+      width: 1400px;
+      height: 2400px;
+      position: relative;
     }
 
     .graph-lines {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       z-index: 0;
@@ -376,7 +372,10 @@
 
     .graph-nodes {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       z-index: 1;
     }
 
@@ -509,7 +508,7 @@
 
     /* Activity — subtle, bottom of canvas */
     .activity-bar {
-      padding: 12px 40px 12px 440px;
+      padding: 12px 40px 12px 20px;
       display: flex;
       gap: 24px;
       font-size: 11px;
@@ -1123,8 +1122,14 @@
       const cv = $('canvas');
       if (!cv) return;
 
-      cv.addEventListener('mousedown', function(e) {
-        if (e.target.closest('.conversation') || e.target.closest('.canvas-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.app-overlay') || e.target.closest('.tool-btn')) return;
+      function isCanvasDrag(e) {
+        return !e.target.closest('.conversation') && !e.target.closest('.zoom-controls') &&
+               !e.target.closest('.app-overlay') && !e.target.closest('.settings-overlay') &&
+               !e.target.closest('.canvas-logo') && !e.target.closest('button') && !e.target.closest('input');
+      }
+
+      document.addEventListener('mousedown', function(e) {
+        if (!isCanvasDrag(e)) return;
         isPanning = true;
         panStartX = e.clientX - panX;
         panStartY = e.clientY - panY;
@@ -1132,14 +1137,14 @@
         e.preventDefault();
       });
 
-      window.addEventListener('mousemove', function(e) {
+      document.addEventListener('mousemove', function(e) {
         if (!isPanning) return;
         panX = e.clientX - panStartX;
         panY = e.clientY - panStartY;
         applyTransform();
       });
 
-      window.addEventListener('mouseup', function() {
+      document.addEventListener('mouseup', function() {
         if (isPanning) {
           isPanning = false;
           cv.classList.remove('grabbing');
@@ -1148,7 +1153,7 @@
 
       // Wheel zoom (pinch on trackpad)
       cv.addEventListener('wheel', function(e) {
-        if (e.target.closest('.conversation') || e.target.closest('.canvas-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.app-overlay')) return;
+        if (!isCanvasDrag(e)) return;
         e.preventDefault();
 
         // Zoom toward cursor
