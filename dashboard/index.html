@@ -44,12 +44,12 @@
       z-index: 10;
       display: flex;
       flex-direction: column;
-      background: rgba(58, 50, 42, 0.88);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: rgba(180, 156, 132, 0.35);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       border-radius: 22px;
-      border: 1px solid rgba(255,255,255,0.06);
-      box-shadow: 0 12px 48px rgba(40, 32, 24, 0.2), 0 4px 12px rgba(40, 32, 24, 0.1);
+      border: 1px solid rgba(160, 140, 115, 0.15);
+      box-shadow: 0 10px 40px rgba(120, 95, 70, 0.08), 0 2px 8px rgba(120, 95, 70, 0.05);
       overflow: hidden;
     }
 
@@ -61,22 +61,22 @@
     }
 
     .logo-icon {
-      width: 30px;
-      height: 30px;
-      background: rgba(255,255,255,0.15);
-      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      background: rgba(80, 65, 50, 0.25);
+      border-radius: 7px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .logo-icon svg { width: 15px; height: 15px; stroke: rgba(255,255,255,0.7); }
+    .logo-icon svg { width: 14px; height: 14px; stroke: rgba(80, 60, 40, 0.6); }
 
     .conv-header h1 {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
       letter-spacing: -0.3px;
-      color: rgba(255,255,255,0.9);
+      color: rgba(60, 48, 36, 0.8);
     }
 
     .conv-status {
@@ -85,7 +85,7 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      color: rgba(255,255,255,0.35);
+      color: rgba(80, 65, 50, 0.35);
     }
 
     .conv-messages {
@@ -99,7 +99,7 @@
 
     .conv-messages::-webkit-scrollbar { width: 3px; }
     .conv-messages::-webkit-scrollbar-track { background: transparent; }
-    .conv-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+    .conv-messages::-webkit-scrollbar-thumb { background: rgba(80, 65, 50, 0.15); border-radius: 3px; }
 
     .chat-msg {
       max-width: 88%;
@@ -112,29 +112,29 @@
 
     .chat-msg.user {
       align-self: flex-end;
-      background: rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.88);
+      background: rgba(60, 48, 36, 0.5);
+      color: rgba(255, 252, 248, 0.9);
       border-bottom-right-radius: 4px;
     }
 
     .chat-msg.prism {
       align-self: flex-start;
-      background: rgba(0,0,0,0.12);
-      color: rgba(255,255,255,0.7);
+      background: rgba(255, 255, 255, 0.3);
+      color: rgba(60, 48, 36, 0.75);
       border-bottom-left-radius: 4px;
     }
 
     .chat-msg .msg-time {
       font-size: 10px;
-      opacity: 0.3;
+      opacity: 0.35;
       margin-top: 4px;
     }
 
-    .chat-msg.user .msg-time { text-align: right; color: rgba(255,255,255,0.5); }
-    .chat-msg.prism .msg-time { color: rgba(255,255,255,0.35); }
+    .chat-msg.user .msg-time { text-align: right; color: rgba(255,252,248,0.45); }
+    .chat-msg.prism .msg-time { color: rgba(80, 65, 50, 0.35); }
 
     .chat-empty {
-      color: rgba(255,255,255,0.35);
+      color: rgba(80, 65, 50, 0.4);
       font-size: 13px;
       text-align: center;
       padding: 40px 24px;
@@ -150,27 +150,27 @@
     .conv-input input {
       flex: 1;
       height: 48px;
-      background: rgba(0,0,0,0.15);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(160, 140, 115, 0.12);
       border-radius: 12px;
       padding: 0 18px;
       font-size: 14px;
-      color: rgba(255,255,255,0.85);
+      color: rgba(60, 48, 36, 0.8);
       font-family: inherit;
       outline: none;
       transition: border-color 0.15s ease;
     }
 
-    .conv-input input:focus { border-color: rgba(255,255,255,0.2); }
-    .conv-input input::placeholder { color: rgba(255,255,255,0.25); }
+    .conv-input input:focus { border-color: rgba(160, 130, 90, 0.3); }
+    .conv-input input::placeholder { color: rgba(80, 65, 50, 0.3); }
 
     .conv-input button {
       width: 48px;
       height: 48px;
-      background: rgba(255,255,255,0.12);
+      background: rgba(60, 48, 36, 0.45);
       border: none;
       border-radius: 12px;
-      color: rgba(255,255,255,0.6);
+      color: rgba(255, 252, 248, 0.7);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -179,7 +179,7 @@
       flex-shrink: 0;
     }
 
-    .conv-input button:hover { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.8); }
+    .conv-input button:hover { background: rgba(60, 48, 36, 0.55); color: rgba(255, 252, 248, 0.85); }
     .conv-input button:active { transform: scale(0.95); }
     .conv-input button:disabled { opacity: 0.2; cursor: default; }
 
@@ -189,7 +189,7 @@
       align-items: center;
       gap: 8px;
       font-size: 11px;
-      color: rgba(255,255,255,0.25);
+      color: rgba(80, 65, 50, 0.3);
     }
 
     .conn-dot {
@@ -201,34 +201,89 @@
 
     .conn-dot.disconnected { background: var(--red); }
 
-    /* ---- Canvas (full screen behind) ---- */
+    /* ---- Canvas (infinite pan/zoom) ---- */
     .canvas {
       position: absolute;
       inset: 0;
-      display: flex;
-      flex-direction: column;
       overflow: hidden;
       background: var(--bg);
+      cursor: grab;
     }
 
-    /* Dot grid */
-    .canvas::before {
-      content: '';
+    .canvas.grabbing { cursor: grabbing; }
+
+    /* Dot grid — scales with zoom */
+    .canvas-grid {
       position: absolute;
-      inset: 0;
+      inset: -200%;
+      width: 500%;
+      height: 500%;
       background-image: radial-gradient(circle, #d5d0c8 0.8px, transparent 0.8px);
       background-size: 28px 28px;
       opacity: 0.45;
       pointer-events: none;
       z-index: 0;
+      transform-origin: 0 0;
+    }
+
+    /* Transform layer — pans and zooms */
+    .canvas-transform {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+      z-index: 1;
     }
 
     .canvas-content {
-      position: relative;
-      z-index: 1;
-      flex: 1;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
       display: flex;
       flex-direction: column;
+      min-width: 600px;
+    }
+
+    /* Zoom controls — fixed position */
+    .zoom-controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 4px;
+      z-index: 10;
+    }
+
+    .zoom-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 300;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .zoom-btn:hover { color: var(--text); border-color: #ccc; }
+
+    .zoom-level {
+      padding: 0 8px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      user-select: none;
     }
 
     /* Stage bar — minimal, top of canvas */
@@ -640,11 +695,13 @@
       </div>
     </div>
 
-    <!-- RIGHT: Canvas -->
-    <div class="canvas">
-      <div class="canvas-content">
-        <!-- Stage bar -->
-        <div class="stage-bar">
+    <!-- RIGHT: Canvas (infinite pan/zoom) -->
+    <div id="canvas" class="canvas">
+      <div id="canvasGrid" class="canvas-grid"></div>
+      <div id="canvasTransform" class="canvas-transform">
+        <div class="canvas-content">
+          <!-- Stage bar -->
+          <div class="stage-bar">
           <div id="stageTrack" class="stage-track">
             <div class="stage-step" data-stage="visioning"></div>
             <div class="stage-step" data-stage="creating"></div>
@@ -681,6 +738,15 @@
 
         <!-- Activity — subtle at bottom -->
         <div id="activityBar" class="activity-bar"></div>
+        </div>
+      </div>
+
+      <!-- Zoom controls (fixed, not transformed) -->
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomCanvas(-0.15)" title="Zoom out">−</button>
+        <div id="zoomLevel" class="zoom-level">100%</div>
+        <button class="zoom-btn" onclick="zoomCanvas(0.15)" title="Zoom in">+</button>
+        <button class="zoom-btn" onclick="resetCanvas()" title="Reset view" style="margin-left:4px;font-size:11px">⌂</button>
       </div>
     </div>
   </div>
@@ -1003,6 +1069,85 @@
       fetchState(); fetchHistory(); fetchChat();
       pollTimer = setInterval(() => { fetchState(); fetchHistory(); fetchChat(); }, config.pollInterval);
     }
+
+
+    // Pan & Zoom
+    let panX = 0, panY = 0, zoom = 1;
+    let isPanning = false, panStartX = 0, panStartY = 0;
+    const MIN_ZOOM = 0.3, MAX_ZOOM = 3;
+
+    function applyTransform() {
+      const t = $('canvasTransform');
+      if (t) t.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')';
+      const g = $('canvasGrid');
+      if (g) {
+        g.style.backgroundSize = (28 * zoom) + 'px ' + (28 * zoom) + 'px';
+        g.style.backgroundPosition = panX + 'px ' + panY + 'px';
+      }
+      const zl = $('zoomLevel');
+      if (zl) zl.textContent = Math.round(zoom * 100) + '%';
+    }
+
+    function zoomCanvas(delta) {
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom + delta));
+      applyTransform();
+    }
+
+    function resetCanvas() {
+      panX = 0; panY = 0; zoom = 1;
+      applyTransform();
+    }
+
+    // Mouse pan
+    document.addEventListener('DOMContentLoaded', function() {
+      const cv = $('canvas');
+      if (!cv) return;
+
+      cv.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.canvas-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.app-overlay') || e.target.closest('.tool-btn')) return;
+        isPanning = true;
+        panStartX = e.clientX - panX;
+        panStartY = e.clientY - panY;
+        cv.classList.add('grabbing');
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isPanning) return;
+        panX = e.clientX - panStartX;
+        panY = e.clientY - panStartY;
+        applyTransform();
+      });
+
+      window.addEventListener('mouseup', function() {
+        if (isPanning) {
+          isPanning = false;
+          cv.classList.remove('grabbing');
+        }
+      });
+
+      // Wheel zoom (pinch on trackpad)
+      cv.addEventListener('wheel', function(e) {
+        if (e.target.closest('.canvas-toolbar') || e.target.closest('.zoom-controls') || e.target.closest('.app-overlay')) return;
+        e.preventDefault();
+
+        // Zoom toward cursor
+        const rect = cv.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const oldZoom = zoom;
+        const delta = e.deltaY > 0 ? -0.08 : 0.08;
+        zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom + delta));
+
+        // Adjust pan to zoom toward cursor
+        const scale = zoom / oldZoom;
+        panX = mx - scale * (mx - panX);
+        panY = my - scale * (my - panY);
+
+        applyTransform();
+      }, { passive: false });
+    });
 
     // Init
     applyAppUrl();
