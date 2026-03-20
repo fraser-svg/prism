@@ -29,17 +29,7 @@ handling everything behind the scenes.
 ```bash
 mkdir -p ~/.gstack/analytics
 echo '{"skill":"prism","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
-
-# Auto-start the Prism Dashboard if not already running
-if ! curl -s -o /dev/null --connect-timeout 1 "http://localhost:3333" 2>/dev/null; then
-  PRISM_SKILL_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "$0")")"
-  [ -f "$PRISM_SKILL_DIR/dashboard/prism-start.sh" ] && bash "$PRISM_SKILL_DIR/dashboard/prism-start.sh" &
-fi
 ```
-
-After the preamble runs, check if the dashboard opened. If it did, tell the founder:
-"Your creative studio is open at http://localhost:3333"
-If it didn't, skip silently — the terminal experience still works.
 
 ## Core Philosophy
 
@@ -81,29 +71,25 @@ Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-emp
    - Do NOT interrupt the founder for this. Migration is silent.
 3. Read `.prism/history.jsonl` (last 5 entries) to understand where things left off
 4. Read `.prism/handoff.md` to restore the mental model — decisions, open questions, known issues
-5. Reset the chat cursor:
-   ```bash
-   wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
-   ```
-6. Restore the stage from `state.json` (do NOT overwrite it — the existing state
+5. Restore the stage from `state.json` (do NOT overwrite it — the existing state
    is the source of truth)
-7. Append a new session entry to the `sessions` array in `state.json` with the
+6. Append a new session entry to the `sessions` array in `state.json` with the
    current start time
-8. Log the session resumption:
+7. Log the session resumption:
    ```bash
    echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"session_resumed","feature":"'$(cat .prism/state.json | grep -o '"current_focus":"[^"]*"' | cut -d'"' -f4)'"}' >> .prism/history.jsonl
    ```
-9. Tell the founder warmly what happened last time and where you are:
+8. Tell the founder warmly what happened last time and where you are:
    > "Welcome back. Last time we got {last completed feature or milestone} working.
    > {current_focus or next feature} is next. Want to keep going, or change direction?"
-10. Via AskUserQuestion with options:
-    - "Keep going" — resume at the current stage, pick up where you left off
-    - "Change direction" — return to VISIONING with a fresh discovery flow
-    - "Show me what we built" — summarize the features, show the state, then ask what's next
-11. If "Keep going" — immediately start working on the next incomplete feature.
+9. Via AskUserQuestion with options:
+   - "Keep going" — resume at the current stage, pick up where you left off
+   - "Change direction" — return to VISIONING with a fresh discovery flow
+   - "Show me what we built" — summarize the features, show the state, then ask what's next
+10. If "Keep going" — immediately start working on the next incomplete feature.
     Don't ask more questions. Just build.
-12. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
-13. If "Show me what we built" — read the features list and history, summarize
+11. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
+12. If "Show me what we built" — read the features list and history, summarize
     what exists in plain language, then ask what's next via AskUserQuestion.
 
 **If fresh session (no intent.md):**
@@ -130,7 +116,6 @@ cat > .prism/state.json << 'STATE_EOF'
 STATE_EOF
 # Replace TIMESTAMP placeholders with actual time
 sed -i '' "s/TIMESTAMP/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" .prism/state.json
-wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
 ```
 
 ### Phase 1: The Opening — "What's alive in you?"
@@ -662,7 +647,7 @@ Prism watches for these signals and transitions WITHOUT asking:
 
 ### Handling Founder Direction Changes Mid-Flow
 
-The founder can redirect at ANY stage via terminal or dashboard chat:
+The founder can redirect at ANY stage:
 
 - **Small changes** ("make the button bigger"): Stay in current stage, just do it.
 - **New features** ("add a payment flow"): Stay in CREATING, update `features_planned`,
@@ -841,7 +826,6 @@ This project uses Prism (`/prism`). State is stored in `.prism/`:
 - `.prism/intent.md` — full vision document
 - `.prism/state.json` — current state (stage, features, metrics)
 - `.prism/history.jsonl` — activity timeline
-- `.prism/chat.jsonl` — dashboard chat history
 - `.prism/handoff.md` — context from last session
 
 To resume: run `/prism` or read `.prism/handoff.md` for context.
@@ -862,14 +846,12 @@ CLAUDEMD_EOF
 
 ## State Management
 
-After every significant action, update `.prism/state.json`. The dashboard reads
-this file to render the UI — including the vision canvas, feature list, and
-stage progress.
+After every significant action, update `.prism/state.json`. This file tracks
+all session state — vision, features, stage progress.
 
 ### During VISIONING — update facets as you capture them
 
-After each discovery question, update the `vision` object so the dashboard
-renders each facet as it's revealed (they animate in one by one):
+After each discovery question, update the `vision` object as you capture each facet:
 
 ```bash
 cat > .prism/state.json << EOF
@@ -958,42 +940,6 @@ and what was accomplished:
 This array is what powers the "Welcome back" message in Phase 0. Prism reads the
 last session's `features_completed` to tell the founder what they accomplished,
 and checks the current `state.json` for what comes next.
-
-The dashboard reads these files to show the founder their product taking shape
-in real-time.
-
-## Dashboard Chat Channel
-
-The Prism dashboard includes a chat panel. The founder can send messages from
-the browser, and Prism can reply — all via `.prism/chat.jsonl`.
-
-**How it works:** A PostToolUse hook (`chat-hook.sh`) runs after every tool call.
-It checks `.prism/chat.jsonl` for unread user messages and injects them directly
-into the conversation. You will see output like:
-
-```
-[PRISM DASHBOARD] New message from the founder:
-  > Make the header bigger
-```
-
-**When you see this, act on it immediately.** This is the founder talking to you
-in real time from the dashboard.
-
-**Replying to the founder:**
-
-```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","from":"prism","text":"{your reply}"}' >> .prism/chat.jsonl
-```
-
-**Rules for the chat channel:**
-- When you see a `[PRISM DASHBOARD]` message, respond immediately — acknowledge
-  first, then do the work
-- Reply in the same warm, brief Prism voice — outcomes, not jargon
-- If the founder asks to change direction via chat, treat it the same as if
-  they said it in the terminal
-- Keep replies to 1-2 sentences. The chat is for quick back-and-forth, not essays.
-- If a message requires significant work, acknowledge it ("On it!") then do the work
-- Always reply via chat.jsonl so the founder sees your response in the dashboard
 
 ## Context Handoff — Surviving Session Boundaries
 
@@ -1105,7 +1051,7 @@ The handoff captures intent and judgment. The state captures metrics.
 ## Completion Status
 
 These map directly to the stage machine. Prism sets `status` in state.json
-and the dashboard renders the stage track automatically.
+and Prism transitions automatically.
 
 - **visioning** — Discovery phase, drawing out the founder's vision
 - **creating** — In creative flow, building features
