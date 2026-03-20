@@ -38,9 +38,9 @@
     .conversation {
       position: absolute;
       left: 24px;
-      top: 24px;
+      top: 64px;
       bottom: 24px;
-      width: 380px;
+      width: 340px;
       z-index: 10;
       display: flex;
       flex-direction: column;
@@ -54,34 +54,37 @@
       overflow: hidden;
     }
 
-    .conv-header {
-      padding: 22px 24px 18px;
+    .canvas-logo {
+      position: absolute;
+      top: 22px;
+      left: 28px;
+      z-index: 5;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 9px;
+      pointer-events: none;
     }
 
-    .logo-icon {
-      width: 28px;
-      height: 28px;
-      background: rgba(80, 65, 50, 0.25);
-      border-radius: 7px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .canvas-logo svg {
+      width: 18px;
+      height: 18px;
+      color: rgba(80, 65, 50, 0.4);
     }
 
-    .logo-icon svg { width: 14px; height: 14px; stroke: rgba(80, 60, 40, 0.6); }
-
-    .conv-header h1 {
-      font-size: 17px;
+    .canvas-logo span {
+      font-size: 16px;
       font-weight: 600;
       letter-spacing: -0.3px;
-      color: rgba(60, 48, 36, 0.8);
+      color: rgba(60, 48, 36, 0.45);
+    }
+
+    .conv-header {
+      padding: 16px 20px 10px;
+      display: flex;
+      align-items: center;
     }
 
     .conv-status {
-      margin-left: auto;
       font-size: 10px;
       font-weight: 500;
       text-transform: uppercase;
@@ -211,22 +214,14 @@
       cursor: grab;
     }
 
-    .canvas::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: radial-gradient(circle, rgba(175, 165, 150, 0.5) 0.8px, transparent 0.8px);
-      background-size: 28px 28px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
     .canvas.grabbing { cursor: grabbing; }
 
-    /* Dot grid element — for pan/zoom offset */
+    /* Dot grid — moves with pan/zoom */
     .canvas-grid {
       position: absolute;
-      inset: 0;
+      inset: -200px;
+      background-image: radial-gradient(circle, rgba(160, 145, 128, 0.65) 1.1px, transparent 1.1px);
+      background-size: 30px 30px;
       pointer-events: none;
       z-index: 0;
     }
@@ -355,72 +350,51 @@
 
     /* ---- Node Graph — the living canvas ---- */
     .node-graph {
-      flex: 1;
-      position: relative;
-      padding: 60px 40px 40px 440px;
-      overflow: auto;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
     }
 
-    .node-graph svg.connections {
+    .graph-lines {
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
       z-index: 0;
+      overflow: visible;
     }
 
-    .connections line {
+    .graph-lines line {
       stroke: var(--border);
       stroke-width: 1.5;
-      transition: stroke 0.6s ease;
+      opacity: 0.6;
     }
 
-    .connections line.active { stroke: var(--accent-soft); stroke-width: 2; }
-    .connections line.done { stroke: var(--green); opacity: 0.5; }
+    .graph-lines line.vision { stroke: var(--accent-soft); }
+    .graph-lines line.feature { stroke: var(--green); opacity: 0.3; }
+    .graph-lines line.persist { stroke: #60a5fa; opacity: 0.3; }
 
     .graph-nodes {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    /* Node row — a horizontal tier */
-    .node-tier {
-      display: flex;
-      justify-content: center;
-      gap: 32px;
-      padding: 16px 0;
-      position: relative;
-    }
-
-    .node-tier::before {
-      content: '';
       position: absolute;
-      left: 50%;
-      top: -16px;
-      width: 1px;
-      height: 16px;
-      background: var(--border);
+      inset: 0;
+      z-index: 1;
     }
 
-    .node-tier:first-child::before { display: none; }
+
 
     /* Individual node */
     .graph-node {
+      position: absolute;
       background: var(--surface);
       border: 1.5px solid var(--border);
       border-radius: 12px;
-      padding: 14px 20px;
-      min-width: 140px;
-      max-width: 240px;
+      padding: 12px 16px;
+      width: 200px;
       opacity: 0;
-      transform: scale(0.9) translateY(8px);
+      transform: scale(0.85);
       transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-      position: relative;
+      pointer-events: auto;
+      cursor: default;
     }
 
     .graph-node.visible {
@@ -468,6 +442,8 @@
     .node-type.vision { color: var(--accent); }
     .node-type.feature { color: var(--green); }
     .node-type.ship { color: var(--yellow); }
+    .node-type.persist { color: #60a5fa; }
+    .node-type.polish { color: var(--accent-soft); }
 
     .node-text {
       font-size: 14px;
@@ -490,28 +466,10 @@
       font-size: 12px;
     }
 
-    /* Center node — the vision core */
-    .node-core {
-      text-align: center;
-    }
-
-    .node-core .node-text {
-      font-size: 16px;
-      font-weight: 300;
-    }
-
-    /* Tier label */
-    .tier-label {
-      position: absolute;
-      left: 440px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 9px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--text-muted);
-      opacity: 0.4;
+    .graph-node.root {
+      width: 240px;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(196, 120, 48, 0.08);
     }
 
     /* App frame — overlays when URL is set */
@@ -671,12 +629,6 @@
     <!-- LEFT: Conversation -->
     <div class="conversation">
       <div class="conv-header">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
-            <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
-          </svg>
-        </div>
-        <h1>Prism</h1>
         <span id="statusBadge" class="conv-status">visioning</span>
       </div>
 
@@ -698,6 +650,14 @@
         <div id="connDot" class="conn-dot"></div>
         <span id="connText">Watching .prism/</span>
       </div>
+    </div>
+
+    <!-- Canvas logo -->
+    <div class="canvas-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
+      </svg>
+      <span>Prism</span>
     </div>
 
     <!-- RIGHT: Canvas (infinite pan/zoom) -->
@@ -733,6 +693,7 @@
 
         <!-- Node Graph — the living canvas -->
         <div id="nodeGraph" class="node-graph">
+          <svg id="graphLines" class="graph-lines"></svg>
           <div id="graphNodes" class="graph-nodes"></div>
         </div>
 
@@ -896,89 +857,143 @@
       renderNodeGraph(s, status);
     }
 
-    function renderNodeGraph(s, status) {
-      const v = s.vision || {};
-      const features = s.features || [];
-      const currentFocus = s.current_focus || '';
-      const stageIdx = STAGES.indexOf(status);
+    // Story-driven node graph
+    let storyData = null;
+    let lastStoryLen = 0;
 
-      const hash = JSON.stringify({ v, features, status, currentFocus });
-      if (hash === lastNodeHash) return;
-      lastNodeHash = hash;
+    async function fetchStory() {
+      try {
+        const res = await fetch('/api/story');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.nodes || data.nodes.length === lastStoryLen) return;
+        lastStoryLen = data.nodes.length;
+        storyData = data;
+        renderStoryGraph(data);
+      } catch {}
+    }
+
+    function renderStoryGraph(data) {
+      const nodes = data.nodes || [];
+      if (!nodes.length) return;
 
       const container = $('graphNodes');
-      if (!container) return;
-      let html = '';
+      const svgEl = $('graphLines');
+      if (!container || !svgEl) return;
 
-      // Tier 1: Feeling (core node)
-      const feeling = v.feeling;
-      html += '<div class="node-tier">';
-      html += '<div class="graph-node node-core ' + (feeling ? 'visible' : '') + '" style="transition-delay:0s">';
-      html += '<div class="node-type vision">The Feeling</div>';
-      html += feeling ? '<div class="node-text feeling">' + escHtml(feeling) + '</div>' : '<div class="node-text muted">Listening...</div>';
-      html += '</div></div>';
+      // Layout: tree from root. Build parent→children map
+      const byId = {};
+      const children = {};
+      nodes.forEach(function(n) { byId[n.id] = n; children[n.id] = []; });
+      const roots = [];
+      nodes.forEach(function(n) {
+        if (n.parent && byId[n.parent]) {
+          children[n.parent].push(n.id);
+        } else {
+          roots.push(n.id);
+        }
+      });
 
-      // Tier 2: Person + Moment
-      html += '<div class="node-tier">';
-      html += buildNode('vision', 'The Person', v.person, '0.15s');
-      html += buildNode('vision', 'The Moment', v.moment, '0.3s');
-      html += '</div>';
+      // Assign positions via BFS — tree layout
+      const positions = {};
+      const NODE_W = 200, NODE_H = 80, GAP_X = 40, GAP_Y = 100;
+      const CX = 600; // center X
 
-      // Tier 3: Edge
-      html += '<div class="node-tier">';
-      html += buildNode('vision', 'The Edge', v.edge, '0.45s');
-      html += '</div>';
+      // BFS to compute depth and horizontal spread
+      const depths = {};
+      const depthNodes = {};
+      const queue = roots.map(function(id) { return { id: id, depth: 0 }; });
+      const visited = new Set();
 
-      // Tier 4: Intent (once vision complete)
-      if (s.intent && stageIdx >= 1) {
-        html += '<div class="node-tier">';
-        html += '<div class="graph-node visible node-core" style="transition-delay:0.6s">';
-        html += '<div class="node-type vision">Vision</div>';
-        html += '<div class="node-text">' + escHtml(s.intent) + '</div>';
-        html += '</div></div>';
-      }
+      while (queue.length > 0) {
+        const item = queue.shift();
+        if (visited.has(item.id)) continue;
+        visited.add(item.id);
+        depths[item.id] = item.depth;
+        if (!depthNodes[item.depth]) depthNodes[item.depth] = [];
+        depthNodes[item.depth].push(item.id);
 
-      // Tier 5+: Features (creating+)
-      if (features.length > 0 && stageIdx >= 1) {
-        for (let i = 0; i < features.length; i += 3) {
-          const row = features.slice(i, i + 3);
-          html += '<div class="node-tier">';
-          row.forEach(function(f, j) {
-            const isDone = f.done;
-            const isActive = !isDone && f.name === currentFocus;
-            const state = isDone ? 'done visible' : isActive ? 'active visible' : 'pending visible';
-            const delay = (0.7 + (i + j) * 0.1).toFixed(1) + 's';
-            html += '<div class="graph-node ' + state + '" style="transition-delay:' + delay + '">';
-            html += '<div class="node-type feature">Feature</div>';
-            html += '<div class="node-text">' + escHtml(f.name) + '</div>';
-            html += '</div>';
-          });
-          html += '</div>';
+        var ch = children[item.id] || [];
+        for (var ci = 0; ci < ch.length; ci++) {
+          if (!visited.has(ch[ci])) {
+            queue.push({ id: ch[ci], depth: item.depth + 1 });
+          }
         }
       }
 
-      // Final: Ship node
-      if (stageIdx >= 3) {
-        const shipDone = stageIdx >= 4;
-        html += '<div class="node-tier">';
-        html += '<div class="graph-node ' + (shipDone ? 'done' : 'active') + ' visible node-core" style="transition-delay:1s">';
-        html += '<div class="node-type ship">' + (shipDone ? 'Shipped' : 'Shipping') + '</div>';
-        html += '<div class="node-text">' + (shipDone ? "It's live." : 'Preparing to launch...') + '</div>';
-        html += '</div></div>';
+      // Position nodes: center each depth row
+      const maxDepth = Math.max.apply(null, Object.keys(depthNodes).map(Number));
+      for (var d = 0; d <= maxDepth; d++) {
+        var row = depthNodes[d] || [];
+        var totalW = row.length * NODE_W + (row.length - 1) * GAP_X;
+        var startX = CX - totalW / 2;
+        for (var ri = 0; ri < row.length; ri++) {
+          positions[row[ri]] = {
+            x: startX + ri * (NODE_W + GAP_X),
+            y: 40 + d * (NODE_H + GAP_Y)
+          };
+        }
       }
 
+      // Render SVG lines
+      var lines = '';
+      nodes.forEach(function(n) {
+        if (!n.parent || !positions[n.id] || !positions[n.parent]) return;
+        var from = positions[n.parent];
+        var to = positions[n.id];
+        var lineClass = n.type || 'feature';
+        lines += '<line class="' + lineClass + '" x1="' + (from.x + NODE_W/2) + '" y1="' + (from.y + NODE_H) +
+                 '" x2="' + (to.x + NODE_W/2) + '" y2="' + to.y + '"/>';
+      });
+      svgEl.innerHTML = lines;
+
+      // Render nodes
+      var html = '';
+      nodes.forEach(function(n, i) {
+        var pos = positions[n.id];
+        if (!pos) return;
+        var isRoot = !n.parent || !byId[n.parent];
+        var delay = (i * 0.05).toFixed(2) + 's';
+        html += '<div class="graph-node visible ' + (isRoot ? 'root' : '') + '"' +
+                ' style="left:' + pos.x + 'px;top:' + pos.y + 'px;transition-delay:' + delay + '"' +
+                ' title="' + escHtml(n.summary) + '">';
+        html += '<div class="node-type ' + n.type + '">' + escHtml(n.phase || n.type) + '</div>';
+        html += '<div class="node-text">' + escHtml(n.action) + '</div>';
+        html += '</div>';
+      });
       container.innerHTML = html;
+
       requestAnimationFrame(function() {
         container.querySelectorAll('.graph-node:not(.visible)').forEach(function(el) { el.classList.add('visible'); });
       });
     }
 
-    function buildNode(type, label, value, delay) {
-      const has = !!value;
-      return '<div class="graph-node ' + (has ? 'visible' : '') + '" style="transition-delay:' + delay + '">' +
-        '<div class="node-type ' + type + '">' + escHtml(label) + '</div>' +
-        (has ? '<div class="node-text">' + escHtml(value) + '</div>' : '<div class="node-text muted">Listening...</div>') +
-        '</div>';
+    function renderNodeGraph(s, status) {
+      // If we have story data, story graph takes priority
+      if (storyData && storyData.nodes && storyData.nodes.length > 0) return;
+      // Fallback: render from state only (no history yet)
+      var container = $('graphNodes');
+      if (!container) return;
+      var v = s.vision || {};
+      if (!v.feeling && !v.person) { container.innerHTML = ''; return; }
+      // Minimal: just show vision facets as nodes
+      var html = '';
+      var cy = 60;
+      if (v.feeling) {
+        html += '<div class="graph-node visible root" style="left:500px;top:' + cy + 'px"><div class="node-type vision">The Feeling</div><div class="node-text feeling">' + escHtml(v.feeling) + '</div></div>';
+        cy += 120;
+      }
+      if (v.person) {
+        html += '<div class="graph-node visible" style="left:380px;top:' + cy + 'px"><div class="node-type vision">The Person</div><div class="node-text">' + escHtml(v.person) + '</div></div>';
+      }
+      if (v.moment) {
+        html += '<div class="graph-node visible" style="left:640px;top:' + cy + 'px"><div class="node-type vision">The Moment</div><div class="node-text">' + escHtml(v.moment) + '</div></div>';
+      }
+      cy += 120;
+      if (v.edge) {
+        html += '<div class="graph-node visible" style="left:500px;top:' + cy + 'px"><div class="node-type vision">The Edge</div><div class="node-text">' + escHtml(v.edge) + '</div></div>';
+      }
+      container.innerHTML = html;
     }
 
 
@@ -1076,8 +1091,8 @@
     // Poll
     function restartPolling() {
       if (pollTimer) clearInterval(pollTimer);
-      fetchState(); fetchHistory(); fetchChat();
-      pollTimer = setInterval(() => { fetchState(); fetchHistory(); }, config.pollInterval);
+      fetchState(); fetchHistory(); fetchChat(); fetchStory();
+      pollTimer = setInterval(() => { fetchState(); fetchHistory(); fetchStory(); }, config.pollInterval);
       // Chat polls faster for responsiveness
       setInterval(() => { fetchChat(); }, 1000);
     }
@@ -1093,7 +1108,7 @@
       if (t) t.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')';
       const g = $('canvasGrid');
       if (g) {
-        g.style.backgroundSize = (28 * zoom) + 'px ' + (28 * zoom) + 'px';
+        g.style.backgroundSize = (30 * zoom) + 'px ' + (30 * zoom) + 'px';
         g.style.backgroundPosition = panX + 'px ' + panY + 'px';
       }
       const zl = $('zoomLevel');

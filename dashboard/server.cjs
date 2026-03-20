@@ -203,9 +203,30 @@ function buildStory(stateFile, historyFile, cb) {
       }
     }
 
+    // Build full node list from ALL entries that have summaries
+    const nodes = [];
+    for (const e of entries) {
+      if (!e.summary && !e.action) continue;
+      nodes.push({
+        id: e.action || '',
+        ts: e.ts || '',
+        action: e.action || '',
+        summary: e.summary || e.action || '',
+        feature: e.feature || '',
+        phase: e.phase || '',
+        parent: e.parent || null,
+        type: e.phase === 'ideation' ? 'vision'
+            : e.phase === 'persistence' ? 'persist'
+            : e.phase === 'polish' ? 'polish'
+            : (e.action || '').toLowerCase().includes('ship') ? 'ship'
+            : 'feature'
+      });
+    }
+
     cb(null, {
       sessions,
       milestones,
+      nodes,
       stats: {
         total_actions: totalActions,
         features_built: featuresBuilt,
