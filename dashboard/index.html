@@ -235,11 +235,6 @@
       z-index: 1;
     }
 
-    .canvas-content {
-      position: relative;
-      padding: 20px;
-    }
-
     /* Zoom controls — fixed position */
     .zoom-controls {
       position: absolute;
@@ -284,7 +279,11 @@
 
     /* Stage bar — minimal, top of canvas */
     .stage-bar {
-      padding: 20px 40px 0 20px;
+      position: absolute;
+      top: 16px;
+      left: 440px;
+      z-index: 5;
+      padding: 0;
       display: flex;
       align-items: center;
       gap: 20px;
@@ -344,19 +343,12 @@
 
     .tool-btn:hover { color: var(--text); border-color: #ccc; }
 
-    /* ---- Node Graph — the living canvas ---- */
-    .node-graph {
-      width: 1400px;
-      height: 2400px;
-      position: relative;
-    }
-
     .graph-lines {
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 2000px;
+      height: 2000px;
       z-index: 0;
       overflow: visible;
     }
@@ -375,8 +367,8 @@
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 2000px;
+      height: 2000px;
       z-index: 1;
     }
 
@@ -475,8 +467,9 @@
     /* App frame — overlays when URL is set */
     .app-overlay {
       position: absolute;
-      bottom: 20px;
+      bottom: 60px;
       right: 20px;
+      z-index: 5;
       width: 360px;
       height: 240px;
       border-radius: 12px;
@@ -509,7 +502,12 @@
 
     /* Activity — subtle, bottom of canvas */
     .activity-bar {
-      padding: 12px 40px 12px 20px;
+      position: absolute;
+      bottom: 12px;
+      left: 440px;
+      right: 20px;
+      z-index: 5;
+      padding: 0;
       display: flex;
       gap: 24px;
       font-size: 11px;
@@ -663,36 +661,30 @@
     <!-- RIGHT: Canvas (infinite pan/zoom) -->
     <div id="canvas" class="canvas">
       <div id="canvasGrid" class="canvas-grid"></div>
+      <!-- Pan/zoom transform layer — contains ONLY the node graph -->
       <div id="canvasTransform" class="canvas-transform">
-        <div class="canvas-content">
-          <!-- Stage bar -->
-          <div class="stage-bar">
-          <div id="stageTrack" class="stage-track">
-            <div class="stage-step" data-stage="visioning"></div>
-            <div class="stage-step" data-stage="creating"></div>
-            <div class="stage-step" data-stage="polishing"></div>
-            <div class="stage-step" data-stage="shipping"></div>
-            <div class="stage-step" data-stage="done"></div>
-          </div>
-          <span id="stageLabel" class="stage-label active-label">Vision</span>
-        </div>
+        <svg id="graphLines" class="graph-lines"></svg>
+        <div id="graphNodes" class="graph-nodes"></div>
+      </div>
 
-        <!-- Toolbar moved outside transform layer -->
-
-        <!-- Node Graph — the living canvas -->
-        <div id="nodeGraph" class="node-graph">
-          <svg id="graphLines" class="graph-lines"></svg>
-          <div id="graphNodes" class="graph-nodes"></div>
+      <!-- Stage bar — fixed, not transformed -->
+      <div class="stage-bar">
+        <div id="stageTrack" class="stage-track">
+          <div class="stage-step" data-stage="visioning"></div>
+          <div class="stage-step" data-stage="creating"></div>
+          <div class="stage-step" data-stage="polishing"></div>
+          <div class="stage-step" data-stage="shipping"></div>
+          <div class="stage-step" data-stage="done"></div>
         </div>
+        <span id="stageLabel" class="stage-label active-label">Vision</span>
+      </div>
 
-        <!-- App preview — floating overlay, bottom-right -->
-        <div id="appOverlay" class="app-overlay">
-          <iframe id="appFrame"></iframe>
-        </div>
+      <!-- Activity bar — fixed at bottom -->
+      <div id="activityBar" class="activity-bar"></div>
 
-        <!-- Activity — subtle at bottom -->
-        <div id="activityBar" class="activity-bar"></div>
-        </div>
+      <!-- App preview — fixed overlay -->
+      <div id="appOverlay" class="app-overlay">
+        <iframe id="appFrame"></iframe>
       </div>
 
       <!-- Zoom controls (fixed, not transformed) -->
