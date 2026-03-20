@@ -356,12 +356,14 @@
     .graph-lines line {
       stroke: var(--border);
       stroke-width: 1.5;
-      opacity: 0.6;
+      opacity: 0.5;
+      stroke-dasharray: 6 4;
     }
 
-    .graph-lines line.vision { stroke: var(--accent-soft); }
-    .graph-lines line.feature { stroke: var(--green); opacity: 0.3; }
-    .graph-lines line.persist { stroke: #60a5fa; opacity: 0.3; }
+    .graph-lines line.vision { stroke: var(--accent-soft); opacity: 0.6; stroke-dasharray: none; }
+    .graph-lines line.feature { stroke: var(--green); opacity: 0.35; }
+    .graph-lines line.persist { stroke: #60a5fa; opacity: 0.35; }
+    .graph-lines line.polish { stroke: var(--accent-soft); opacity: 0.35; }
 
     .graph-nodes {
       position: absolute;
@@ -378,15 +380,23 @@
     .graph-node {
       position: absolute;
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 16px;
-      width: 200px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      width: 210px;
       opacity: 0;
-      transform: scale(0.85);
-      transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+      transform: scale(0.85) translateY(6px);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.3s ease, box-shadow 0.3s ease;
       pointer-events: auto;
       cursor: default;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .graph-node:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+      transform: scale(1.02) translateY(-1px);
+      z-index: 10;
     }
 
     .graph-node.visible {
@@ -394,41 +404,43 @@
       transform: scale(1) translateY(0);
     }
 
-    .graph-node.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(196, 120, 48, 0.1);
-    }
-
-    .graph-node.done {
-      border-color: var(--green);
-    }
-
-    .graph-node.done::after {
+    /* Type-specific left accent stripe */
+    .graph-node::before {
       content: '';
       position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--border);
+      transition: background 0.3s ease;
     }
 
-    .graph-node.pending {
-      opacity: 0.4;
+    .graph-node.type-vision::before { background: var(--accent); }
+    .graph-node.type-feature::before { background: var(--green); }
+    .graph-node.type-persist::before { background: #60a5fa; }
+    .graph-node.type-polish::before { background: var(--accent-soft); }
+    .graph-node.type-ship::before { background: var(--yellow); }
+
+    .graph-node.root {
+      width: 250px;
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(196, 120, 48, 0.08), 0 0 0 3px rgba(196, 120, 48, 0.06);
     }
 
-    .graph-node.pending.visible {
-      opacity: 0.4;
+    .graph-node.root::before {
+      width: 4px;
+      background: var(--accent);
     }
 
     .node-type {
       font-size: 9px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--accent-soft);
-      margin-bottom: 6px;
+      letter-spacing: 1.2px;
+      margin-bottom: 5px;
+      opacity: 0.7;
     }
 
     .node-type.vision { color: var(--accent); }
@@ -436,32 +448,27 @@
     .node-type.ship { color: var(--yellow); }
     .node-type.persist { color: #60a5fa; }
     .node-type.polish { color: var(--accent-soft); }
+    .node-type.creating { color: var(--green); }
+    .node-type.ideation { color: var(--accent); }
+    .node-type.persistence { color: #60a5fa; }
 
     .node-text {
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 1.4;
+      font-size: 13px;
+      font-weight: 450;
+      line-height: 1.45;
       color: var(--text);
+      letter-spacing: -0.1px;
     }
 
-    .node-text.feeling {
-      font-size: 28px;
-      font-weight: 300;
-      color: var(--accent);
-      letter-spacing: -0.5px;
-    }
-
-    .node-text.muted {
+    .node-summary {
+      font-size: 11px;
+      line-height: 1.4;
       color: var(--text-muted);
-      opacity: 0.3;
-      font-style: italic;
-      font-size: 12px;
-    }
-
-    .graph-node.root {
-      width: 240px;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(196, 120, 48, 0.08);
+      margin-top: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     /* App frame — overlays when URL is set */
@@ -883,7 +890,7 @@
 
       // Assign positions via BFS — tree layout
       const positions = {};
-      const NODE_W = 200, NODE_H = 80, GAP_X = 40, GAP_Y = 100;
+      const NODE_W = 220, NODE_H = 100, GAP_X = 50, GAP_Y = 110;
       const CX = 600; // center X
 
       // BFS to compute depth and horizontal spread
@@ -940,12 +947,15 @@
         var pos = positions[n.id];
         if (!pos) return;
         var isRoot = !n.parent || !byId[n.parent];
-        var delay = (i * 0.05).toFixed(2) + 's';
-        html += '<div class="graph-node visible ' + (isRoot ? 'root' : '') + '"' +
-                ' style="left:' + pos.x + 'px;top:' + pos.y + 'px;transition-delay:' + delay + '"' +
-                ' title="' + escHtml(n.summary) + '">';
-        html += '<div class="node-type ' + n.type + '">' + escHtml(n.phase || n.type) + '</div>';
+        var delay = (i * 0.04).toFixed(2) + 's';
+        var typeClass = 'type-' + (n.type || 'feature');
+        html += '<div class="graph-node visible ' + typeClass + (isRoot ? ' root' : '') + '"' +
+                ' style="left:' + pos.x + 'px;top:' + pos.y + 'px;transition-delay:' + delay + '">';
+        html += '<div class="node-type ' + (n.phase || n.type) + '">' + escHtml(n.phase || n.type) + '</div>';
         html += '<div class="node-text">' + escHtml(n.action) + '</div>';
+        if (n.summary && n.summary !== n.action) {
+          html += '<div class="node-summary">' + escHtml(n.summary) + '</div>';
+        }
         html += '</div>';
       });
       container.innerHTML = html;
