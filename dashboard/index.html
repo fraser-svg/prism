@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prism</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a25;
+      --border: #2a2a3a;
+      --text: #e4e4ed;
+      --text-muted: #7a7a8e;
+      --accent: #7c6ff7;
+      --accent-glow: rgba(124, 111, 247, 0.15);
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      height: 100vh;
+    }
+
+    /* --- Sidebar --- */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .logo {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg { width: 18px; height: 18px; }
+
+    .logo h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .status-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+
+    .status-badge.visioning { background: rgba(168, 139, 250, 0.15); color: #a78bfa; }
+    .status-badge.creating { background: rgba(124, 111, 247, 0.15); color: var(--accent); }
+    .status-badge.polishing { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+    .status-badge.shipping { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+    .status-badge.done { background: rgba(52, 211, 153, 0.2); color: var(--green); }
+
+    /* Stage progress */
+    .stage-track {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .stage-step {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      transition: background 0.4s ease;
+    }
+
+    .stage-step.complete { background: var(--green); }
+    .stage-step.active { background: var(--accent); animation: pulse 2s ease-in-out infinite; }
+
+    .stage-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+
+    .stage-labels span.active-label { color: var(--accent); opacity: 1; font-weight: 600; }
+    .stage-labels span.complete-label { color: var(--green); opacity: 0.7; }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .sidebar-content::-webkit-scrollbar { width: 4px; }
+    .sidebar-content::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .card-header {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* Intent */
+    .intent-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    /* Progress */
+    .progress-bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      border-radius: 3px;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .progress-label span:first-child { color: var(--text-muted); }
+    .progress-label span:last-child { color: var(--text); font-weight: 500; }
+
+    /* Focus */
+    .focus-text {
+      font-size: 14px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .focus-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Complexity */
+    .complexity-meter {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 8px;
+    }
+
+    .complexity-segment {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      transition: background 0.4s ease;
+    }
+
+    .complexity-segment.filled.low { background: var(--green); }
+    .complexity-segment.filled.mid { background: var(--yellow); }
+    .complexity-segment.filled.high { background: var(--red); }
+
+    .complexity-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Warnings */
+    .warning-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--yellow);
+    }
+
+    .warning-item svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* Timeline */
+    .timeline {
+      list-style: none;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding: 0 0 16px 20px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 6px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .timeline-item::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 14px;
+      width: 2px;
+      height: calc(100% - 10px);
+      background: var(--border);
+    }
+
+    .timeline-item:last-child::after { display: none; }
+
+    .timeline-item .action { color: var(--text); }
+    .timeline-item .time {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 10px;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* --- Main (iframe) --- */
+    .main {
+      position: relative;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .iframe-toolbar {
+      height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+    }
+
+    .url-bar {
+      flex: 1;
+      height: 30px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .toolbar-btn {
+      width: 30px;
+      height: 30px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .toolbar-btn:hover {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .app-frame {
+      flex: 1;
+      border: none;
+      background: white;
+    }
+
+    .no-app {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 12px;
+    }
+
+    .no-app svg { opacity: 0.3; }
+    .no-app p { font-size: 14px; }
+    .no-app .hint { font-size: 12px; opacity: 0.5; }
+
+    /* Connected indicator */
+    .connection {
+      padding: 12px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface);
+    }
+
+    .conn-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .conn-dot.disconnected { background: var(--red); }
+
+    /* --- Chat --- */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      min-height: 0;
+      flex-shrink: 0;
+      max-height: 50vh;
+      transition: max-height 0.3s ease;
+    }
+
+    .chat-panel.collapsed { max-height: 44px; }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      cursor: pointer;
+      user-select: none;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .chat-header span {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+
+    .chat-header .unread-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: none;
+    }
+
+    .chat-header .unread-dot.visible { display: block; }
+
+    .chat-chevron {
+      margin-left: auto;
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+    }
+
+    .chat-panel.collapsed .chat-chevron { transform: rotate(180deg); }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 80px;
+    }
+
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .chat-msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-msg.prism {
+      align-self: flex-start;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-msg .msg-time {
+      font-size: 10px;
+      opacity: 0.5;
+      margin-top: 4px;
+    }
+
+    .chat-msg.user .msg-time { text-align: right; }
+
+    .chat-empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 16px 0;
+      opacity: 0.6;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px 12px;
+      flex-shrink: 0;
+    }
+
+    .chat-input {
+      flex: 1;
+      height: 36px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 14px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .chat-input:focus { border-color: var(--accent); }
+
+    .chat-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+    .chat-send {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .chat-send:hover { opacity: 0.85; }
+    .chat-send:disabled { opacity: 0.3; cursor: default; }
+
+    /* Settings overlay */
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-overlay.open { display: flex; }
+
+    .settings-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 400px;
+      max-width: 90vw;
+    }
+
+    .settings-panel h2 {
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+
+    .setting-field {
+      margin-bottom: 14px;
+    }
+
+    .setting-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .setting-field input {
+      width: 100%;
+      height: 36px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .setting-field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover { background: var(--border); }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* --- Vision Canvas (main panel during visioning) --- */
+    .vision-canvas {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      overflow-y: auto;
+      transition: opacity 0.6s ease;
+    }
+
+    .vision-canvas.hidden { display: none; }
+
+    .vision-facets {
+      max-width: 560px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .vision-facet {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vision-facet:last-child { border-bottom: none; }
+
+    .vision-facet.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .vision-facet .facet-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .vision-facet .facet-value {
+      font-size: 20px;
+      font-weight: 300;
+      line-height: 1.5;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    .vision-facet .facet-value.empty {
+      color: var(--text-muted);
+      opacity: 0.3;
+      font-style: italic;
+      font-size: 16px;
+    }
+
+    .vision-facet.feeling .facet-value {
+      font-size: 32px;
+      font-weight: 200;
+      background: linear-gradient(135deg, var(--accent), #a78bfa, #c4b5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .vision-waiting {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 15px;
+      opacity: 0.4;
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.5; }
+    }
+
+    /* --- Feature cards (creating stage) --- */
+    .feature-list { list-style: none; }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+    }
+
+    .feature-item:last-child { border-bottom: none; }
+
+    .feature-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+
+    .feature-check.done {
+      border-color: var(--green);
+      background: rgba(52, 211, 153, 0.15);
+    }
+
+    .feature-check.done::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .feature-check.active {
+      border-color: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .feature-name { color: var(--text); }
+    .feature-name.done-name { color: var(--text-muted); }
+
+    /* Stage-aware visibility */
+    .stage-hide { display: none !important; }
+
+    /* Vision brief (compact, for creating+ stages) */
+    .vision-brief {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      font-style: italic;
+      border-left: 2px solid var(--accent);
+      padding-left: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
+          </svg>
+        </div>
+        <h1>Prism</h1>
+        <span id="statusBadge" class="status-badge creating">Creating</span>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Stage Track -->
+        <div class="card">
+          <div class="card-header">Stage</div>
+          <div id="stageTrack" class="stage-track">
+            <div class="stage-step" data-stage="visioning"></div>
+            <div class="stage-step" data-stage="creating"></div>
+            <div class="stage-step" data-stage="polishing"></div>
+            <div class="stage-step" data-stage="shipping"></div>
+            <div class="stage-step" data-stage="done"></div>
+          </div>
+          <div id="stageLabels" class="stage-labels">
+            <span data-stage="visioning">Vision</span>
+            <span data-stage="creating">Create</span>
+            <span data-stage="polishing">Polish</span>
+            <span data-stage="shipping">Ship</span>
+            <span data-stage="done">Done</span>
+          </div>
+        </div>
+
+        <!-- Vision Brief (compact — shown creating+) -->
+        <div id="visionBriefCard" class="card stage-hide">
+          <div class="card-header">Vision</div>
+          <div id="visionBrief" class="vision-brief"></div>
+        </div>
+
+        <!-- Features (shown creating+) -->
+        <div id="featuresCard" class="card stage-hide">
+          <div class="card-header">Features</div>
+          <div class="progress-bar-track">
+            <div id="progressFill" class="progress-bar-fill" style="width: 0%"></div>
+          </div>
+          <ul id="featureList" class="feature-list"></ul>
+        </div>
+
+        <!-- Current Focus (shown creating+) -->
+        <div class="card stage-hide" id="focusCard">
+          <div class="card-header">Current Focus</div>
+          <div class="focus-text">
+            <div class="focus-dot"></div>
+            <span id="focusText"></span>
+          </div>
+        </div>
+
+        <!-- Codebase Stats (shown creating+) -->
+        <div id="statsCard" class="card stage-hide">
+          <div class="card-header">Codebase</div>
+          <div class="stats-row">
+            <div class="stat">
+              <div id="filesCount" class="stat-value">0</div>
+              <div class="stat-label">Files</div>
+            </div>
+            <div class="stat">
+              <div id="complexityScore" class="stat-value">0</div>
+              <div class="stat-label">Complexity</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complexity Meter (shown creating+) -->
+        <div id="complexityCard" class="card stage-hide">
+          <div class="card-header">Complexity</div>
+          <div id="complexityMeter" class="complexity-meter">
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+            <div class="complexity-segment"></div>
+          </div>
+          <div id="complexityLabel" class="complexity-label">Looking good</div>
+        </div>
+
+        <!-- Warnings -->
+        <div id="warningsCard" class="card" style="display:none">
+          <div class="card-header">Warnings</div>
+          <div id="warningsList"></div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="card">
+          <div class="card-header">Activity</div>
+          <ul id="timeline" class="timeline">
+            <li class="timeline-item">
+              <div class="action">Waiting for activity...</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div id="chatPanel" class="chat-panel">
+        <div class="chat-header" onclick="toggleChat()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Talk to Prism</span>
+          <div id="unreadDot" class="unread-dot"></div>
+          <svg class="chat-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+          <div class="chat-empty">Say something — Prism is listening</div>
+        </div>
+        <div class="chat-input-row">
+          <input id="chatInput" class="chat-input" type="text" placeholder="Tell Prism what you want..." autocomplete="off"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" />
+          <button id="chatSendBtn" class="chat-send" onclick="sendChat()" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="connection">
+        <div id="connDot" class="conn-dot"></div>
+        <span id="connText">Watching .prism/</span>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <div class="iframe-toolbar">
+        <div id="urlBar" class="url-bar">No app URL configured</div>
+        <button class="toolbar-btn" onclick="reloadFrame()" title="Reload">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" onclick="openSettings()" title="Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4m-9-9h4m14 0h4m-3.3-6.7-2.8 2.8M7.1 16.9l-2.8 2.8m0-13.4 2.8 2.8m9.8 9.8 2.8 2.8"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Vision Canvas (shown during visioning) -->
+      <div id="visionCanvas" class="vision-canvas">
+        <div class="vision-facets">
+          <div id="facetPerson" class="vision-facet">
+            <div class="facet-label">The Person</div>
+            <div class="facet-value empty">Listening...</div>
+          </div>
+          <div id="facetFeeling" class="vision-facet feeling">
+            <div class="facet-label">The Feeling</div>
+            <div class="facet-value empty">Listening...</div>
+          </div>
+          <div id="facetMoment" class="vision-facet">
+            <div class="facet-label">The Moment</div>
+            <div class="facet-value empty">Listening...</div>
+          </div>
+          <div id="facetEdge" class="vision-facet">
+            <div class="facet-label">The Edge</div>
+            <div class="facet-value empty">Listening...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No app placeholder (shown creating+ when no URL) -->
+      <div id="noApp" class="no-app" style="display:none">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <p>No app URL configured yet</p>
+        <p class="hint">Click the gear icon to set your app's URL (e.g. localhost:3000)</p>
+      </div>
+
+      <iframe id="appFrame" class="app-frame" style="display:none"></iframe>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="settingsOverlay" class="settings-overlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-panel">
+      <h2>Settings</h2>
+      <div class="setting-field">
+        <label>App URL</label>
+        <input id="appUrlInput" type="text" placeholder="http://localhost:3000" />
+      </div>
+      <div class="setting-field">
+        <label>State file path (relative or absolute)</label>
+        <input id="statePathInput" type="text" placeholder=".prism/state.json" />
+      </div>
+      <div class="setting-field">
+        <label>History file path</label>
+        <input id="historyPathInput" type="text" placeholder=".prism/history.jsonl" />
+      </div>
+      <div class="setting-field">
+        <label>Poll interval (ms)</label>
+        <input id="pollInput" type="number" value="2000" min="500" max="30000" />
+      </div>
+      <div class="settings-actions">
+        <button class="btn" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Config ---
+    const DEFAULTS = {
+      appUrl: '',
+      statePath: '.prism/state.json',
+      historyPath: '.prism/history.jsonl',
+      pollInterval: 2000
+    };
+
+    let config = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('prism-config') || '{}') };
+    let lastStateJson = '';
+    let lastHistorySize = 0;
+    let pollTimer = null;
+
+    // --- Elements ---
+    const $ = id => document.getElementById(id);
+
+    // --- Settings ---
+    function openSettings() {
+      $('appUrlInput').value = config.appUrl;
+      $('statePathInput').value = config.statePath;
+      $('historyPathInput').value = config.historyPath;
+      $('pollInput').value = config.pollInterval;
+      $('settingsOverlay').classList.add('open');
+    }
+
+    function closeSettings() {
+      $('settingsOverlay').classList.remove('open');
+    }
+
+    function saveSettings() {
+      config.appUrl = $('appUrlInput').value.trim();
+      config.statePath = $('statePathInput').value.trim() || DEFAULTS.statePath;
+      config.historyPath = $('historyPathInput').value.trim() || DEFAULTS.historyPath;
+      config.pollInterval = Math.max(500, parseInt($('pollInput').value) || 2000);
+      localStorage.setItem('prism-config', JSON.stringify(config));
+      closeSettings();
+      applyAppUrl();
+      restartPolling();
+    }
+
+    // --- App iframe ---
+    function applyAppUrl() {
+      if (config.appUrl) {
+        $('noApp').style.display = 'none';
+        $('appFrame').style.display = 'block';
+        $('appFrame').src = config.appUrl;
+        $('urlBar').textContent = config.appUrl;
+      } else {
+        $('noApp').style.display = '';
+        $('appFrame').style.display = 'none';
+        $('urlBar').textContent = 'No app URL configured';
+      }
+    }
+
+    function reloadFrame() {
+      if (config.appUrl) {
+        $('appFrame').src = config.appUrl;
+      }
+    }
+
+    // --- State polling ---
+    async function fetchState() {
+      try {
+        const res = await fetch(`/api/state`);
+        if (!res.ok) throw new Error(res.statusText);
+        const text = await res.text();
+        if (text === lastStateJson) return;
+        lastStateJson = text;
+        const state = JSON.parse(text);
+        renderState(state);
+        $('connDot').classList.remove('disconnected');
+        $('connText').textContent = 'Watching .prism/ — live';
+      } catch {
+        $('connDot').classList.add('disconnected');
+        $('connText').textContent = 'Cannot read state — is the server running?';
+      }
+    }
+
+    async function fetchHistory() {
+      try {
+        const res = await fetch(`/api/history`);
+        if (!res.ok) return;
+        const text = await res.text();
+        if (text.length === lastHistorySize) return;
+        lastHistorySize = text.length;
+        const lines = text.trim().split('\n').filter(Boolean);
+        const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+        renderTimeline(entries.slice(-15).reverse());
+      } catch {}
+    }
+
+    const STAGES = ['visioning', 'creating', 'polishing', 'shipping', 'done'];
+    let prevStatus = '';
+
+    function renderState(s) {
+      const status = (s.status || s.mode || 'unknown').toLowerCase();
+      const isVisioning = status === 'visioning';
+      const isBuildStage = !isVisioning; // creating, polishing, shipping, done
+
+      // Status badge
+      const badge = $('statusBadge');
+      badge.textContent = status;
+      badge.className = 'status-badge ' + status;
+
+      // Stage track
+      const currentIdx = STAGES.indexOf(status);
+      $('stageTrack').querySelectorAll('.stage-step').forEach((el, i) => {
+        el.classList.remove('complete', 'active');
+        if (i < currentIdx) el.classList.add('complete');
+        else if (i === currentIdx) el.classList.add('active');
+      });
+      $('stageLabels').querySelectorAll('span').forEach((el, i) => {
+        el.classList.remove('active-label', 'complete-label');
+        if (i < currentIdx) el.classList.add('complete-label');
+        else if (i === currentIdx) el.classList.add('active-label');
+      });
+
+      // --- Main panel: vision canvas vs iframe ---
+      $('visionCanvas').classList.toggle('hidden', !isVisioning);
+      if (isVisioning) {
+        $('noApp').style.display = 'none';
+        $('appFrame').style.display = 'none';
+        renderVisionFacets(s.vision || {});
+      } else {
+        applyAppUrl();
+      }
+
+      // --- Sidebar: show/hide cards based on stage ---
+      const buildCards = ['visionBriefCard', 'featuresCard', 'focusCard', 'statsCard', 'complexityCard'];
+      buildCards.forEach(id => {
+        $(id).classList.toggle('stage-hide', isVisioning);
+      });
+
+      // Vision brief (compact)
+      if (isBuildStage && s.intent) {
+        $('visionBrief').textContent = s.intent;
+      }
+
+      // Features
+      if (isBuildStage) {
+        const features = s.features || [];
+        const planned = s.features_planned || features.length || 0;
+        const built = s.features_built || features.filter(f => f.done).length || 0;
+        const pct = planned > 0 ? Math.round((built / planned) * 100) : 0;
+        $('progressFill').style.width = pct + '%';
+
+        if (features.length > 0) {
+          $('featureList').innerHTML = features.map(f => {
+            const isDone = f.done;
+            const isActive = !isDone && f.name === s.current_focus;
+            return `<li class="feature-item">
+              <div class="feature-check ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}"></div>
+              <span class="feature-name ${isDone ? 'done-name' : ''}">${escHtml(f.name)}</span>
+            </li>`;
+          }).join('');
+        } else if (planned > 0) {
+          $('featureList').innerHTML = `<li class="feature-item" style="color:var(--text-muted);font-size:12px">${built} of ${planned} features built</li>`;
+        }
+      }
+
+      // Focus
+      if (isBuildStage && s.current_focus) {
+        $('focusCard').classList.remove('stage-hide');
+        $('focusText').textContent = s.current_focus;
+      } else if (isBuildStage && !s.current_focus) {
+        $('focusCard').classList.add('stage-hide');
+      }
+
+      // Stats
+      $('filesCount').textContent = s.files_count || 0;
+      $('complexityScore').textContent = s.complexity_score || 0;
+
+      // Complexity meter
+      const score = s.complexity_score || 0;
+      const segments = $('complexityMeter').children;
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        seg.classList.remove('filled', 'low', 'mid', 'high');
+        if (i < score) {
+          seg.classList.add('filled');
+          if (score <= 3) seg.classList.add('low');
+          else if (score <= 6) seg.classList.add('mid');
+          else seg.classList.add('high');
+        }
+      }
+      const clabels = ['Looking good', 'Looking good', 'Looking good', 'Looking good',
+                       'Getting complex', 'Getting complex', 'Getting complex',
+                       'Watch it', 'Danger zone', 'Danger zone', 'Danger zone'];
+      $('complexityLabel').textContent = clabels[score] || 'Looking good';
+
+      // Warnings
+      const warnings = s.warnings || [];
+      if (warnings.length > 0) {
+        $('warningsCard').style.display = '';
+        $('warningsList').innerHTML = warnings.map(w =>
+          `<div class="warning-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>${escHtml(w)}</span>
+          </div>`
+        ).join('');
+      } else {
+        $('warningsCard').style.display = 'none';
+      }
+
+      prevStatus = status;
+    }
+
+    function renderVisionFacets(v) {
+      const facets = [
+        { id: 'facetPerson', key: 'person' },
+        { id: 'facetFeeling', key: 'feeling' },
+        { id: 'facetMoment', key: 'moment' },
+        { id: 'facetEdge', key: 'edge' },
+      ];
+      facets.forEach(({ id, key }) => {
+        const el = $(id);
+        const val = v[key];
+        const valueEl = el.querySelector('.facet-value');
+        if (val) {
+          el.classList.add('revealed');
+          valueEl.textContent = val;
+          valueEl.classList.remove('empty');
+        } else {
+          valueEl.textContent = 'Listening...';
+          valueEl.classList.add('empty');
+        }
+      });
+    }
+
+    function renderTimeline(entries) {
+      if (!entries.length) return;
+      $('timeline').innerHTML = entries.map(e => {
+        const t = e.ts ? timeAgo(new Date(e.ts)) : '';
+        return `<li class="timeline-item">
+          <div class="action">${escHtml(e.action || 'Unknown action')}</div>
+          ${e.feature ? `<div class="time">${escHtml(e.feature)} · ${t}</div>` : `<div class="time">${t}</div>`}
+        </li>`;
+      }).join('');
+    }
+
+    function timeAgo(date) {
+      const s = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (s < 5) return 'just now';
+      if (s < 60) return s + 's ago';
+      const m = Math.floor(s / 60);
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);
+      return h + 'h ago';
+    }
+
+    function escHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // --- Chat ---
+    let lastChatSize = 0;
+    let chatCollapsed = false;
+    let chatMessages = [];
+
+    function toggleChat() {
+      chatCollapsed = !chatCollapsed;
+      $('chatPanel').classList.toggle('collapsed', chatCollapsed);
+      if (!chatCollapsed) $('unreadDot').classList.remove('visible');
+    }
+
+    async function sendChat() {
+      const input = $('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      $('chatSendBtn').disabled = true;
+
+      try {
+        await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        // Immediately poll to show the sent message
+        await fetchChat();
+      } catch {
+        // Show inline error
+        appendLocalMsg('prism', 'Failed to send — is the server running?');
+      }
+
+      $('chatSendBtn').disabled = false;
+      input.focus();
+    }
+
+    function appendLocalMsg(from, text) {
+      const container = $('chatMessages');
+      const empty = container.querySelector('.chat-empty');
+      if (empty) empty.remove();
+
+      const div = document.createElement('div');
+      div.className = 'chat-msg ' + from;
+      div.innerHTML = `${escHtml(text)}<div class="msg-time">just now</div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function fetchChat() {
+      try {
+        const res = await fetch('/api/chat');
+        if (!res.ok) return;
+        const text = await res.text();
+        if (text.length === lastChatSize) return;
+        lastChatSize = text.length;
+
+        const lines = text.trim().split('\n').filter(Boolean);
+        const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+
+        // Detect new Prism responses
+        if (entries.length > chatMessages.length) {
+          const newMsgs = entries.slice(chatMessages.length);
+          const hasNewPrism = newMsgs.some(m => m.from === 'prism');
+          if (hasNewPrism && chatCollapsed) {
+            $('unreadDot').classList.add('visible');
+          }
+        }
+
+        chatMessages = entries;
+        renderChat(entries);
+      } catch {}
+    }
+
+    function renderChat(entries) {
+      const container = $('chatMessages');
+      if (!entries.length) {
+        container.innerHTML = '<div class="chat-empty">Say something — Prism is listening</div>';
+        return;
+      }
+
+      container.innerHTML = entries.map(e => {
+        const from = e.from === 'user' ? 'user' : 'prism';
+        const t = e.ts ? timeAgo(new Date(e.ts)) : '';
+        return `<div class="chat-msg ${from}">
+          ${escHtml(e.text || '')}
+          <div class="msg-time">${t}</div>
+        </div>`;
+      }).join('');
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // --- Poll loop ---
+    function restartPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      fetchState();
+      fetchHistory();
+      fetchChat();
+      pollTimer = setInterval(() => {
+        fetchState();
+        fetchHistory();
+        fetchChat();
+      }, config.pollInterval);
+    }
+
+    // --- Init ---
+    applyAppUrl();
+    restartPolling();
+    $('chatInput').focus();
+  </script>
+</body>
+</html>
