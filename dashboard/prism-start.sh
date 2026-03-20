@@ -3,6 +3,13 @@
 
 PORT=3333
 
+# If the launchd service is already running, just open the browser and exit
+if launchctl list 2>/dev/null | grep -q "com.prism.dashboard"; then
+  open "http://localhost:$PORT"
+  echo "◆ Prism Dashboard (launchd service) — http://localhost:$PORT"
+  exit 0
+fi
+
 # Parse flags
 while [[ $# -gt 0 ]]; do
   case "$1" in

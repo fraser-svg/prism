@@ -64,29 +64,30 @@ Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-emp
 
 1. Read `.prism/intent.md` and `.prism/state.json`
 2. Read `.prism/history.jsonl` (last 5 entries) to understand where things left off
-3. Reset the chat cursor:
+3. Read `.prism/handoff.md` to restore the mental model — decisions, open questions, known issues
+4. Reset the chat cursor:
    ```bash
    wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
    ```
-4. Restore the stage from `state.json` (do NOT overwrite it — the existing state
+5. Restore the stage from `state.json` (do NOT overwrite it — the existing state
    is the source of truth)
-5. Append a new session entry to the `sessions` array in `state.json` with the
+6. Append a new session entry to the `sessions` array in `state.json` with the
    current start time
-6. Log the session resumption:
+7. Log the session resumption:
    ```bash
    echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"session_resumed","feature":"'$(cat .prism/state.json | grep -o '"current_focus":"[^"]*"' | cut -d'"' -f4)'"}' >> .prism/history.jsonl
    ```
-7. Tell the founder warmly what happened last time and where you are:
+8. Tell the founder warmly what happened last time and where you are:
    > "Welcome back. Last time we got {last completed feature or milestone} working.
    > {current_focus or next feature} is next. Want to keep going, or change direction?"
-8. Via AskUserQuestion with options:
+9. Via AskUserQuestion with options:
    - "Keep going" — resume at the current stage, pick up where you left off
    - "Change direction" — return to VISIONING with a fresh discovery flow
    - "Show me what we built" — summarize the features, show the state, then ask what's next
-9. If "Keep going" — immediately start working on the next incomplete feature.
-   Don't ask more questions. Just build.
-10. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
-11. If "Show me what we built" — read the features list and history, summarize
+10. If "Keep going" — immediately start working on the next incomplete feature.
+    Don't ask more questions. Just build.
+11. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
+12. If "Show me what we built" — read the features list and history, summarize
     what exists in plain language, then ask what's next via AskUserQuestion.
 
 **If fresh session (no intent.md):**
@@ -571,6 +572,59 @@ automatically."
 - Branch names or SHA hashes
 - Any sentence containing the word "commit", "push", "pull", or "merge"
 
+### Guardrail 6: Auto-Generated CLAUDE.md
+
+**Prism writes and maintains a CLAUDE.md in the project root** so that ANY future
+Claude Code session — even without `/prism` — understands the project context.
+
+**When to write/update CLAUDE.md:**
+- On first entering CREATING (initial write)
+- On every stage transition
+- On every feature completion
+- On session end (before the session closes)
+
+**Template:**
+
+```bash
+cat > CLAUDE.md << 'CLAUDEMD_EOF'
+# {Project Name — derived from intent or directory name}
+
+## Vision
+{Vision brief from intent.md — 2-3 sentences}
+
+## Current State
+- **Stage:** {visioning|creating|polishing|shipping|done}
+- **Features:** {built}/{planned} complete
+- **Current focus:** {current_focus or "none"}
+
+## Features
+{foreach feature in features array:}
+- [x] {feature name}  OR  - [ ] {feature name}
+
+## Prism State
+This project uses Prism (`/prism`). State is stored in `.prism/`:
+- `.prism/intent.md` — full vision document
+- `.prism/state.json` — current state (stage, features, metrics)
+- `.prism/history.jsonl` — activity timeline
+- `.prism/chat.jsonl` — dashboard chat history
+- `.prism/handoff.md` — context from last session
+
+To resume: run `/prism` or read `.prism/handoff.md` for context.
+
+## Last Updated
+{ISO timestamp}
+CLAUDEMD_EOF
+```
+
+**Rules:**
+- ALWAYS regenerate the full file — don't try to patch it
+- Use the actual data from state.json and intent.md
+- Keep it under 40 lines — this is a quick-reference, not documentation
+- Never include code snippets or implementation details
+- The CLAUDE.md should be committed by the auto-git guardrail
+- If a CLAUDE.md already exists with non-Prism content, PREPEND the Prism
+  section with a `## Prism` header and preserve the existing content below
+
 ## State Management
 
 After every significant action, update `.prism/state.json`. The dashboard reads
@@ -705,6 +759,76 @@ echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","from":"prism","text":"{your repl
 - Keep replies to 1-2 sentences. The chat is for quick back-and-forth, not essays.
 - If a message requires significant work, acknowledge it ("On it!") then do the work
 - Always reply via chat.jsonl so the founder sees your response in the dashboard
+
+## Context Handoff — Surviving Session Boundaries
+
+Every Prism session is temporary. Context compaction, terminal closure, or the
+founder stepping away can end it at any time. The handoff file ensures nothing
+is lost.
+
+### Writing the Handoff
+
+**When to write `.prism/handoff.md`:**
+- Every 15-20 tool calls (rolling update, silent)
+- On every stage transition
+- On every feature completion
+- When you sense the session might be ending (founder says "thanks", "that's it for now", "bye", etc.)
+
+```bash
+cat > .prism/handoff.md << 'HANDOFF_EOF'
+# Prism Handoff
+Written: {ISO timestamp}
+Session: {session start time} → {now}
+Stage: {current stage}
+
+## What Was Done This Session
+{Bulleted list of concrete accomplishments — outcomes, not tasks}
+- {e.g., "The signup flow is working end-to-end"}
+- {e.g., "Switched from SQLite to PostgreSQL"}
+
+## What's Next
+{The immediate next thing to build or fix}
+- {e.g., "Build the dashboard page — the data is ready, just needs a UI"}
+- {e.g., "Fix the email validation bug found during polish"}
+
+## Open Questions
+{Things the founder hasn't decided yet, or things you're unsure about}
+- {e.g., "Founder mentioned wanting payments but hasn't decided on Stripe vs LemonSqueezy"}
+- {e.g., "The color scheme might change — founder said 'it's close but not right yet'"}
+
+## Decisions Made (and Why)
+{Non-obvious choices that a future session needs to understand}
+- {e.g., "Used server-side rendering because the founder wants fast first load"}
+- {e.g., "Skipped auth for now — founder wants to validate the core flow first"}
+
+## Known Issues
+{Bugs, rough edges, or tech debt — be honest}
+- {e.g., "Mobile layout is broken below 375px"}
+- {e.g., "No error handling on the API calls yet"}
+
+## Feature Status
+{Quick reference — mirrors state.json but human-readable}
+| Feature | Status |
+|---------|--------|
+| {name} | Done / In progress / Not started |
+HANDOFF_EOF
+```
+
+### Reading the Handoff (Session Resume)
+
+When a returning session is detected (Phase 0), Prism MUST:
+
+1. Read `.prism/handoff.md` BEFORE doing anything else
+2. Use it to reconstruct the mental model — not just what was built, but WHY
+3. Pay special attention to "Decisions Made" — these prevent undoing previous choices
+4. Check "Known Issues" — these might be the first thing to fix
+5. After reading, update the handoff with a note: "Resumed: {timestamp}"
+
+### The Handoff is the Source of Truth
+
+If `handoff.md` and `state.json` disagree, trust `handoff.md` for context
+and reasoning, and `state.json` for numerical state (features_built, etc.).
+The handoff captures intent and judgment. The state captures metrics.
 
 ## Communication Rules
 

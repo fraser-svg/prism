@@ -6,18 +6,19 @@
   <title>Prism</title>
   <style>
     :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --surface-2: #1a1a25;
-      --border: #2a2a3a;
-      --text: #e4e4ed;
-      --text-muted: #7a7a8e;
-      --accent: #7c6ff7;
-      --accent-glow: rgba(124, 111, 247, 0.15);
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --red: #f87171;
-      --radius: 12px;
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --surface-2: #f3f0eb;
+      --border: #e8e4dd;
+      --text: #2c2925;
+      --text-muted: #9a9590;
+      --accent: #c47830;
+      --accent-glow: rgba(196, 120, 48, 0.08);
+      --accent-soft: #b8845a;
+      --green: #5a9a6b;
+      --yellow: #b8943a;
+      --red: #b85a50;
+      --radius: 10px;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -54,21 +55,21 @@
     }
 
     .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      width: 34px;
+      height: 34px;
+      background: var(--text);
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .logo-icon svg { width: 18px; height: 18px; }
+    .logo-icon svg { width: 18px; height: 18px; stroke: var(--bg); }
 
     .logo h1 {
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: -0.3px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
     }
 
     .status-badge {
@@ -83,11 +84,11 @@
       color: var(--accent);
     }
 
-    .status-badge.visioning { background: rgba(168, 139, 250, 0.15); color: #a78bfa; }
-    .status-badge.creating { background: rgba(124, 111, 247, 0.15); color: var(--accent); }
-    .status-badge.polishing { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
-    .status-badge.shipping { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
-    .status-badge.done { background: rgba(52, 211, 153, 0.2); color: var(--green); }
+    .status-badge.visioning { background: rgba(226, 163, 54, 0.12); color: var(--accent); }
+    .status-badge.creating { background: rgba(92, 184, 120, 0.12); color: var(--green); }
+    .status-badge.polishing { background: rgba(120, 160, 200, 0.12); color: #8bb0d0; }
+    .status-badge.shipping { background: rgba(212, 167, 69, 0.12); color: var(--yellow); }
+    .status-badge.done { background: rgba(92, 184, 120, 0.15); color: var(--green); }
 
     /* Stage progress */
     .stage-track {
@@ -166,7 +167,7 @@
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      background: linear-gradient(90deg, var(--accent-soft), var(--accent));
       border-radius: 3px;
       transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
     }
@@ -344,11 +345,11 @@
     }
 
     .toolbar-btn {
-      width: 30px;
-      height: 30px;
+      width: 36px;
+      height: 36px;
       background: none;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       color: var(--text-muted);
       cursor: pointer;
       display: flex;
@@ -479,9 +480,10 @@
 
     .chat-msg.user {
       align-self: flex-end;
-      background: var(--accent);
-      color: white;
+      background: var(--text);
+      color: var(--bg);
       border-bottom-right-radius: 4px;
+      font-weight: 450;
     }
 
     .chat-msg.prism {
@@ -490,6 +492,18 @@
       border: 1px solid var(--border);
       color: var(--text);
       border-bottom-left-radius: 4px;
+    }
+
+    .chat-msg.prism::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--accent-soft);
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      opacity: 0.6;
     }
 
     .chat-msg .msg-time {
@@ -517,12 +531,12 @@
 
     .chat-input {
       flex: 1;
-      height: 36px;
+      height: 44px;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 0 14px;
-      font-size: 13px;
+      padding: 0 16px;
+      font-size: 14px;
       color: var(--text);
       font-family: inherit;
       outline: none;
@@ -534,19 +548,21 @@
     .chat-input::placeholder { color: var(--text-muted); opacity: 0.5; }
 
     .chat-send {
-      width: 36px;
-      height: 36px;
-      background: var(--accent);
+      width: 44px;
+      height: 44px;
+      background: var(--text);
       border: none;
       border-radius: 10px;
-      color: white;
+      color: var(--bg);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: opacity 0.15s ease;
+      transition: opacity 0.15s ease, transform 0.1s ease;
       flex-shrink: 0;
     }
+
+    .chat-send:active { transform: scale(0.95); }
 
     .chat-send:hover { opacity: 0.85; }
     .chat-send:disabled { opacity: 0.3; cursor: default; }
@@ -556,7 +572,8 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.15);
+      backdrop-filter: blur(4px);
       z-index: 100;
       align-items: center;
       justify-content: center;
@@ -672,36 +689,34 @@
     }
 
     .vision-facet .facet-label {
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--accent);
-      margin-bottom: 8px;
+      letter-spacing: 1.2px;
+      color: var(--accent-soft);
+      margin-bottom: 10px;
     }
 
     .vision-facet .facet-value {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 300;
       line-height: 1.5;
       color: var(--text);
-      letter-spacing: -0.2px;
+      letter-spacing: -0.3px;
     }
 
     .vision-facet .facet-value.empty {
       color: var(--text-muted);
-      opacity: 0.3;
+      opacity: 0.25;
       font-style: italic;
-      font-size: 16px;
+      font-size: 17px;
     }
 
     .vision-facet.feeling .facet-value {
-      font-size: 32px;
-      font-weight: 200;
-      background: linear-gradient(135deg, var(--accent), #a78bfa, #c4b5fd);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: 40px;
+      font-weight: 300;
+      color: var(--accent);
+      letter-spacing: -1px;
     }
 
     .vision-waiting {
@@ -868,10 +883,10 @@
       z-index: 1;
     }
 
-    .story-dot.vision { background: rgba(168, 139, 250, 0.2); color: #a78bfa; }
-    .story-dot.feature { background: rgba(52, 211, 153, 0.2); color: var(--green); }
-    .story-dot.stage { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
-    .story-dot.ship { background: rgba(251, 191, 36, 0.2); color: var(--yellow); }
+    .story-dot.vision { background: rgba(226, 163, 54, 0.15); color: var(--accent); }
+    .story-dot.feature { background: rgba(92, 184, 120, 0.15); color: var(--green); }
+    .story-dot.stage { background: rgba(140, 170, 200, 0.15); color: #8bb0d0; }
+    .story-dot.ship { background: rgba(212, 167, 69, 0.15); color: var(--yellow); }
 
     .story-card {
       background: var(--surface-2);
@@ -903,10 +918,10 @@
       border-radius: 4px;
     }
 
-    .story-card-type.vision { background: rgba(168, 139, 250, 0.15); color: #a78bfa; }
-    .story-card-type.feature { background: rgba(52, 211, 153, 0.15); color: var(--green); }
-    .story-card-type.stage { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
-    .story-card-type.ship { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+    .story-card-type.vision { background: rgba(226, 163, 54, 0.12); color: var(--accent); }
+    .story-card-type.feature { background: rgba(92, 184, 120, 0.12); color: var(--green); }
+    .story-card-type.stage { background: rgba(140, 170, 200, 0.12); color: #8bb0d0; }
+    .story-card-type.ship { background: rgba(212, 167, 69, 0.12); color: var(--yellow); }
 
     .story-empty {
       text-align: center;
@@ -919,10 +934,10 @@
     /* Vision brief (compact, for creating+ stages) */
     .vision-brief {
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.6;
       color: var(--text-muted);
       font-style: italic;
-      border-left: 2px solid var(--accent);
+      border-left: 2px solid var(--accent-soft);
       padding-left: 12px;
     }
   </style>
