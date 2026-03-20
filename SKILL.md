@@ -47,14 +47,53 @@ not to show your work, not to ask for approval on every detail.
 
 ## Session Initialization
 
-When /prism is activated, ALWAYS start in **Vision Mode** — a creative discovery
-phase that draws out the founder's vision before a single line of code is written.
-This is non-negotiable. Every session begins here.
+When /prism is activated, it detects whether this is a fresh start or a returning
+session. Returning founders pick up right where they left off. New founders enter
+Vision Mode for creative discovery. Prism handles this automatically.
 
-### Phase 0: Setup
+### Phase 0: Detect Session State
 
 ```bash
 mkdir -p .prism
+```
+
+Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-empty
+`intent` value.
+
+**If returning session (intent.md exists):**
+
+1. Read `.prism/intent.md` and `.prism/state.json`
+2. Read `.prism/history.jsonl` (last 5 entries) to understand where things left off
+3. Reset the chat cursor:
+   ```bash
+   wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
+   ```
+4. Restore the stage from `state.json` (do NOT overwrite it — the existing state
+   is the source of truth)
+5. Append a new session entry to the `sessions` array in `state.json` with the
+   current start time
+6. Log the session resumption:
+   ```bash
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"session_resumed","feature":"'$(cat .prism/state.json | grep -o '"current_focus":"[^"]*"' | cut -d'"' -f4)'"}' >> .prism/history.jsonl
+   ```
+7. Tell the founder warmly what happened last time and where you are:
+   > "Welcome back. Last time we got {last completed feature or milestone} working.
+   > {current_focus or next feature} is next. Want to keep going, or change direction?"
+8. Via AskUserQuestion with options:
+   - "Keep going" — resume at the current stage, pick up where you left off
+   - "Change direction" — return to VISIONING with a fresh discovery flow
+   - "Show me what we built" — summarize the features, show the state, then ask what's next
+9. If "Keep going" — immediately start working on the next incomplete feature.
+   Don't ask more questions. Just build.
+10. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
+11. If "Show me what we built" — read the features list and history, summarize
+    what exists in plain language, then ask what's next via AskUserQuestion.
+
+**If fresh session (no intent.md):**
+
+Initialize state and proceed to Phase 1 (The Opening) for the full visioning flow.
+
+```bash
 cat > .prism/state.json << 'STATE_EOF'
 {
   "status": "visioning",
@@ -66,9 +105,14 @@ cat > .prism/state.json << 'STATE_EOF'
   "complexity_score": 0,
   "drift_alert": false,
   "warnings": [],
-  "last_updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  "sessions": [
+    {"started": "TIMESTAMP", "ended": null, "features_completed": []}
+  ],
+  "last_updated": "TIMESTAMP"
 }
 STATE_EOF
+# Replace TIMESTAMP placeholders with actual time
+sed -i '' "s/TIMESTAMP/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" .prism/state.json
 wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
 ```
 
@@ -324,6 +368,37 @@ If the founder says "not yet" or asks for changes → return to CREATING.
 - Fix any issues the founder approves
 - Then ship (deploy, push, whatever the project needs)
 
+**Ship Pipeline — Auto-detect and deploy:**
+
+When entering SHIPPING, Prism detects the project type and runs the appropriate deploy:
+
+```bash
+# Detect project type
+if [ -f "vercel.json" ] || [ -f ".vercel/project.json" ]; then
+  DEPLOY_CMD="npx vercel --prod"
+elif [ -f "netlify.toml" ]; then
+  DEPLOY_CMD="npx netlify deploy --prod"
+elif [ -f "Dockerfile" ]; then
+  DEPLOY_CMD="docker compose up -d --build"
+elif [ -f "fly.toml" ]; then
+  DEPLOY_CMD="fly deploy"
+elif [ -f "package.json" ] && grep -q '"start"' package.json; then
+  DEPLOY_CMD="npm start"
+elif [ -f "index.html" ]; then
+  DEPLOY_CMD="npx serve ."
+else
+  DEPLOY_CMD=""
+fi
+```
+
+Rules:
+- If deploy command is detected, tell the founder: "Shipping to {platform}..." then run it
+- If no deploy detected, ask: "How should we ship this? I can set up Vercel, Netlify, or Docker for you."
+- Always run the quality gate BEFORE deploying
+- If deploy fails, tell the founder in plain English what went wrong and offer to fix it
+- On success: "It's live. {URL if available}"
+- Auto-commit with `git add -A && git commit -m "prism: ship v1" && git push` after successful deploy
+
 **Exits to DONE when:** Successfully shipped.
 
 ### Stage 5: DONE
@@ -567,6 +642,33 @@ Also maintain a history log:
 ```bash
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"{what was done}","feature":"{which feature}"}' >> .prism/history.jsonl
 ```
+
+### Session History Tracking
+
+The `sessions` array in `state.json` tracks every Prism session for continuity
+across conversations. Each entry records when the session started, when it ended,
+and what was accomplished:
+
+```json
+"sessions": [
+  {"started": "2026-03-20T10:00:00Z", "ended": "2026-03-20T11:30:00Z", "features_completed": ["magic moment", "signup flow"]},
+  {"started": "2026-03-21T09:00:00Z", "ended": null, "features_completed": []}
+]
+```
+
+**When to update the sessions array:**
+
+- **Session start:** Append a new entry with `started` set to the current time,
+  `ended` as `null`, and `features_completed` as an empty array. For returning
+  sessions, this happens in Phase 0 after reading existing state.
+- **Feature completion:** Push the feature name into the current session's
+  `features_completed` array whenever a feature moves to `done`.
+- **Session end:** When the founder says goodbye, when the conversation ends,
+  or when transitioning to DONE — update the current session's `ended` timestamp.
+
+This array is what powers the "Welcome back" message in Phase 0. Prism reads the
+last session's `features_completed` to tell the founder what they accomplished,
+and checks the current `state.json` for what comes next.
 
 The dashboard reads these files to show the founder their product taking shape
 in real-time.

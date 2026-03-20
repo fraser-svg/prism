@@ -87,6 +87,21 @@ const server = http.createServer((req, res) => {
     return serveFile(res, chatFile, 'text/plain');
   }
 
+  // API: story — product journey assembled from history + state
+  if (pathname === '/api/story') {
+    const stateFile = path.join(PRISM_DIR, 'state.json');
+    const historyFile = path.join(PRISM_DIR, 'history.jsonl');
+
+    return buildStory(stateFile, historyFile, (err, story) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: err.message }));
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(story));
+    });
+  }
+
   // API: read intent.md
   if (pathname === '/api/intent') {
     const file = path.join(PRISM_DIR, 'intent.md');
@@ -117,6 +132,105 @@ function readBody(req, cb) {
   });
   req.on('end', () => cb(null, Buffer.concat(chunks).toString()));
   req.on('error', cb);
+}
+
+function buildStory(stateFile, historyFile, cb) {
+  // Read both files in parallel
+  let stateData = null;
+  let historyLines = [];
+  let pending = 2;
+  let failed = false;
+
+  function done() {
+    if (failed) return;
+    if (--pending > 0) return;
+
+    // Extract sessions from state
+    const sessions = (stateData && stateData.sessions) ? stateData.sessions : [];
+
+    // Parse history entries
+    const entries = [];
+    for (const line of historyLines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try { entries.push(JSON.parse(trimmed)); } catch (_) { /* skip malformed */ }
+    }
+
+    // Build milestones from significant events
+    const milestones = [];
+    for (const e of entries) {
+      const action = (e.action || '').toLowerCase();
+      const text = e.action || '';
+      const ts = e.ts || '';
+
+      // Vision captured
+      if (action.includes('vision') || action.includes('intent captured') || action.includes('brief confirmed')) {
+        milestones.push({ ts, type: 'vision', text: text });
+      }
+      // Feature completions
+      else if (action.includes('feature complete') || action.includes('feature built') || action.includes('magic moment') || (action.includes('built') && e.feature)) {
+        milestones.push({ ts, type: 'feature', text: e.feature ? `Built: ${e.feature}` : text });
+      }
+      // Stage transitions
+      else if (action.includes('enter') && (action.includes('creating') || action.includes('polishing') || action.includes('shipping') || action.includes('done'))) {
+        milestones.push({ ts, type: 'stage', text: text });
+      }
+      // Ship events
+      else if (action.includes('ship') || action.includes('deploy') || action.includes('launched') || action.includes('went live')) {
+        milestones.push({ ts, type: 'ship', text: text });
+      }
+    }
+
+    // Compute stats
+    const totalActions = entries.length;
+    const featuresBuilt = (stateData && typeof stateData.features_built === 'number')
+      ? stateData.features_built
+      : milestones.filter(m => m.type === 'feature').length;
+
+    let firstAction = null;
+    let lastAction = null;
+    let daysActive = 0;
+
+    if (entries.length > 0) {
+      const timestamps = entries.map(e => e.ts).filter(Boolean).sort();
+      firstAction = timestamps[0] || null;
+      lastAction = timestamps[timestamps.length - 1] || null;
+
+      if (firstAction && lastAction) {
+        const msPerDay = 86400000;
+        const diffMs = new Date(lastAction).getTime() - new Date(firstAction).getTime();
+        daysActive = Math.max(1, Math.ceil(diffMs / msPerDay));
+      }
+    }
+
+    cb(null, {
+      sessions,
+      milestones,
+      stats: {
+        total_actions: totalActions,
+        features_built: featuresBuilt,
+        days_active: daysActive,
+        first_action: firstAction,
+        last_action: lastAction,
+      }
+    });
+  }
+
+  // Read state.json
+  fs.readFile(stateFile, 'utf8', (err, raw) => {
+    if (!err) {
+      try { stateData = JSON.parse(raw); } catch (_) { /* ignore parse errors */ }
+    }
+    done();
+  });
+
+  // Read history.jsonl
+  fs.readFile(historyFile, 'utf8', (err, raw) => {
+    if (!err && raw) {
+      historyLines = raw.split('\n');
+    }
+    done();
+  });
 }
 
 function serveFile(res, filePath, contentType) {

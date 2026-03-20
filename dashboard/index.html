@@ -767,6 +767,155 @@
     /* Stage-aware visibility */
     .stage-hide { display: none !important; }
 
+    /* --- Main panel tab bar --- */
+    .main-tabs {
+      display: flex;
+      gap: 24px;
+      padding: 0 16px;
+      height: 36px;
+      align-items: center;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .main-tab {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 8px 0;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .main-tab:hover { color: var(--text); }
+    .main-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    /* --- Story view --- */
+    .story-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 48px;
+      display: none;
+    }
+
+    .story-view.visible { display: block; }
+
+    .story-view::-webkit-scrollbar { width: 4px; }
+    .story-view::-webkit-scrollbar-track { background: transparent; }
+    .story-view::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .story-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .story-stat {
+      text-align: center;
+    }
+
+    .story-stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .story-stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .story-timeline {
+      position: relative;
+      padding-left: 32px;
+    }
+
+    .story-timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .story-entry {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .story-dot {
+      position: absolute;
+      left: -32px;
+      top: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      z-index: 1;
+    }
+
+    .story-dot.vision { background: rgba(168, 139, 250, 0.2); color: #a78bfa; }
+    .story-dot.feature { background: rgba(52, 211, 153, 0.2); color: var(--green); }
+    .story-dot.stage { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .story-dot.ship { background: rgba(251, 191, 36, 0.2); color: var(--yellow); }
+
+    .story-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .story-card-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .story-card-desc {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .story-card-type {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .story-card-type.vision { background: rgba(168, 139, 250, 0.15); color: #a78bfa; }
+    .story-card-type.feature { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+    .story-card-type.stage { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+    .story-card-type.ship { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+
+    .story-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 48px 0;
+      opacity: 0.5;
+    }
+
     /* Vision brief (compact, for creating+ stages) */
     .vision-brief {
       font-size: 13px;
@@ -930,6 +1079,17 @@
             <circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4m-9-9h4m14 0h4m-3.3-6.7-2.8 2.8M7.1 16.9l-2.8 2.8m0-13.4 2.8 2.8m9.8 9.8 2.8 2.8"/>
           </svg>
         </button>
+      </div>
+
+      <!-- Main panel tabs -->
+      <div class="main-tabs">
+        <div class="main-tab active" data-tab="live" onclick="switchMainTab('live')">Live</div>
+        <div class="main-tab" data-tab="story" onclick="switchMainTab('story')">Story</div>
+      </div>
+
+      <!-- Story view -->
+      <div id="storyView" class="story-view">
+        <div class="story-empty">Loading story...</div>
       </div>
 
       <!-- Vision Canvas (shown during visioning) -->
@@ -1112,14 +1272,18 @@
         else if (i === currentIdx) el.classList.add('active-label');
       });
 
-      // --- Main panel: vision canvas vs iframe ---
-      $('visionCanvas').classList.toggle('hidden', !isVisioning);
-      if (isVisioning) {
-        $('noApp').style.display = 'none';
-        $('appFrame').style.display = 'none';
+      // --- Main panel: vision canvas vs iframe (skip if Story tab active) ---
+      if (!storyActive) {
+        $('visionCanvas').classList.toggle('hidden', !isVisioning);
+        if (isVisioning) {
+          $('noApp').style.display = 'none';
+          $('appFrame').style.display = 'none';
+          renderVisionFacets(s.vision || {});
+        } else {
+          applyAppUrl();
+        }
+      } else if (isVisioning) {
         renderVisionFacets(s.vision || {});
-      } else {
-        applyAppUrl();
       }
 
       // --- Sidebar: show/hide cards based on stage ---
@@ -1357,6 +1521,134 @@
         fetchHistory();
         fetchChat();
       }, config.pollInterval);
+    }
+
+    // --- Story view ---
+    let storyActive = false;
+    let storyTimer = null;
+    let storyData = null;
+
+    function switchMainTab(tab) {
+      document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+      storyActive = tab === 'story';
+
+      $('storyView').classList.toggle('visible', storyActive);
+
+      // Toggle visibility of live content
+      $('visionCanvas').style.display = storyActive ? 'none' : '';
+      $('noApp').style.display = storyActive ? 'none' : '';
+      $('appFrame').style.display = storyActive ? 'none' : '';
+
+      if (storyActive) {
+        // Stop normal polling, start story polling
+        if (pollTimer) clearInterval(pollTimer);
+        fetchStory();
+        storyTimer = setInterval(fetchStory, 10000);
+      } else {
+        // Stop story polling, restart normal polling
+        if (storyTimer) clearInterval(storyTimer);
+        storyTimer = null;
+        restartPolling();
+        // Re-apply correct main panel state
+        if (lastStateJson) {
+          try { renderState(JSON.parse(lastStateJson)); } catch {}
+        }
+      }
+    }
+
+    async function fetchStory() {
+      try {
+        const res = await fetch('/api/story');
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        storyData = data;
+        renderStory(data);
+      } catch {
+        $('storyView').innerHTML = '<div class="story-empty">No story data yet — keep building</div>';
+      }
+    }
+
+    function renderStory(data) {
+      const entries = data.entries || [];
+      const stats = data.stats || {};
+
+      let html = '';
+
+      // Summary stats
+      const daysActive = stats.days_active || 0;
+      const featuresBuilt = stats.features_built || 0;
+      const totalActions = stats.total_actions || entries.length || 0;
+
+      html += `<div class="story-stats">
+        <div class="story-stat">
+          <div class="story-stat-value">${daysActive}</div>
+          <div class="story-stat-label">Days Active</div>
+        </div>
+        <div class="story-stat">
+          <div class="story-stat-value">${featuresBuilt}</div>
+          <div class="story-stat-label">Features Built</div>
+        </div>
+        <div class="story-stat">
+          <div class="story-stat-value">${totalActions}</div>
+          <div class="story-stat-label">Total Actions</div>
+        </div>
+      </div>`;
+
+      if (entries.length === 0) {
+        html += '<div class="story-empty">No story entries yet — your journey starts here</div>';
+        $('storyView').innerHTML = html;
+        return;
+      }
+
+      // Timeline
+      html += '<div class="story-timeline">';
+      entries.forEach(entry => {
+        const type = entry.type || 'stage';
+        const icon = storyIcon(type);
+        const ts = entry.ts ? storyTimeAgo(new Date(entry.ts)) : '';
+        const desc = escHtml(entry.description || entry.action || '');
+
+        html += `<div class="story-entry">
+          <div class="story-dot ${type}">${icon}</div>
+          <div class="story-card">
+            <div class="story-card-time">${ts}</div>
+            <div class="story-card-desc">${desc}</div>
+            <span class="story-card-type ${type}">${type}</span>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+
+      $('storyView').innerHTML = html;
+    }
+
+    function storyIcon(type) {
+      switch (type) {
+        case 'vision': return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg>';
+        case 'feature': return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+        case 'stage': return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+        case 'ship': return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>';
+        default: return '';
+      }
+    }
+
+    function storyTimeAgo(date) {
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffS = Math.floor(diffMs / 1000);
+      const diffM = Math.floor(diffS / 60);
+      const diffH = Math.floor(diffM / 60);
+      const diffD = Math.floor(diffH / 24);
+
+      if (diffD === 0) {
+        if (diffH === 0 && diffM < 5) return 'just now';
+        if (diffH === 0) return diffM + ' min ago';
+        return diffH + ' hour' + (diffH > 1 ? 's' : '') + ' ago';
+      }
+      if (diffD === 1) return 'yesterday';
+      if (diffD < 7) return diffD + ' days ago';
+      if (diffD < 30) return Math.floor(diffD / 7) + ' week' + (Math.floor(diffD / 7) > 1 ? 's' : '') + ' ago';
+      return Math.floor(diffD / 30) + ' month' + (Math.floor(diffD / 30) > 1 ? 's' : '') + ' ago';
     }
 
     // --- Init ---
