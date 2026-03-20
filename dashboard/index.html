@@ -855,6 +855,20 @@
         if (data.nodes.length === lastStoryLen) return;
         lastStoryLen = data.nodes.length;
         storyData = data;
+        console.log('STORY: got ' + data.nodes.length + ' nodes, rendering...');
+        
+        // DEBUG: brute force test — place one node directly
+        var testContainer = document.getElementById('graphNodes');
+        if (testContainer && testContainer.children.length === 0) {
+          console.log('DEBUG: graphNodes exists, offsetWidth=' + testContainer.offsetWidth + ' offsetHeight=' + testContainer.offsetHeight);
+          console.log('DEBUG: parent=' + testContainer.parentElement.id + ' parent.offsetWidth=' + testContainer.parentElement.offsetWidth);
+          var testDiv = document.createElement('div');
+          testDiv.style.cssText = 'position:absolute;left:500px;top:200px;width:200px;padding:16px;background:white;border:2px solid red;border-radius:12px;z-index:9999;';
+          testDiv.textContent = 'DEBUG NODE — ' + data.nodes.length + ' nodes loaded';
+          testContainer.appendChild(testDiv);
+          console.log('DEBUG: appended test node');
+        }
+        
         renderStoryGraph(data);
       } catch (e) { console.error('fetchStory error:', e); }
     }
