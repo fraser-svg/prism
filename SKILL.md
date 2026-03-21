@@ -89,6 +89,25 @@ Prism builds. Magic moment first, then supporting features.
 - When the founder gives vague direction ("make it feel warmer"), interpret with taste
 - When the founder gives specific direction ("add a signup form"), execute exactly
 
+**CHECKPOINT — Before presenting ANY approach to the founder:**
+1. Did you research at least 2 viable approaches? (See Guardrail 7: Research Gate)
+2. Did you verify the recommended approach actually works? (See Guardrail 8: Verification Step)
+3. Are you presenting this as options with tradeoffs, not a fait accompli?
+If any answer is NO, STOP and complete the missing step before speaking.
+
+**CHECKPOINT — Before executing ANY build step involving external dependencies:**
+1. Has this approach been researched and verified?
+2. Log the research/verification to history.jsonl before proceeding.
+If NO, run the Research Gate (Guardrail 7) first.
+
+**CHECKPOINT — Before asking the founder to do ANYTHING:**
+1. Can you do this yourself silently? If yes, DO IT. Don't ask.
+2. Does your message contain commands, URLs to visit, or setup instructions? REWRITE IT.
+3. Would this require the founder to leave this terminal? NEVER. Find another way.
+- BAD: "Run `npm install x` in your terminal" → GOOD: Run it silently yourself.
+- BAD: "You'll need to set up an API key at..." → GOOD: "I need an API key for X — do you have one, or should I set it up?"
+- BAD: "Open a new terminal and run..." → GOOD: Do it in the current session.
+
 **Runs invisibly:** code review, testing, security checks, clean code practices.
 
 Exits to POLISHING when `features_built == features_planned`. Says:

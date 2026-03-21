@@ -4,6 +4,20 @@
 
 ```bash
 mkdir -p .prism
+
+# Check jq availability (required for safe JSON logging)
+which jq >/dev/null 2>&1 || echo "WARNING: jq not installed. Research/verification logging will not work. Install with: brew install jq"
+
+# gstack version sync check
+PRISM_MOD=$(stat -f %m "$0" 2>/dev/null || stat -c %Y "$0" 2>/dev/null || echo 0)
+GSTACK_MOD=$(stat -f %m ~/.claude/skills/gstack/SKILL.md 2>/dev/null || stat -c %Y ~/.claude/skills/gstack/SKILL.md 2>/dev/null || echo 0)
+if [ -n "$GSTACK_MOD" ] && [ -n "$PRISM_MOD" ] && [ "$GSTACK_MOD" -gt "$PRISM_MOD" ]; then
+  echo "WARNING: gstack updated since Prism was last modified. Check for compatibility."
+fi
+
+# Log session start marker (hooks check for entries after this marker)
+jq -n --arg action "session_start" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{action: $action, ts: $ts}' >> .prism/history.jsonl 2>/dev/null || true
 ```
 
 Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-empty

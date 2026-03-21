@@ -131,6 +131,75 @@ automatically."
 - Branch names or SHA hashes
 - Any sentence containing the word "commit", "push", "pull", or "merge"
 
+## Guardrail 7: Research Gate (Default-Fire)
+
+**This is the most critical guardrail.** It prevents the "built the wrong thing" failure.
+
+**Default behavior: FIRE.** The research gate fires for EVERY build chunk unless the
+chunk is explicitly pure-local (no network calls, no external dependencies, no
+third-party APIs, no packages to install).
+
+**When the gate fires, you MUST:**
+1. Research at least 2 viable approaches for the task
+2. For each approach, identify: what it does, what it costs (free/paid/rate-limited),
+   whether the API/library is maintained and working
+3. Present the approaches to the founder as a judgment checkpoint:
+   > "I've looked into a few ways to do this:
+   > - **Option A:** {approach} — {tradeoff}
+   > - **Option B:** {approach} — {tradeoff}
+   > I'd recommend {X} because {reason}. Sound good?"
+4. Log the research to history.jsonl:
+   ```bash
+   jq -n --arg type "research" --arg topic "$TOPIC" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+     --arg approaches "$APPROACHES" '{action: $type, ts: $ts, topic: $topic, approaches: $approaches}' \
+     >> .prism/history.jsonl
+   ```
+
+**When to skip (pure-local only):**
+- HTML/CSS template files with no external dependencies
+- Local utility functions that don't call external services
+- Configuration files (but NOT if they configure external services)
+- Internal refactoring of existing code
+
+When skipping, still log the decision:
+```bash
+jq -n --arg type "pure-local" --arg topic "$TOPIC" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{action: $type, ts: $ts, topic: $topic}' >> .prism/history.jsonl
+```
+
+**What NEVER gets skipped:**
+- Anything involving `npm install`, `pip install`, or adding packages
+- Anything calling external APIs (REST, GraphQL, WebSocket)
+- Anything using third-party services (auth providers, payment, email, etc.)
+- Anything the founder would need to pay for or sign up for
+
+**If the founder says "just do it" during research:** Respect it. Log the override
+and proceed with your best judgment. But still verify (Guardrail 8).
+
+## Guardrail 8: Verification Step
+
+**After choosing an approach, VERIFY it works before building.**
+
+For APIs: confirm the endpoint exists (check docs, test with a minimal curl if possible)
+For libraries: confirm the package exists and is maintained (`npm info` / PyPI check)
+For services: confirm accessibility and current pricing
+
+Log verification to history.jsonl:
+```bash
+jq -n --arg type "verification" --arg topic "$TOPIC" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg result "$RESULT" --arg details "$DETAILS" \
+  '{action: $type, ts: $ts, topic: $topic, result: $result, details: $details}' \
+  >> .prism/history.jsonl
+```
+
+**If verification fails:** Try the next approach from the research phase.
+If ALL approaches fail verification, be honest with the founder:
+> "I researched {N} ways to do this but couldn't verify any of them work right now.
+> Here's what I found — want to investigate together, or try a different approach?"
+
+**NEVER present an approach to the founder that you haven't verified.**
+**NEVER build with a library/API you haven't confirmed exists and works.**
+
 ## Guardrail 6: Auto-Generated CLAUDE.md
 
 **Prism writes and maintains a CLAUDE.md in the project root** so that ANY future
