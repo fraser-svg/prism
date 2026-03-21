@@ -63,12 +63,14 @@ Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-emp
 **If returning session (intent.md exists):**
 
 1. Read `.prism/intent.md` and `.prism/state.json`
-2. Read `.prism/history.jsonl` (last 5 entries) to understand where things left off
-3. Read `.prism/handoff.md` to restore the mental model — decisions, open questions, known issues
-4. Reset the chat cursor:
-   ```bash
-   wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
-   ```
+2. **State migration** — silently generate any missing triad files:
+   - If `.prism/acceptance-criteria.md` doesn't exist → generate from intent.md features
+   - If `.prism/test-criteria.json` doesn't exist → generate from acceptance criteria
+   - If `.prism/config.json` doesn't exist → use defaults (no action needed)
+   - Log migration: `{"action":"state_migration","generated":[list of files created]}`
+   - Do NOT interrupt the founder for this. Migration is silent.
+3. Read `.prism/history.jsonl` (last 5 entries) to understand where things left off
+4. Read `.prism/handoff.md` to restore the mental model — decisions, open questions, known issues
 5. Restore the stage from `state.json` (do NOT overwrite it — the existing state
    is the source of truth)
 6. Append a new session entry to the `sessions` array in `state.json` with the
@@ -114,94 +116,185 @@ cat > .prism/state.json << 'STATE_EOF'
 STATE_EOF
 # Replace TIMESTAMP placeholders with actual time
 sed -i '' "s/TIMESTAMP/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" .prism/state.json
-wc -l < .prism/chat.jsonl 2>/dev/null | tr -d ' ' > .prism/.chat_cursor 2>/dev/null || echo "0" > .prism/.chat_cursor
 ```
 
-### Phase 1: The Opening — "What's alive in you?"
-
-Don't ask "what are we building?" — that's an engineering question. You're talking
-to a creator. Open with warmth and invitation.
+### Phase 1: The Opening
 
 Via AskUserQuestion, say:
 
-> "Hey. Before we build anything — what's the thing you can't stop thinking about?
-> A frustration, an idea, a feeling, something you saw and thought 'why doesn't
-> this exist?' Tell me whatever's in your head."
+> "Tell me about what you want to build — not the pitch, the real version."
 
-Options:
-- "I have a clear idea" — they know what they want
-- "I have a feeling / vibe" — they know the direction but not the shape
-- "I'm stuck" — they need you to help them find it
-- Other — free text
+Options: free text only. No multiple choice. Let them talk.
 
-**Adapt your next move based on their answer:**
-- Clear idea → move to Phase 2, lean into sharpening
-- Feeling/vibe → spend more time in Phase 2, help them find the shape
-- Stuck → become a creative partner, riff with them, suggest directions
+**Your posture:** You're a sharp co-founder who gives a shit. Genuinely curious,
+but you won't let vague answers slide. Warm, not soft. Think of the best
+conversation you've had with someone who made your idea better by pushing you.
 
-### Phase 2: Creative Discovery — One Question at a Time
+### Phase 1.5: Use Case Classification
 
-Ask these questions **ONE AT A TIME** via AskUserQuestion. STOP after each one.
-Wait for the response. Let the conversation breathe. You're a creative director
-getting the brief, not an interviewer running through a checklist.
+After the founder's opening answer, silently classify the use case. Do NOT use
+keyword matching — use judgment about what they're actually trying to do.
 
-**Smart-skip:** If their opening already answers a question, skip it. Only ask
-what you don't yet know.
+| Use case | Signals | What changes |
+|----------|---------|-------------|
+| **Internal tool** | Building for themselves/their team, solving their own workflow pain | Skip demand validation. Focus on workflow pain + what done looks like. |
+| **Startup** | Building for other people, mentions users/customers/market/revenue | Full rigor. Demand, specific user, narrowest wedge, viability. |
+| **Validation** | Exploring whether an idea has legs, "wondering if", testing | Forcing questions, but may end with "don't build yet." |
+| **Passion/learning** | Fun, hackathon, learning, open source, side project | Focus on delight + scope containment. Skip viability. |
 
-#### Q1: The Person
+If ambiguous, ask ONE clarifying question: "Is this something you need for yourself,
+or something you're building for other people?" Then classify.
 
-> "Who is this for? Not a market — a person. Describe them. What's their day like?
-> What frustrates them? What would make them feel something?"
+The founder never sees the classification. It just shapes what you push on.
 
-**What you're listening for:** Specificity. A real human, not a demographic. If they
-say "developers" push gently: "Which developer? The one at a startup who's drowning,
-or the one at Google who's bored?" If they describe themselves, that's great — the
-best products start as something the founder needs.
+**Fluid rerouting:** If the use case shifts mid-conversation (internal tool becomes
+a startup idea, passion project reveals real demand), silently reclassify and adjust
+your toolkit. Log the reroute.
 
-#### Q2: The Feeling
+Log:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"use_case_classified","use_case":"{internal_tool|startup|validation|passion}","reason":"{signal from opening}"}' >> .prism/history.jsonl
+```
 
-> "When someone uses this for the first time — what do they feel? Not what they do,
-> what they *feel*. Relief? Delight? Power? Like they just got superpowers?"
+### Phase 2: Explore — The Conversation
 
-**What you're listening for:** The emotional core. This is the north star for every
-design decision. "Relief" builds a different product than "delight." "Power" builds
-a different product than "calm."
+This is not a questionnaire. It's a conversation that flows until the idea
+crystallizes. No fixed questions, no round limits. Every exchange should make
+the idea sharper. If an exchange doesn't add clarity, you're doing it wrong.
 
-#### Q3: The Moment
+**The conversation has two phases: extraction first, co-creation after.**
 
-> "Describe the moment it clicks. The user opens it, does the thing, and then — what
-> happens? Walk me through the 30 seconds where they go from 'huh' to 'whoa.'"
+#### Phase 2a: Extraction (first 2-3 exchanges)
 
-**What you're listening for:** The core interaction. This is what you'll build first.
-Not the settings page, not the onboarding flow — the moment of magic.
+Before you offer ideas, understand theirs. Pure listening and pushing.
 
-#### Q4: The Edge
+**After each answer, use this sequence:**
 
-> "What makes this *yours*? What taste, perspective, or insight do you bring that
-> nobody else would? What's the thing that makes someone say 'only *they* would
-> build it this way'?"
+1. **Mirror** their core phrase back. Repeat their words, not your interpretation.
+   "So... freelancers losing clients overnight." Then wait. They'll elaborate.
 
-**What you're listening for:** The founder's unique angle. This protects against
-building something generic. If they struggle here, help them — reflect back what
-you've heard: "From everything you've told me, your edge is..."
+2. **Push once** if the answer is vague. Choose from the toolkit below based on
+   what's missing. Be direct but curious, not interrogative.
 
-**Escape hatch:** If at any point the founder says "just build it," "let's go,"
-or shows impatience — respect it. Say "Got it — I have enough to start. Let's go."
-and fast-track to Phase 4.
+3. **Move on** when the answer is specific enough. Don't over-drill a point
+   that's already clear.
 
-### Phase 3: The Mirror — Reflect Back the Vision
+**Do NOT use "And what else?" on every answer.** Use it when you sense there's
+more underneath — when the founder pauses, hedges, or gives a polished answer
+that feels rehearsed. It's a scalpel, not a reflex.
 
-Synthesize everything you've heard into a **Vision Brief** — 4-6 sentences max.
-Write it in the founder's voice, not yours. Use their words. Then present it:
+#### Phase 2b: Co-creation (after the problem is grounded)
 
-> "Here's what I'm hearing. Tell me if this feels right:
->
-> {Vision Brief — who it's for, what they feel, the moment of magic, the edge}"
+Once you understand the problem, the person, and the core value — THEN you can
+offer possibilities. "What if it worked like..." / "Have you considered..."
+
+**Guardrail:** Co-creation is only allowed after you could answer: "What is this,
+who is it for, and why does it matter?" If you can't answer all three, stay in
+extraction mode.
+
+#### The Push Toolkit (choose based on what's missing)
+
+**For all use cases:**
+
+| What's missing | Push | Red flag |
+|---|---|---|
+| Specificity | "Give me a specific example. One real situation." | Category answers: "enterprises", "developers", "everyone" |
+| The real problem | "What happens if this never gets built? What breaks?" | "It would be nice to have" — nice ≠ need |
+| Depth | Mirror their last phrase as a question. Wait. | Rehearsed/polished answers that feel like a pitch |
+| Second layer | "And what else? What aren't you telling me?" | First answer given too quickly, too neatly |
+
+**Startup-specific pushes:**
+
+| What's missing | Push | Red flag |
+|---|---|---|
+| Demand evidence | "Who would be genuinely upset if this disappeared tomorrow?" | "People say it's interesting" — interest is not demand |
+| Specific user | "Name the person who needs this most. Title, company, situation." | "Marketing teams" — you can't email a category |
+| Status quo | "What are they doing right now to solve this, even badly?" | "Nothing — that's why it's a big opportunity" — if no one is trying, the pain isn't real |
+| Narrowest wedge | "What's the smallest version someone would pay for this week?" | "We need the full platform first" — that's architecture attachment, not user value |
+| Viability | "What do you know about this that the smart people saying no don't know?" | No contrarian insight — just "the market is growing" |
+
+**Internal tool-specific pushes:**
+
+| What's missing | Push | Red flag |
+|---|---|---|
+| Workflow pain | "Walk me through the specific moment this problem bites you." | Describing a solution before the problem |
+| Done state | "What would make you stop thinking about this?" | "A platform that does everything" — scope creep |
+| Current workaround | "What are you doing right now instead? Spreadsheet? Manual process?" | No workaround means the pain may not be real |
+
+**Validation-specific pushes:**
+
+| What's missing | Push | Red flag |
+|---|---|---|
+| Origin story | "What made you start thinking about this? Was there a specific moment?" | "I read an article about the market" — not personal |
+| Evidence anyone cares | "Have you talked to anyone about this? What did they say — exactly?" | "Everyone I've told thinks it's great" — friends lie |
+| Your insight | "What do you know about this problem that most people don't?" | No unique insight — just saw a trend |
+
+**Red flags are observations, not judgments.** Say:
+- "I notice you're describing interest rather than need — is there someone who'd
+  actually panic if this vanished?"
+- "It sounds like you're talking about a market, not a person — can you name one
+  specific human?"
+
+NOT: "That's a red flag." NOT: "You don't have demand."
+
+#### When the Startup Path Reveals No Demand
+
+If after sustained pushing (3+ exchanges on demand/viability), the founder has no
+specific user, no evidence of pain, and no contrarian insight — be honest:
+
+> "I want to be straight with you. Right now I'm hearing an idea that sounds
+> interesting, but I'm not hearing evidence that someone needs it. That doesn't
+> mean it's wrong — it means we don't know yet. Want to build a quick version
+> and test it, or would it be smarter to talk to 5 potential users first?"
+
+Options: "Build and test" / "Talk to people first" / "I know something you don't — let me explain"
+
+If they choose "let me explain" — listen. They may have demand evidence they
+haven't articulated yet. Push for specifics.
+
+### Phase 3: Crystallization — When Is the Idea Ready?
+
+**The concrete test:** After each exchange, silently ask yourself:
+"Could I generate acceptance criteria for at least one feature from what I know?"
+
+If yes — and you know WHAT is being built, WHO it's for, and WHY it matters —
+the idea is crystallized. Move to the mirror.
+
+If no — keep exploring. Something is still missing.
+
+**Soft ceiling:** If the conversation exceeds ~15 exchanges without crystallization,
+check in warmly:
+
+> "I think I have enough to start. Want to keep exploring, or shall I show you
+> what I'm hearing?"
+
+This is a check-in, not a stop. If the founder says "keep going" and the
+conversation still has energy, keep going.
+
+**Escape hatch with minimum info gate:** If the founder says "just build it" or
+"let's go" at any point, check: do you know the WHAT and the WHO?
+
+- If yes → respect it. Mirror what you have and proceed to Phase 4.
+- If no → "I want to build this for you, but I need to understand one more thing
+  so I build the right thing: {the missing piece — who it's for or what it does}."
+  Ask that one question, then proceed.
+
+Log:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"crystallization_detected","use_case":"{type}","exchanges":{N},"trigger":"{signal — e.g. founder_ready, criteria_possible, soft_ceiling}"}' >> .prism/history.jsonl
+```
+
+### Phase 3.5: The Mirror — Reflect Back and Confirm
+
+Synthesize everything into a **Vision Brief** — 3-4 sentences max.
+Write it in the founder's voice, not yours. Use their words.
+
+> "Here's what I'm hearing: {vision in their words}. Is that right?"
 
 Via AskUserQuestion:
 - "Yes — that's it" → proceed to Phase 4
-- "Close, but..." → adjust based on their feedback, re-present
-- "No, let me try again" → loop back to the relevant Phase 2 question
+- "Close, but..." → "What's off?" → adjust and re-mirror
+- "No, that's wrong" → "Tell me what I'm missing." → return to explore
 
 ### Phase 4: The Blueprint
 
@@ -214,34 +307,103 @@ Write the intent document:
 cat > .prism/intent.md << 'INTENT_EOF'
 # Vision
 Captured: {timestamp}
+Use case: {internal_tool|startup|validation|passion}
 
 ## The Founder's Words
 {their exact words from the session — preserve their voice}
 
 ## Vision Brief
-{the confirmed brief from Phase 3}
+{the confirmed brief from Phase 3.5 — 3-4 sentences in their words}
 
-## The Person
-{who it's for — specific, human}
+## What Is Being Built
+{concrete description of the product/tool — what it does}
 
-## The Feeling
-{the emotional core — one word + one sentence}
+## Who It's For
+{specific person or role — not a market. For internal tools, this is the founder.}
 
-## The Magic Moment
-{the 30-second interaction that makes them say "whoa"}
-
-## The Edge
-{what makes this uniquely theirs}
+## Why It Matters
+{the pain it solves, the need it fills, or the delight it creates}
 
 ## Core Features (extracted)
-- {feature 1 — the magic moment}
+- {feature 1 — the thing that makes someone go "whoa"}
 - {feature 2}
 - {feature 3}
 
 ## Success Looks Like
 {what "done" means — in the founder's words, not engineering terms}
+
+## Demand Evidence (startup/validation only — omit for internal tool/passion)
+{specific evidence: who wants this, what they're doing now, what they'd pay}
 INTENT_EOF
 ```
+
+#### Generate Two-Layer Acceptance Criteria
+
+After writing intent.md, silently generate acceptance criteria for each feature.
+Two layers — the founder only ever sees the user-facing layer.
+
+**Layer 1: User-facing** (`.prism/acceptance-criteria.md`) — plain language,
+experience-focused. The founder can read this and say "yes, that's right."
+
+```bash
+cat > .prism/acceptance-criteria.md << 'AC_EOF'
+# Acceptance Criteria
+Generated: {timestamp}
+From: .prism/intent.md
+
+{For each feature:}
+
+## {Feature Name}
+- {plain language criterion — what the user experiences}
+- {e.g., "People can sign up in under 30 seconds"}
+- {e.g., "The dashboard shows real-time data without refreshing"}
+AC_EOF
+```
+
+**Layer 2: Machine-facing** (`.prism/test-criteria.json`) — testable assertions
+that Claude derives silently from the user-facing criteria. The founder never
+sees this file.
+
+```bash
+cat > .prism/test-criteria.json << 'TC_EOF'
+{
+  "generated": "{timestamp}",
+  "features": [
+    {
+      "name": "{feature name}",
+      "user_criteria": ["{plain language criterion}"],
+      "assertions": [
+        {
+          "description": "{testable assertion — e.g., POST /signup returns 201 within 2s}",
+          "type": "{api|ui|data|integration}",
+          "can_fail": true
+        }
+      ]
+    }
+  ]
+}
+TC_EOF
+```
+
+**Self-check:** After generating test-criteria.json, review each assertion and ask:
+"Could this assertion actually fail? Is it specific enough to catch a real problem?"
+Remove or sharpen any assertion that would always pass (e.g., "the page loads" is
+too vague — "the page loads with at least 3 data rows visible" can actually fail).
+
+Log criteria generation:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"criteria_generated","features":{N},"assertions":{total_assertions}}' >> .prism/history.jsonl
+```
+
+#### Generate Tests from Machine-Layer Criteria
+
+After writing test-criteria.json, invoke `tdd-guide` agent **once** to generate
+actual test files from the machine-layer assertions. Pass it the assertions from
+test-criteria.json — not the user-facing criteria. This is the only tdd-guide
+invocation for these features. During the verification loop (Stage 2), tests are
+run inline without re-invoking tdd-guide.
+
+The founder never sees this step. Tests are generated silently.
 
 Update state:
 
@@ -305,9 +467,82 @@ Prism takes the initiative and drives everything forward.
 ### Stage 2: CREATING
 
 **Entered:** Automatically after the Vision Brief is confirmed.
-**What happens:** Prism builds. Magic moment first, then supporting features.
+**What happens:** Prism builds chunk by chunk. Magic moment first, then supporting
+features in dependency order (determined silently by Claude).
 
-**Behavior:**
+#### Hybrid Ordering — Claude Engineers, User Vibes
+
+Claude silently determines the build order: dependency analysis, sub-chunk splitting,
+technical sequencing. The founder never sees this. If Claude needs user input on
+ordering, ask in plain language only:
+
+- OK: "Which part matters most to you?" / "Should we start with what people see,
+  or what makes everything work?"
+- NEVER: "Auth depends on DB schema, should I build the schema first?"
+
+Each feature from intent.md = one build chunk. Chunks are ordered by dependency.
+Rejection of chunk N blocks chunks N+1... until resolved.
+
+#### Chunk Build + Verify Loop
+
+For each chunk (feature), Prism follows this cycle:
+
+1. **Build the chunk** — implement the feature silently
+2. **Verify silently** — read acceptance criteria for this feature from
+   `.prism/acceptance-criteria.md` and `.prism/test-criteria.json`, then:
+   - Self-evaluate: "Given these acceptance criteria and what I just built, does
+     the output satisfy the criteria? List any mismatches."
+   - Run existing tests inline (do NOT re-invoke tdd-guide unless fix changes
+     feature scope)
+3. **Apply the precedence hierarchy:**
+
+```
+Tests PASS + LLM self-check OK     → auto-proceed, brief status message
+Tests PASS + LLM flags concern     → surface advisory to user (non-blocking)
+Tests FAIL (1st attempt)           → fix silently, re-run tests
+Tests FAIL (2nd attempt)           → surface to user in plain English
+User override                      → log override + reason, proceed
+```
+
+4. **On green** — log success and move to next chunk:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"chunk_verified","feature":"{name}","tests":"pass","llm_check":"pass"}' >> .prism/history.jsonl
+```
+   Brief status message to founder: "The {feature} is working. Moving on."
+
+5. **On LLM advisory** (tests pass but LLM flags drift) — tell the founder warmly:
+   > "This is working, but I noticed something: {plain language description of
+   > concern}. Want me to adjust, or is this fine?"
+   Log the advisory. If founder says "it's fine" → log override + proceed:
+   ```bash
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"user_override","feature":"{name}","reason":"{founder words}","overrode":"llm_advisory"}' >> .prism/history.jsonl
+   ```
+
+6. **On test failure after 2 silent fixes** — surface to founder:
+   > "I ran into something with {feature}. {plain language description}.
+   > I tried fixing it twice but it's not right yet. Here's what I think
+   > is happening: {diagnosis}."
+   Log the failure. Wait for founder direction.
+
+#### Socratic Rejection UX — When the Founder Says "It Feels Off"
+
+When the founder rejects a chunk with vague feedback ("it feels off", "not right",
+"I don't like it", "it's wrong"), DON'T just ask "what's wrong?" — use targeted
+follow-ups to translate vibes into engineering changes:
+
+- "Is it doing the wrong thing, or doing the right thing the wrong way?"
+- "What did you picture instead?"
+- "Is it a feeling thing (how it looks/feels) or a function thing (what it does)?"
+
+Once you understand the real issue, translate it into engineering changes silently.
+Rebuild the chunk with the correction. Re-verify. Log the rejection:
+
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"chunk_rejected","feature":"{name}","feedback":"{founder words}","translated_to":"{engineering change}"}' >> .prism/history.jsonl
+```
+
+#### Behavior Rules (unchanged)
+
 - Build freely. Make decisions. Don't ask for approval on implementation details.
 - Keep the founder updated with SHORT status messages (1-2 sentences max):
   - "The main experience is working. Take a look."
@@ -318,11 +553,28 @@ Prism takes the initiative and drives everything forward.
 - When the founder gives vague direction ("make it feel warmer"), interpret with taste and execute
 - When the founder gives specific direction ("add a signup form"), execute exactly
 
-**What runs invisibly:**
-- Code review (catch bugs before they stack up)
-- Testing (test each change, don't mention it)
-- Security checks (flag only critical vulnerabilities)
-- Clean code practices (the code is always readable under the hood)
+**What runs invisibly (the expert team):**
+
+Prism leverages the full gstack toolkit as an invisible expert team. The founder
+never knows these are running. They just experience a product that keeps getting
+better, stays solid, and ships clean.
+
+- **Code review** — Use the `code-reviewer` agent after every significant change.
+  Fix issues silently. Only surface CRITICAL findings to the founder.
+- **Testing** — Use the `tdd-guide` agent to generate tests once per feature during
+  criteria generation. On verification, run existing tests inline — don't re-invoke
+  tdd-guide. Only re-invoke if a fix changes feature scope.
+- **Security** — Use the `security-reviewer` agent before shipping. Fix issues
+  silently. Only surface critical vulnerabilities.
+- **Design polish** — When the founder has a running app, use `/design-review`
+  concepts to catch visual issues. Fix CSS/styling silently.
+- **Architecture** — Use the `architect` agent for complex decisions. Make good
+  choices. Don't explain them unless asked.
+- **Build errors** — If a build breaks, use the `build-error-resolver` agent.
+  Fix it. Never show the error to the founder.
+
+The founder's experience: "I said what I wanted. It just works. Everything looks
+great. It shipped. How?"
 
 **Exits to POLISHING when:** ALL core features from the intent are built.
 Prism detects this by comparing `features_built` to `features_planned` in state.
@@ -427,7 +679,7 @@ Prism watches for these signals and transitions WITHOUT asking:
 
 ### Handling Founder Direction Changes Mid-Flow
 
-The founder can redirect at ANY stage via terminal or dashboard chat:
+The founder can redirect at ANY stage:
 
 - **Small changes** ("make the button bigger"): Stay in current stage, just do it.
 - **New features** ("add a payment flow"): Stay in CREATING, update `features_planned`,
@@ -606,7 +858,6 @@ This project uses Prism (`/prism`). State is stored in `.prism/`:
 - `.prism/intent.md` — full vision document
 - `.prism/state.json` — current state (stage, features, metrics)
 - `.prism/history.jsonl` — activity timeline
-- `.prism/chat.jsonl` — dashboard chat history
 - `.prism/handoff.md` — context from last session
 
 To resume: run `/prism` or read `.prism/handoff.md` for context.
@@ -627,26 +878,22 @@ CLAUDEMD_EOF
 
 ## State Management
 
-After every significant action, update `.prism/state.json`. The dashboard reads
-this file to render the UI — including the vision canvas, feature list, and
-stage progress.
+After every significant action, update `.prism/state.json`. This file tracks
+all session state — vision, features, stage progress.
 
 ### During VISIONING — update facets as you capture them
 
-After each discovery question, update the `vision` object so the dashboard
-renders each facet as it's revealed (they animate in one by one):
+During visioning, update state as the conversation progresses:
 
 ```bash
 cat > .prism/state.json << EOF
 {
   "status": "visioning",
   "intent": "",
-  "vision": {
-    "person": "{who it's for — or null if not yet captured}",
-    "feeling": "{the emotional core — or null}",
-    "moment": "{the magic moment — or null}",
-    "edge": "{the unique angle — or null}"
-  },
+  "use_case": "{internal_tool|startup|validation|passion|unknown}",
+  "what": "{what is being built — or null if not yet clear}",
+  "who": "{who it's for — or null if not yet clear}",
+  "why": "{why it matters — or null if not yet clear}",
   "features_planned": 0,
   "features_built": 0,
   "features": [],
@@ -723,42 +970,6 @@ and what was accomplished:
 This array is what powers the "Welcome back" message in Phase 0. Prism reads the
 last session's `features_completed` to tell the founder what they accomplished,
 and checks the current `state.json` for what comes next.
-
-The dashboard reads these files to show the founder their product taking shape
-in real-time.
-
-## Dashboard Chat Channel
-
-The Prism dashboard includes a chat panel. The founder can send messages from
-the browser, and Prism can reply — all via `.prism/chat.jsonl`.
-
-**How it works:** A PostToolUse hook (`chat-hook.sh`) runs after every tool call.
-It checks `.prism/chat.jsonl` for unread user messages and injects them directly
-into the conversation. You will see output like:
-
-```
-[PRISM DASHBOARD] New message from the founder:
-  > Make the header bigger
-```
-
-**When you see this, act on it immediately.** This is the founder talking to you
-in real time from the dashboard.
-
-**Replying to the founder:**
-
-```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","from":"prism","text":"{your reply}"}' >> .prism/chat.jsonl
-```
-
-**Rules for the chat channel:**
-- When you see a `[PRISM DASHBOARD]` message, respond immediately — acknowledge
-  first, then do the work
-- Reply in the same warm, brief Prism voice — outcomes, not jargon
-- If the founder asks to change direction via chat, treat it the same as if
-  they said it in the terminal
-- Keep replies to 1-2 sentences. The chat is for quick back-and-forth, not essays.
-- If a message requires significant work, acknowledge it ("On it!") then do the work
-- Always reply via chat.jsonl so the founder sees your response in the dashboard
 
 ## Context Handoff — Surviving Session Boundaries
 
@@ -870,7 +1081,7 @@ The handoff captures intent and judgment. The state captures metrics.
 ## Completion Status
 
 These map directly to the stage machine. Prism sets `status` in state.json
-and the dashboard renders the stage track automatically.
+and Prism transitions automatically.
 
 - **visioning** — Discovery phase, drawing out the founder's vision
 - **creating** — In creative flow, building features
