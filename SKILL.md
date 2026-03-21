@@ -1,6 +1,6 @@
 ---
 name: prism
-version: 0.1.0
+version: 0.2.0
 description: |
   Creative founder's AI co-pilot. Invisible guardrails that keep you in creative flow
   while preventing the 80% complexity wall. Tracks your intent, detects drift, monitors
@@ -66,7 +66,9 @@ Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-emp
 2. **State migration** — silently generate any missing triad files:
    - If `.prism/acceptance-criteria.md` doesn't exist → generate from intent.md features
    - If `.prism/test-criteria.json` doesn't exist → generate from acceptance criteria
+   - If `.prism/protocol-template.md` doesn't exist OR sources (intent.md, acceptance-criteria.md) are newer → regenerate it
    - If `.prism/config.json` doesn't exist → use defaults (no action needed)
+   - Re-read `.prism/config.json` at session start to pick up path changes between sessions
    - Log migration: `{"action":"state_migration","generated":[list of files created]}`
    - Do NOT interrupt the founder for this. Migration is silent.
 3. Read `.prism/history.jsonl` (last 5 entries) to understand where things left off
@@ -161,6 +163,39 @@ echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"use_case_classified","u
 This is not a questionnaire. It's a conversation that flows until the idea
 crystallizes. No fixed questions, no round limits. Every exchange should make
 the idea sharper. If an exchange doesn't add clarity, you're doing it wrong.
+
+#### Socratic Depth Calibration
+
+The conversation depth adapts to how much exploration the founder needs.
+
+| Mode | Questions | When |
+|------|-----------|------|
+| **Quick** (1-2 Qs) | Founder has a clear plan, just needs criteria generated | Clear, specific opening with concrete features and users |
+| **Standard** (3-5 Qs) | Default | Most conversations |
+| **Deep** (5-10 Qs) | Founder is exploring, fuzzy on details | Vague opening, hedging, "I'm not sure yet" signals |
+
+**Auto-detection:** After the founder's opening answer, silently classify the
+depth (separate from the use-case classification in Phase 1.5). Look for:
+- **Quick signals:** Named specific features, gave concrete user, described
+  exact workflow. They know what they want.
+- **Deep signals:** Used hedging language ("maybe", "I think"), described a
+  category of problems rather than a specific one, gave abstract answers.
+- **Standard:** Everything else.
+
+**User override:** The founder can change depth at any point by saying things
+like "let's go deeper", "I know what I want — let's just build", "ask me more",
+or "skip ahead". When they override:
+- The new depth takes effect from the **next exchange forward**
+- Questions already asked are NOT re-asked
+- Existing criteria are NOT regenerated
+- Log the override:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"depth_override","from":"{previous}","to":"{new}","exchange_number":{N}}' >> .prism/history.jsonl
+```
+
+**Safety net:** If Quick mode produces vague criteria, the specificity gate
+(Stage 2 verification loop) catches them and re-derives with more detail.
+Quick mode is safe to grant because verification backstops it.
 
 **The conversation has two phases: extraction first, co-creation after.**
 
@@ -395,13 +430,127 @@ Log criteria generation:
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"criteria_generated","features":{N},"assertions":{total_assertions}}' >> .prism/history.jsonl
 ```
 
-#### Generate Tests from Machine-Layer Criteria
+#### Generate Protocol Template
 
-After writing test-criteria.json, invoke `tdd-guide` agent **once** to generate
-actual test files from the machine-layer assertions. Pass it the assertions from
-test-criteria.json — not the user-facing criteria. This is the only tdd-guide
-invocation for these features. During the verification loop (Stage 2), tests are
-run inline without re-invoking tdd-guide.
+After writing acceptance criteria, auto-generate a structured protocol document
+that captures the full intent in a portable format. This is a **derived artifact** —
+it regenerates whenever `intent.md` or `acceptance-criteria.md` change.
+
+```bash
+cat > .prism/protocol-template.md << 'PROTOCOL_EOF'
+---
+format_version: 1
+generated: {ISO timestamp}
+source: .prism/intent.md + .prism/acceptance-criteria.md
+---
+
+# Protocol: {Project Name}
+
+## Problem Statement
+{Extracted from intent.md — the pain, the need, or the delight gap}
+
+## Confirmed Intent
+{The Vision Brief from Phase 3.5 — the founder's confirmed words}
+
+## Target User
+{Who it's for — from intent.md "Who It's For" section}
+
+## Acceptance Criteria
+{For each feature, copy the user-facing criteria from acceptance-criteria.md}
+
+### {Feature 1}
+- {criterion}
+- {criterion}
+
+### {Feature 2}
+- {criterion}
+
+## Build Plan
+{Ordered list of features from intent.md "Core Features" section, with dependency order}
+1. {Feature — the magic moment}
+2. {Feature}
+3. {Feature}
+PROTOCOL_EOF
+```
+
+**Error handling:** If `intent.md` or `acceptance-criteria.md` is missing when
+protocol generation is triggered, skip silently and log:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"protocol_skipped","reason":"missing_source","missing":"{file}"}' >> .prism/history.jsonl
+```
+
+**Auto-regeneration:** Whenever Prism writes to `intent.md` or
+`acceptance-criteria.md` (during visioning, re-derivation, or user edits),
+regenerate `protocol-template.md` immediately after the write. The protocol
+is never edited directly — always regenerated from sources. Log:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"protocol_exported","sections_generated":{N},"trigger":"{source_file_changed}"}' >> .prism/history.jsonl
+```
+
+#### Obsidian Vault Integration
+
+After generating (or regenerating) the protocol template, optionally copy it
+to a configured Obsidian vault path.
+
+**Configuration:** Read `.prism/config.json` at session start. Re-read on each
+session start to handle path changes between sessions.
+
+```json
+{
+  "obsidian_vault_path": "~/Obsidian/Prism"
+}
+```
+
+**Defaults:** If config is missing, malformed, or `obsidian_vault_path` is not
+set → Obsidian integration is disabled. No error, no prompt. Silent.
+
+**Write behavior:**
+1. Expand `~` to the user's home directory
+2. Check if the vault path exists and is writable
+3. If path doesn't exist → warn once: "Vault path not found, saving locally only"
+   then fall back to `.prism/` and log
+4. If path not writable → warn once + skip, log
+5. If protocol template already exists at vault path → create a timestamped backup
+   (e.g., `protocol-template.2026-03-21T14-00.md`) then overwrite
+6. **Backup retention:** Keep only the last 3 backups per project. Delete older ones silently.
+7. Copy `protocol-template.md` to the vault path using a **project-specific filename**:
+   `protocol-{project-name}.md` where `project-name` is derived from the directory
+   name or `intent.md` title. This prevents cross-project clobbering when multiple
+   Prism projects share the same vault path.
+
+```bash
+# Example Obsidian write (pseudocode — Claude implements the logic)
+VAULT_PATH=$(python3 -c "import json,os; c=json.load(open('.prism/config.json')); print(os.path.expanduser(c.get('obsidian_vault_path','')))" 2>/dev/null)
+PROJECT_NAME=$(basename "$(pwd)" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+VAULT_FILE="protocol-${PROJECT_NAME}.md"
+if [ -n "$VAULT_PATH" ] && [ -d "$VAULT_PATH" ] && [ -w "$VAULT_PATH" ]; then
+  # Backup if exists
+  if [ -f "$VAULT_PATH/$VAULT_FILE" ]; then
+    cp "$VAULT_PATH/$VAULT_FILE" "$VAULT_PATH/protocol-${PROJECT_NAME}.$(date -u +%Y-%m-%dT%H-%M-%S).md"
+    # Keep only last 3 backups for this project
+    ls -t "$VAULT_PATH"/protocol-${PROJECT_NAME}.2*.md 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null
+  fi
+  cp .prism/protocol-template.md "$VAULT_PATH/$VAULT_FILE"
+fi
+```
+
+Log:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"obsidian_write","path":"{vault_path}","backup_created":{true|false}}' >> .prism/history.jsonl
+```
+
+If write fails:
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"obsidian_write_failed","path":"{vault_path}","error_type":"{not_found|not_writable|copy_failed}"}' >> .prism/history.jsonl
+```
+
+#### Initial Test Scaffolding (optional)
+
+After writing test-criteria.json, Prism MAY invoke `tdd-guide` agent to generate
+an initial test scaffold from the machine-layer assertions. This is a head start,
+not the final test suite — during the Stage 2 verification loop, tdd-guide
+generates tests **per chunk** from the (possibly re-derived) criteria for that
+chunk. The per-chunk invocation is authoritative; this initial pass is optional.
 
 The founder never sees this step. Tests are generated silently.
 
@@ -485,40 +634,103 @@ Rejection of chunk N blocks chunks N+1... until resolved.
 
 #### Chunk Build + Verify Loop
 
+A "chunk" = one feature from the build plan (one entry in the protocol template's
+Build Plan section). Chunk boundaries align with features in `intent.md`, ordered
+by dependency. One feature = one chunk.
+
 For each chunk (feature), Prism follows this cycle:
 
-1. **Build the chunk** — implement the feature silently
-2. **Verify silently** — read acceptance criteria for this feature from
-   `.prism/acceptance-criteria.md` and `.prism/test-criteria.json`, then:
-   - Self-evaluate: "Given these acceptance criteria and what I just built, does
-     the output satisfy the criteria? List any mismatches."
-   - Run existing tests inline (do NOT re-invoke tdd-guide unless fix changes
-     feature scope)
-3. **Apply the precedence hierarchy:**
+1. **Specificity gate** — before building, evaluate each machine-layer criterion
+   for this chunk with the prompt: "Does this criterion reference a concrete
+   input/output pair, a specific endpoint, a measurable value, or a testable
+   behavior? If not, what's missing?" Criteria that fail are re-derived with
+   more specificity.
+   - **Re-derived criteria require founder approval.** Show the diff:
+     > "I made your criteria more specific. Here's what changed:
+     > - Before: '{original criterion}'
+     > - After: '{re-derived criterion}'
+     > Does this look right?"
+   - Max 2 re-derivation attempts per criterion. If still vague after 2 tries,
+     surface as a **judgment checkpoint**:
+     > "I'm having trouble making this specific enough to test: '{criterion}'.
+     > Can you help me understand what success looks like here?"
+   - If founder approves re-derived criteria → **write them back** to
+     `.prism/test-criteria.json` (update the assertion) and
+     `.prism/acceptance-criteria.md` (update the user-facing criterion)
+     before proceeding. This ensures tdd-guide in step 3 generates tests
+     from the approved version, and the criteria survive session boundaries.
+     Then regenerate `protocol-template.md` (and Obsidian copy if configured).
+   - If founder rejects re-derived criteria → use original criteria
+   - Log:
+   ```bash
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"specificity_gate","feature":"{name}","criteria_count":{N},"vague_count":{N},"re_derived":{N}}' >> .prism/history.jsonl
+   ```
+
+2. **Build the chunk** — implement the feature silently
+
+3. **tdd-guide generates tests** from machine-layer criteria for this chunk.
+   Pass the (possibly re-derived) assertions from `test-criteria.json`.
+
+   **Fallback:** If tdd-guide is unavailable or fails, degrade to LLM-only
+   comparison with a **distinct warning per failure type**:
+   - Agent unavailable: "Test agent unavailable — verifying with code review only"
+   - Test compilation failure: "Couldn't generate tests for this chunk — verifying with code review only"
+   - Timeout: "Tests timed out — verifying with code review only"
+   Log degradation:
+   ```bash
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"tdd_degradation","feature":"{name}","reason":"{unavailable|compilation|timeout}","chunk_number":{N}}' >> .prism/history.jsonl
+   ```
+
+4. **Run ALL tests** — re-run ALL previous chunk tests + current chunk tests
+   (regression detection). This catches cases where chunk N breaks chunk N-1.
+   Assumes <10 chunks per project for Phase 2a. If chunk count exceeds 15,
+   revisit with incremental test strategy.
+   - If a previous chunk's tests fail, log regression:
+   ```bash
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"test_regression","chunk_failing":"{name}","chunk_that_broke_it":"{current_chunk}"}' >> .prism/history.jsonl
+   ```
+
+5. **LLM comparison** (runs AFTER tests complete — sequential, not parallel).
+   Reviews the built chunk's code and test results against both human-layer
+   and machine-layer acceptance criteria. Flags semantic drift from the original
+   intent (e.g., "the criteria say users sign up in under 30 seconds, but the
+   implementation has no timeout handling").
+
+6. **Apply the precedence hierarchy:**
 
 ```
-Tests PASS + LLM self-check OK     → auto-proceed, brief status message
-Tests PASS + LLM flags concern     → surface advisory to user (non-blocking)
-Tests FAIL (1st attempt)           → fix silently, re-run tests
+Tests PASS + LLM OK                → auto-proceed, brief status message
+Tests PASS + LLM flags drift       → judgment checkpoint (blocks until founder dismisses or adjusts)
+Tests FAIL (1st attempt)           → fix silently, re-run ALL tests
 Tests FAIL (2nd attempt)           → surface to user in plain English
+tdd-guide degraded + LLM OK       → auto-proceed with degradation warning shown once
+tdd-guide degraded + LLM flags     → judgment checkpoint
 User override                      → log override + reason, proceed
 ```
 
-4. **On green** — log success and move to next chunk:
+7. **On green** — log success and move to next chunk:
 ```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"chunk_verified","feature":"{name}","tests":"pass","llm_check":"pass"}' >> .prism/history.jsonl
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"chunk_verified","feature":"{name}","tests":"pass","llm_check":"pass","regression":"none"}' >> .prism/history.jsonl
 ```
    Brief status message to founder: "The {feature} is working. Moving on."
+   Regenerate `protocol-template.md` (and Obsidian copy if configured).
 
-5. **On LLM advisory** (tests pass but LLM flags drift) — tell the founder warmly:
-   > "This is working, but I noticed something: {plain language description of
-   > concern}. Want me to adjust, or is this fine?"
-   Log the advisory. If founder says "it's fine" → log override + proceed:
+8. **On LLM drift flag** (tests pass but LLM flags semantic drift) — this is a
+   **judgment checkpoint**, not a non-blocking advisory. It blocks until the
+   founder explicitly dismisses or adjusts:
+   > "This is working, but I noticed something that might not match what you
+   > described: {plain language description of drift}. Should I adjust this,
+   > or is it fine as-is?"
+   Log the checkpoint. Wait for founder response:
    ```bash
-   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"user_override","feature":"{name}","reason":"{founder words}","overrode":"llm_advisory"}' >> .prism/history.jsonl
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"drift_judgment_checkpoint","feature":"{name}","drift":"{description}"}' >> .prism/history.jsonl
+   ```
+   If founder says "it's fine" → log override + proceed:
+   ```bash
+   echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"user_override","feature":"{name}","reason":"{founder words}","overrode":"drift_checkpoint"}' >> .prism/history.jsonl
    ```
 
-6. **On test failure after 2 silent fixes** — surface to founder:
+9. **On test failure after 2 silent fixes** — surface to founder:
    > "I ran into something with {feature}. {plain language description}.
    > I tried fixing it twice but it's not right yet. Here's what I think
    > is happening: {diagnosis}."
@@ -561,9 +773,9 @@ better, stays solid, and ships clean.
 
 - **Code review** — Use the `code-reviewer` agent after every significant change.
   Fix issues silently. Only surface CRITICAL findings to the founder.
-- **Testing** — Use the `tdd-guide` agent to generate tests once per feature during
-  criteria generation. On verification, run existing tests inline — don't re-invoke
-  tdd-guide. Only re-invoke if a fix changes feature scope.
+- **Testing** — Use the `tdd-guide` agent to generate tests per chunk during the
+  verification loop. Run ALL tests (current + previous chunks) for regression
+  detection. If tdd-guide is unavailable, degrade to LLM-only with distinct warnings.
 - **Security** — Use the `security-reviewer` agent before shipping. Fix issues
   silently. Only surface critical vulnerabilities.
 - **Design polish** — When the founder has a running app, use `/design-review`
@@ -856,6 +1068,10 @@ cat > CLAUDE.md << 'CLAUDEMD_EOF'
 ## Prism State
 This project uses Prism (`/prism`). State is stored in `.prism/`:
 - `.prism/intent.md` — full vision document
+- `.prism/acceptance-criteria.md` — user-facing acceptance criteria
+- `.prism/test-criteria.json` — machine-facing testable assertions
+- `.prism/protocol-template.md` — portable protocol doc (derived, auto-regenerated)
+- `.prism/config.json` — configuration (Obsidian vault path, etc.)
 - `.prism/state.json` — current state (stage, features, metrics)
 - `.prism/history.jsonl` — activity timeline
 - `.prism/handoff.md` — context from last session
@@ -1077,6 +1293,43 @@ The handoff captures intent and judgment. The state captures metrics.
 4. **Don't lose the vibe.** The founder chose Prism because they want to stay creative.
    If your communication style feels like a project manager's status report, you've failed.
    Be warm. Be brief. Be their teammate, not their tool.
+
+## Behavioral Precedence
+
+Phase 2a introduces multiple interacting behaviors (specificity gate, tdd-guide
+verification, depth calibration, drift detection, scope protection, smart
+interrupts). When these conflict, use this precedence:
+
+### Specificity gate vs drift detection
+If both fire simultaneously (e.g., re-derived criteria also reveal drift from
+original intent): **specificity gate first.** Resolve criteria quality before
+checking drift. The re-derived criteria may resolve the drift concern. If drift
+persists after re-derivation, fire the drift judgment checkpoint next.
+
+### Verification judgment checkpoint vs Socratic questioning
+If the verification loop wants to interrupt (drift checkpoint) during the same
+turn that depth calibration would ask a Socratic question: **verification wins.**
+Verification checkpoints are blocking — they protect the founder from building
+on a drifted foundation. Socratic questions can wait until the checkpoint is
+resolved.
+
+### Depth override vs crystallization detection
+If the founder says "let's just build" (Quick override) but the conversation
+signals Deep (vague answers, hedging): **respect the override.** The founder's
+explicit intent trumps auto-detection. The specificity gate in Stage 2 backstops
+Quick mode by catching vague criteria before tests are generated.
+
+### General rule
+When two behaviors want to interrupt the founder simultaneously, fire at most
+ONE interrupt per exchange. Priority order:
+1. Test failure (after 2 silent fixes) — blocking
+2. Drift judgment checkpoint — blocking
+3. Specificity gate re-derivation approval — blocking
+4. Scope protection warning — non-blocking
+5. Complexity warning — non-blocking
+6. Socratic depth question — non-blocking
+
+Queue lower-priority interrupts for the next exchange.
 
 ## Completion Status
 
