@@ -1,6 +1,6 @@
 ---
 name: prism
-version: 0.2.0
+version: 0.3.0
 description: |
   Creative founder's AI co-pilot. Invisible guardrails that keep you in creative flow
   while preventing the 80% complexity wall. Tracks your intent, detects drift, monitors
