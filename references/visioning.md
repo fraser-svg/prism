@@ -22,6 +22,23 @@ Options:
 - Feeling/vibe → spend more time in Phase 2, help them find the shape
 - Stuck → become a creative partner, riff with them, suggest directions
 
+**Depth classification:** From the opening answer, silently classify the Socratic
+depth for this session. This determines how many questions you ask and how deep
+you drill.
+
+| Opening signal | Depth | Max rounds | Behaviour |
+|---------------|-------|------------|-----------|
+| Clear idea, specific features, knows the "what" and "why" | **Quick** | 2 | Sharpen and confirm. Skip questions they already answered. |
+| Has a feeling/direction but not the shape | **Standard** | 5 | Full discovery flow. One question at a time. |
+| Stuck, exploring, "I don't know yet" | **Deep** | 10 | Creative partner mode. Riff, suggest, probe. Ask "why" repeatedly until the real requirement surfaces. |
+
+The founder can override at any point:
+- "Let's go deeper" → escalate depth
+- "That's enough, let's build" → exit immediately (escape hatch)
+- "Can you ask me more about X?" → targeted deep-dive on X, then resume
+
+Log the classified depth to state.json (`socratic_depth`) and history.jsonl.
+
 ## Phase 2: Creative Discovery — One Question at a Time
 
 Ask these questions **ONE AT A TIME** via AskUserQuestion. STOP after each one.
@@ -30,6 +47,13 @@ getting the brief, not an interviewer running through a checklist.
 
 **Smart-skip:** If their opening already answers a question, skip it. Only ask
 what you don't yet know.
+
+**The "why" drill:** When a founder's answer is vague or surface-level, drill
+deeper before moving to the next question. Not aggressively. Curiously.
+- "That's interesting. Why does that matter to them?"
+- "What happens if they don't have this?"
+- "You said 'frustrated'. What does that frustration actually look like?"
+Each follow-up counts toward the max round limit for the current depth.
 
 ### Q1: The Person
 
@@ -72,6 +96,14 @@ you've heard: "From everything you've told me, your edge is..."
 or shows impatience — respect it. Say "Got it — I have enough to start. Let's go."
 and fast-track to Phase 4.
 
+**Graceful exit:** When you hit the max round limit for the current depth, stop
+questioning. Do not ask "one more thing." Say:
+
+> "I have enough to start. We'll refine as we go."
+
+Then generate best-effort acceptance criteria from whatever you have and proceed
+to Phase 3. Log the graceful exit to history.jsonl with the round count.
+
 ## Phase 3: The Mirror — Reflect Back the Vision
 
 Synthesize everything you've heard into a **Vision Brief** — 4-6 sentences max.
@@ -86,12 +118,12 @@ Via AskUserQuestion:
 - "Close, but..." → adjust based on their feedback, re-present
 - "No, let me try again" → loop back to the relevant Phase 2 question
 
-## Phase 4: The Blueprint
+## Phase 4: The Blueprint + Acceptance Criteria
 
-Once the vision is confirmed, extract the build plan. Do this silently — the
-founder doesn't need to see architecture decisions.
+Once the vision is confirmed, do three things silently. The founder doesn't need
+to see architecture decisions or test specifications.
 
-Write the intent document:
+### 4a. Write the intent document
 
 ```bash
 cat > .prism/intent.md << 'INTENT_EOF'
@@ -125,6 +157,95 @@ Captured: {timestamp}
 {what "done" means — in the founder's words, not engineering terms}
 INTENT_EOF
 ```
+
+### 4b. Generate two-layer acceptance criteria
+
+For each feature extracted from the intent, generate TWO layers of acceptance
+criteria. The founder only ever sees the user-facing layer.
+
+**User-facing layer** (`.prism/acceptance-criteria.md`):
+Plain language, experience-focused. Written in the founder's voice.
+
+```bash
+cat > .prism/acceptance-criteria.md << 'AC_EOF'
+# Acceptance Criteria
+Generated: {timestamp}
+From: .prism/intent.md
+
+{For each feature:}
+
+## {Feature name}
+- {criterion 1 — plain language, what the user experiences}
+- {criterion 2}
+- {criterion 3}
+
+AC_EOF
+```
+
+**Machine-facing layer** (`.prism/test-criteria.json`):
+Testable assertions that Claude derives silently from the user-facing criteria.
+These feed into the tdd-guide agent for deterministic test generation.
+
+```bash
+cat > .prism/test-criteria.json << 'TC_EOF'
+{
+  "generated": "{timestamp}",
+  "features": [
+    {
+      "name": "{feature name}",
+      "assertions": [
+        "{testable assertion — e.g., POST /signup returns 201 within 2s}",
+        "{testable assertion — specific, measurable, can fail}"
+      ]
+    }
+  ]
+}
+TC_EOF
+```
+
+### 4c. Self-check the machine-layer criteria
+
+Before proceeding, validate EVERY machine-layer assertion by asking yourself:
+
+1. **"Could this actually fail?"** If the assertion would pass trivially or can
+   never fail, it is useless. Rewrite it to be specific enough to catch a real
+   problem.
+2. **"Is this specific enough?"** Vague assertions ("the page loads correctly")
+   cascade into weak tests. Rewrite: "the page renders within 2s and displays
+   the user's name in the header."
+3. **"Does this map to what the founder said?"** If you cannot trace the assertion
+   back to a specific thing the founder expressed, delete it. Do not invent
+   requirements.
+
+Log the criteria generation to history.jsonl:
+```bash
+jq -n --arg action "criteria_generated" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg features "{count}" --arg assertions "{count}" \
+  '{action: $action, ts: $ts, features: $features, assertions: $assertions}' \
+  >> .prism/history.jsonl
+```
+
+### 4d. Generate tests from machine-layer criteria
+
+After writing test-criteria.json, invoke `tdd-guide` agent **once** to generate
+actual test files from the machine-layer assertions. Pass it the assertions from
+test-criteria.json, not the user-facing criteria. This is the only tdd-guide
+invocation for these features. During the verification loop, tests are run inline
+without re-invoking tdd-guide (unless a fix changes feature scope).
+
+The founder never sees this step. Tests are generated silently.
+
+### 4e. Determine build order silently
+
+Claude handles all engineering decisions: dependency analysis, build order,
+sub-chunk splitting, technical sequencing. The founder NEVER sees this.
+
+If build order involves a genuine product choice (not an engineering choice),
+ask in plain language:
+> "Which part matters most to you? Should we start with what people see first,
+> or what makes everything work underneath?"
+
+NEVER ask: "Auth depends on DB schema, should I build the schema first?"
 
 Update state to `"status": "creating"` with features_planned set and current_focus
 pointing to the magic moment feature.

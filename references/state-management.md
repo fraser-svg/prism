@@ -9,11 +9,18 @@ stage progress.
 After each discovery question, update the `vision` object so the dashboard
 renders each facet as it's revealed (they animate in one by one):
 
+**IMPORTANT:** When rewriting state.json, always preserve the existing `sessions`
+array. Read the current sessions first, then include them in the rewrite. The
+templates below show `sessions` as a placeholder — in practice, copy the array
+from the current state.json before overwriting.
+
 ```bash
 cat > .prism/state.json << EOF
 {
   "status": "visioning",
   "intent": "",
+  "socratic_depth": "{quick|standard|deep}",
+  "socratic_rounds": 0,
   "vision": {
     "person": "{who it's for — or null if not yet captured}",
     "feeling": "{the emotional core — or null}",
@@ -23,6 +30,8 @@ cat > .prism/state.json << EOF
   "features_planned": 0,
   "features_built": 0,
   "features": [],
+  "acceptance_criteria": false,
+  "sessions": [{existing sessions array — MUST be preserved across rewrites}],
   "files_count": 0,
   "complexity_score": 0,
   "warnings": [],
@@ -31,17 +40,24 @@ cat > .prism/state.json << EOF
 EOF
 ```
 
+- `socratic_depth`: the classified depth from the opening answer (quick/standard/deep)
+- `socratic_rounds`: running count of questions asked (increment after each Q+A)
+- `acceptance_criteria`: set to `true` once `.prism/acceptance-criteria.md` and
+  `.prism/test-criteria.json` are generated in Phase 4
+
 ## During CREATING+ — update features as you build them
 
 The `features` array drives the feature checklist in the sidebar. Each feature
-has a `name` and `done` boolean. Set `current_focus` to the feature you're
-working on — it gets a pulsing indicator.
+has a `name`, `done` boolean, and `verification` object tracking the last
+verification outcome for that feature.
 
 ```bash
 cat > .prism/state.json << EOF
 {
   "status": "creating",
   "intent": "{one-line vision brief}",
+  "socratic_depth": "{quick|standard|deep}",
+  "socratic_rounds": {N},
   "vision": {
     "person": "{captured}",
     "feeling": "{captured}",
@@ -51,10 +67,24 @@ cat > .prism/state.json << EOF
   "features_planned": {N},
   "features_built": {N},
   "features": [
-    {"name": "{magic moment feature}", "done": true},
-    {"name": "{feature 2}", "done": false},
-    {"name": "{feature 3}", "done": false}
+    {
+      "name": "{magic moment feature}",
+      "done": true,
+      "verification": {"tests": "pass", "llm": "ok", "outcome": "auto_proceed"}
+    },
+    {
+      "name": "{feature 2}",
+      "done": false,
+      "verification": null
+    },
+    {
+      "name": "{feature 3}",
+      "done": false,
+      "verification": null
+    }
   ],
+  "acceptance_criteria": true,
+  "sessions": [{existing sessions array — MUST be preserved across rewrites}],
   "current_focus": "{feature being built right now}",
   "files_count": {N},
   "complexity_score": {0-10},
@@ -63,6 +93,11 @@ cat > .prism/state.json << EOF
 }
 EOF
 ```
+
+The `verification` object per feature tracks:
+- `tests`: "pass" | "fail" | null (not yet run)
+- `llm`: "ok" | "flagged" | null
+- `outcome`: "auto_proceed" | "advisory" | "silent_fix" | "escalated" | "override" | null
 
 Also maintain a history log:
 

@@ -16,8 +16,12 @@ if [ -n "$GSTACK_MOD" ] && [ -n "$PRISM_MOD" ] && [ "$GSTACK_MOD" -gt "$PRISM_MO
 fi
 
 # Log session start marker (hooks check for entries after this marker)
-jq -n --arg action "session_start" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{action: $action, ts: $ts}' >> .prism/history.jsonl 2>/dev/null || true
+if command -v jq >/dev/null 2>&1; then
+  jq -n --arg action "session_start" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{action: $action, ts: $ts}' >> .prism/history.jsonl 2>/dev/null || true
+else
+  printf '{"action":"session_start","ts":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .prism/history.jsonl 2>/dev/null || true
+fi
 ```
 
 Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-empty
@@ -34,23 +38,36 @@ Check if `.prism/intent.md` exists AND `.prism/state.json` exists with a non-emp
    ```
 5. Restore the stage from `state.json` (do NOT overwrite it — the existing state
    is the source of truth)
-6. Append a new session entry to the `sessions` array in `state.json` with the
+6. **State migration** — silently upgrade older sessions to include triad fields:
+   - If `acceptance_criteria` field is missing from state.json: add it as `false`
+   - If `socratic_depth` field is missing: add it as `"standard"` (safe default)
+   - If `socratic_rounds` field is missing: add it as `0`
+   - If `.prism/acceptance-criteria.md` does not exist but intent.md has features:
+     generate acceptance criteria silently from the existing features in intent.md
+     (both user-facing and machine-facing layers). Set `acceptance_criteria: true`.
+     Log: `{"action": "criteria_migrated", "ts": "...", "source": "intent.md"}`
+   - If `.prism/config.json` does not exist: use defaults (no Obsidian path). Do
+     NOT create config.json unless the founder configures something.
+   - If features in state.json lack `verification` objects: add `"verification": null`
+     to each feature silently.
+   **No user interruption during migration.** This happens before the welcome-back.
+7. Append a new session entry to the `sessions` array in `state.json` with the
    current start time
-7. Log the session resumption:
+8. Log the session resumption:
    ```bash
    echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","action":"session_resumed","feature":"'$(cat .prism/state.json | grep -o '"current_focus":"[^"]*"' | cut -d'"' -f4)'"}' >> .prism/history.jsonl
    ```
-8. Tell the founder warmly what happened last time and where you are:
+9. Tell the founder warmly what happened last time and where you are:
    > "Welcome back. Last time we got {last completed feature or milestone} working.
    > {current_focus or next feature} is next. Want to keep going, or change direction?"
-9. Via AskUserQuestion with options:
+10. Via AskUserQuestion with options:
    - "Keep going" — resume at the current stage, pick up where you left off
    - "Change direction" — return to VISIONING with a fresh discovery flow
    - "Show me what we built" — summarize the features, show the state, then ask what's next
-10. If "Keep going" — immediately start working on the next incomplete feature.
+11. If "Keep going" — immediately start working on the next incomplete feature.
     Don't ask more questions. Just build.
-11. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
-12. If "Show me what we built" — read the features list and history, summarize
+12. If "Change direction" — return to VISIONING. Start the discovery flow fresh.
+13. If "Show me what we built" — read the features list and history, summarize
     what exists in plain language, then ask what's next via AskUserQuestion.
 
 **If fresh session (no intent.md):**

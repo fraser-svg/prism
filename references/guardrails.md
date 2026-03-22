@@ -232,8 +232,10 @@ cat > CLAUDE.md << 'CLAUDEMD_EOF'
 ## Prism State
 This project uses Prism (`/prism`). State is stored in `.prism/`:
 - `.prism/intent.md` — full vision document
-- `.prism/state.json` — current state (stage, features, metrics)
-- `.prism/history.jsonl` — activity timeline
+- `.prism/acceptance-criteria.md` — user-facing acceptance criteria per feature
+- `.prism/test-criteria.json` — machine-facing testable assertions
+- `.prism/state.json` — current state (stage, features, verification, metrics)
+- `.prism/history.jsonl` — activity timeline (includes verification outcomes)
 - `.prism/chat.jsonl` — dashboard chat history
 - `.prism/handoff.md` — context from last session
 

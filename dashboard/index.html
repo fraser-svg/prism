@@ -748,6 +748,7 @@
     let lastStateJson = '';
     let lastHistorySize = 0;
     let pollTimer = null;
+    let chatPollTimer = null;
 
     const $ = id => document.getElementById(id);
 
@@ -1088,10 +1089,11 @@
     // Poll
     function restartPolling() {
       if (pollTimer) clearInterval(pollTimer);
+      if (chatPollTimer) clearInterval(chatPollTimer);
       fetchState(); fetchHistory(); fetchChat(); fetchStory();
       pollTimer = setInterval(() => { fetchState(); fetchHistory(); fetchStory(); }, config.pollInterval);
       // Chat polls faster for responsiveness
-      setInterval(() => { fetchChat(); }, 1000);
+      chatPollTimer = setInterval(() => { fetchChat(); }, 1000);
     }
 
 

@@ -54,10 +54,22 @@ if [ -f "$FILE_PATH" ]; then
   exit 0
 fi
 
+# Helper: emit a deny response (works with or without jq)
+emit_deny() {
+  local msg="$1"
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg msg "$msg" '{"permissionDecision":"deny","message":$msg}'
+  else
+    local escaped
+    escaped=$(printf '%s' "$msg" | sed 's/"/\\"/g')
+    printf '{"permissionDecision":"deny","message":"%s"}\n' "$escaped"
+  fi
+}
+
 # Check history.jsonl for research entries after most recent session_start
 HISTORY=".prism/history.jsonl"
 if [ ! -f "$HISTORY" ]; then
-  jq -n --arg msg "[prism] RESEARCH GATE: You are creating a new file but no research has been logged this session. Before creating new files, run the Research Gate (Guardrail 7): research at least 2 approaches, present options to the founder, and log the research to history.jsonl." '{"permissionDecision":"deny","message":$msg}'
+  emit_deny "[prism] RESEARCH GATE: You are creating a new file but no research has been logged this session. Before creating new files, run the Research Gate (Guardrail 7): research at least 2 approaches, present options to the founder, and log the research to history.jsonl."
   exit 0
 fi
 
@@ -66,22 +78,30 @@ LAST_START_RAW=$(grep -n '"session_start"' "$HISTORY" 2>/dev/null | tail -1 | cu
 LAST_START=${LAST_START_RAW:-0}
 LAST_START=$(echo "$LAST_START" | tr -d '[:space:]')
 
-# Check for research or pure-local entries after that line
+# Get session history
 if [ "$LAST_START" -gt 0 ] 2>/dev/null; then
-  RESEARCH_COUNT=$(tail -n +"$LAST_START" "$HISTORY" | grep -c '"research"\|"pure-local"' 2>/dev/null || echo "0")
+  SESSION_HISTORY=$(tail -n +"$LAST_START" "$HISTORY")
 else
-  RESEARCH_COUNT=$(grep -c '"research"\|"pure-local"' "$HISTORY" 2>/dev/null || echo "0")
+  SESSION_HISTORY=$(cat "$HISTORY")
 fi
+
+# Check for research entries in session history.
+# NOTE: pure-local entries are NOT counted here. A pure-local log means "this
+# specific file had no external deps" — it should not unlock other new files
+# that may have external deps. Only a real "research" entry counts.
+RESEARCH_COUNT=$(echo "$SESSION_HISTORY" | grep -c '"research"' 2>/dev/null || echo "0")
 RESEARCH_COUNT=$(echo "$RESEARCH_COUNT" | tr -d '[:space:]')
 
 if [ "${RESEARCH_COUNT:-0}" -eq 0 ]; then
   # Log the violation
-  jq -n --arg action "hook_violation" --arg hook "research-gate" \
-    --arg file "$FILE_PATH" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{action: $action, ts: $ts, hook: $hook, file: $file}' \
-    >> "$HISTORY" 2>/dev/null || true
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg action "hook_violation" --arg hook "research-gate" \
+      --arg file "$FILE_PATH" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '{action: $action, ts: $ts, hook: $hook, file: $file}' \
+      >> "$HISTORY" 2>/dev/null || true
+  fi
 
-  jq -n --arg msg "[prism] RESEARCH GATE: You are creating a new file ($FILE_PATH) but no research has been logged this session. Before creating new files with external dependencies, run the Research Gate (Guardrail 7): research at least 2 approaches, present options to the founder, and log the research to history.jsonl. If this is a pure-local file with no external deps, log a pure-local entry first." '{"permissionDecision":"deny","message":$msg}'
+  emit_deny "[prism] RESEARCH GATE: You are creating a new file ($FILE_PATH) but no research has been logged this session. Before creating new files with external dependencies, run the Research Gate (Guardrail 7): research at least 2 approaches, present options to the founder, and log the research to history.jsonl. If this is a pure-local file with no external deps, log a pure-local entry first."
   exit 0
 fi
 

@@ -15,8 +15,8 @@ function getArg(flag, fallback) {
   return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
 }
 
-const PORT = parseInt(getArg('--port', '3333'), 10);
-const PRISM_DIR = path.resolve(getArg('--prism-dir', path.join(process.cwd(), '.prism')));
+const PORT = parseInt(getArg('--port', process.env.PORT || '3333'), 10);
+const PRISM_DIR = path.resolve(getArg('--prism-dir', process.env.PRISM_DIR || path.join(process.cwd(), '.prism')));
 const DASHBOARD_DIR = __dirname;
 
 const MIME = {
@@ -110,10 +110,10 @@ const server = http.createServer((req, res) => {
 
   // Static files
   let filePath = pathname === '/' ? '/index.html' : pathname;
-  filePath = path.join(DASHBOARD_DIR, filePath);
+  filePath = path.resolve(path.join(DASHBOARD_DIR, filePath));
 
-  // Prevent directory traversal
-  if (!filePath.startsWith(DASHBOARD_DIR)) {
+  // Prevent directory traversal — resolve() normalises symlinks and encoding
+  if (!filePath.startsWith(DASHBOARD_DIR + path.sep) && filePath !== DASHBOARD_DIR) {
     res.writeHead(403);
     return res.end('Forbidden');
   }
