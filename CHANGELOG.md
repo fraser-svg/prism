@@ -2,6 +2,57 @@
 
 All notable changes to Prism are documented here.
 
+## [1.0.1.0] - 2026-03-23
+
+### Added
+- Auto-advance: Prism auto-invokes /plan-eng-review, /qa, and /ship via the Skill tool instead of telling users to run them manually
+- Operation log: verbose machine-readable log at openspec/changes/{name}/prism-log.md for diagnostics and cross-session resume
+- Artifact verification (Part B.5): verifies spec files exist on disk before advancing, preventing silent data loss from subagent failures
+- Fallback to guided mode if Skill tool invocation fails
+- Context args: Prism constructs spec summaries to pass to each invoked skill
+
+### Changed
+- Stages 2, 4, 5 now auto-invoke gstack skills with announcements instead of prompting user to run manually
+- Stage 0 resume now reads last 3 log entries for cross-session context
+- Skill catalog rewritten for auto-invocation with skip handling and fallback sections
+- OpenSpec guided-orchestration spec updated to reflect auto-invocation behavior
+
+### Fixed
+- Stale spec path in build-mode.md (was reading from wrong directory during active builds)
+- Subagent trust issue: spec generation could report success without writing files to disk
+
+## [1.0.0.0] - 2026-03-22
+
+### Added
+- Prism Autopilot: AI concierge that orchestrates OpenSpec + gstack for non-engineers
+- OpenSpec CLI integration for structured spec generation, validation, and change tracking
+- Guided gstack orchestration: recommends /plan-eng-review, /qa, /ship at each stage
+- Subagent pattern: technical operations hidden from user's terminal
+- 6-stage lifecycle: Resume → Understand → Plan → Build → Verify → Ship
+- Drift detection: compares build state against OpenSpec requirements
+- Cross-session resume via OpenSpec change tracking
+- Backward stage transitions: user can go back to any stage at any time
+- Post-ship confirmation before marking specs as shipped
+- Spec validation on resume (malformed specs skipped gracefully)
+- OpenSpec skills and commands for Claude Code (.claude/skills/, .claude/commands/)
+- OpenSpec change specs for prism-autopilot-v1 (16 requirements, 28 scenarios)
+
+### Changed
+- SKILL.md rewritten from 254-line monolith to 262-line thin dispatcher with reference files
+- Repositioned from "creative founder co-pilot" to "AI concierge for building software"
+- Personality (The Operator) carried forward; all other v0.3 architecture replaced
+- Spec format: OpenSpec strict (### Requirement / #### Scenario / SHALL / WHEN-THEN)
+
+### Removed
+- Old stage machine (VISIONING/CREATING/POLISHING/SHIPPING/DONE)
+- Socratic visioning flow (references/visioning.md)
+- .prism/ state management system (references/state-management.md)
+- 6 invisible guardrails system (references/guardrails.md)
+- Verification loop (references/verification.md) — replaced by OpenSpec validation
+- Session init protocol (references/session-init.md) — replaced by OpenSpec resume
+- Dashboard chat protocol (references/chat-and-handoff.md)
+- Enforcement hooks (operator-boundary, research-gate, verification-gate)
+
 ## [0.3.0] - 2026-03-22
 
 ### Added
