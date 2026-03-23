@@ -78,4 +78,28 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 ---
 
+## 8. No product-level planning — Prism only thinks in single features (2026-03-23)
+
+**What happened:** Prism treats every build as an independent feature change. When building a whole product (like Encounter), there's no step where it looks at the full vision, designs a foundation, and sequences the build order. Each change gets its own isolated spec/plan/build cycle with no awareness of what came before or what comes next.
+
+**Four specific gaps:**
+
+1. **No product decomposition.** Prism jumps from understanding to spec to build. No stage to look at a whole product, identify foundational architecture, and sequence the build order so later features don't force rewrites.
+
+2. **No change sequencing.** When a product has 5 changes that must be built in order (foundation first, then features that depend on it), Prism treats each as independent. No dependency graph, no shared architecture doc across changes.
+
+3. **No architectural continuity.** Each change gets its own spec, eng review, and build. Nothing carries forward architectural decisions from Change 1 into Change 2's planning. The model abstraction layer from the foundation is invisible when planning the next feature — leading to contradictory decisions or duplicated work.
+
+4. **No parallel workstreams.** Real products have tracks that run simultaneously (e.g., content pipeline + app build). Prism is single-threaded: understand, plan, build, verify, ship, repeat.
+
+**Expected:** A "Stage 0.5: Product Decomposition" where Prism:
+- Takes a full product vision
+- Designs the architecture
+- Sequences changes with dependencies
+- Maintains a living architecture document that informs every subsequent change
+
+**Severity:** Critical — this is the difference between "build me a feature" and "build me a product." Without this, Prism is a feature builder, not a product builder.
+
+---
+
 _Add new entries below. Format: number, date, what happened, expected, severity._
