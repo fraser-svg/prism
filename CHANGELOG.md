@@ -2,6 +2,33 @@
 
 All notable changes to Prism are documented here.
 
+## [1.1.0.0] - 2026-03-23
+
+### Added
+- Living Architecture Doc (PRODUCT.md): per-project product context that Prism creates, reads, and updates throughout the build lifecycle (DOGFOOD #8)
+- Product-level sharpening questions for new products (vision, architecture, phases)
+- Bootstrap protocol: synthesize PRODUCT.md from existing code/archived specs
+- Silent context injection: PRODUCT.md read at every stage transition without ceremony
+- Authority rule: archived specs = history ground truth, PRODUCT.md = direction
+- Stale architecture detection via narrow heuristics (package.json, directory structure)
+- Stage 2.5: auto-invoke /design-consultation for UI products before first build (DOGFOOD #1, #6)
+- Stage 4.5: auto-invoke /design-review for UI products after QA (DOGFOOD #6)
+- Resilience protocol: research alternatives before saying something isn't possible, implement after researching (DOGFOOD #5)
+- PRODUCT.md update after Build completion (status: "built") and after Ship (status: "shipped")
+- Next-phase suggestion after shipping
+- UI product detection heuristic in stage routing
+- New reference file: references/product-context.md
+
+### Changed
+- Stage 0 resume subagent now reads PRODUCT.md and returns product-aware routing (4 paths)
+- Stage 1 now checks for PRODUCT.md before sharpening questions (product vs feature ceremony)
+- Stage 2 passes architecture context to /plan-eng-review
+- Stage 3 consults PRODUCT.md architecture for build decisions
+- Stage 5 updates PRODUCT.md and suggests next phase after archiving
+- Stage routing decision tree expanded with PRODUCT.md awareness
+- Build mode now includes resilience protocol and PRODUCT.md consultation
+- Skill catalog now includes /design-consultation and /design-review invocation patterns
+
 ## [1.0.1.0] - 2026-03-23
 
 ### Added
