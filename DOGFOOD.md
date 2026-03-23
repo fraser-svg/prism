@@ -68,4 +68,14 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 ---
 
+## 7. Use Anthropic's skill-creator when Prism creates skills (2026-03-23)
+
+**What happened:** Prism creates/modifies its own skill files (SKILL.md, reference files) by hand-writing markdown. There's no standardization or quality check on the skill format.
+
+**Expected:** Any time Prism creates or modifies a skill, it should use the `/skill-creator` skill (Anthropic's official tool for creating and optimizing skills). This ensures proper format, triggering accuracy, and quality.
+
+**Severity:** Medium — not user-facing, but affects Prism's own reliability and maintainability.
+
+---
+
 _Add new entries below. Format: number, date, what happened, expected, severity._
