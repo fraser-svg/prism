@@ -1,49 +1,76 @@
 # gstack Skill Catalog
 
-Prism recommends gstack skills at specific stages. The user invokes them manually.
-Prism updates the spec after the user returns.
+Prism invokes gstack skills automatically using the Skill tool. They run in the
+main conversation because they are interactive — the user sees and answers their
+questions. Prism observes the output and auto-advances to the next stage.
 
 ## Plan Stage → /plan-eng-review
 
-**Recommendation text:** "Your spec is ready. Run `/plan-eng-review` now to lock in the architecture. When it's done, come back and tell me."
+**Announcement text:** "Your spec is ready — I'm going to run a quick architecture review."
 
 **What it does:** Reviews the implementation plan for architecture, code quality, tests, and performance. Interactive — asks the user questions.
 
-**Behavioral contract:** Accepts free-text context as its argument.
+**Invocation:** `Skill tool: skill="plan-eng-review", args="Review the implementation of {feature-name}: {spec summary}"`
 
-**After user returns:** Ask "How did planning go? Any decisions I should know about?"
-- All good → proceed to Build
-- Planning found problems → offer to revise the spec: "No worries — let's adjust the spec."
+**Args:** Read the spec and construct a 2-3 sentence context summary. Include the feature name and key requirements.
+
+**After skill completes:** Prism observes the review output and auto-advances.
+- Review passed → proceed to Build
+- Planning found problems → offer to revise the spec: "The review flagged some issues — let's adjust the spec."
 
 ## Verify Stage → /qa
 
-**Recommendation text:** "Build looks complete. Run `/qa` now to test everything works."
+**Announcement text:** "Build looks complete — I'm going to run QA to make sure everything works."
 
 **What it does:** Systematically QA tests the application. Can fix bugs it finds.
 
-**Behavioral contract:** Accepts a URL or description of what to test.
+**Invocation:** `Skill tool: skill="qa", args="Test the app at {URL or description}"`
 
-**After user returns:** Ask "Did QA pass? Any issues remaining?"
-- All good → proceed to Ship
-- QA found issues → offer to fix: "Let me fix those." Go back to Build.
+**Args:** Detect a testable URL (dev server, localhost, deployed URL). If not detectable, ask the user before invoking.
+
+**After skill completes:** Prism observes the QA output and auto-advances.
+- QA passed → proceed to Ship
+- QA found issues → offer to fix: "QA found some issues — let me fix those." Go back to Build.
 
 ## Ship Stage → /ship
 
-**Recommendation text:** "Everything looks good. Run `/ship` now — it'll commit your code and create a pull request."
+**Announcement text:** "Everything looks good — I'm going to commit your code and create a pull request."
 
 **What it does:** Commits code, pushes to remote, creates a pull request. It does NOT deploy to production — it creates a PR for review.
 
-**Behavioral contract:** Handles commit, push, and PR creation.
+**Invocation:** `Skill tool: skill="ship"`
 
-**After user returns:** Ask "Did that go smoothly? Is your code committed and PR created?"
-- Yes → archive the OpenSpec change, mark complete
-- No → offer to troubleshoot
+**Args:** None needed — /ship operates on the current branch.
+
+**After skill completes:** Prism observes the shipping output.
+- PR created → archive the OpenSpec change, mark complete
+- Problems → offer to troubleshoot
 
 **IMPORTANT:** /ship creates a PR, not a deployment. Do NOT say "deploy" or ask "Did the deploy succeed?" The user would not have deployed anything — they'd have a PR.
 
+## Skip Handling
+
+The user can skip any gstack skill by saying "skip planning", "skip QA", etc.
+When skipped, Prism acknowledges ("No problem") and advances to the next stage.
+Do NOT invoke the Skill tool if the user has asked to skip.
+
+**Timing:** Skips must happen BEFORE Prism invokes the skill. Once a skill starts
+running in the main conversation, it runs to completion.
+
+## Fallback
+
+If the Skill tool fails or produces unexpected results, Prism falls back to guided
+mode — telling the user which skill to run manually:
+
+- "I couldn't run the review automatically. Run `/plan-eng-review` now and come back when it's done."
+- "I couldn't run QA automatically. Run `/qa` now and come back when it's done."
+- "I couldn't ship automatically. Run `/ship` now and come back when it's done."
+
+This preserves the original guided behavior as a safety net.
+
 ## Error Handling
 
-If a user reports a gstack skill failed or didn't work as expected:
+If a gstack skill fails during auto-invocation:
 - Surface the issue in plain English: "The planning step hit a problem."
 - Offer options: "Want me to try a different approach, or should we skip this step and keep building?"
 - Never retry silently. Never show raw errors.

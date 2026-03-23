@@ -15,6 +15,7 @@ allowed-tools:
   - Glob
   - AskUserQuestion
   - Agent
+  - Skill
 ---
 
 # Prism Autopilot — AI Concierge for Building Software
@@ -50,6 +51,19 @@ CLI output, or tool call noise. To achieve this:
   let me try that again." Retry once. If still fails, do the operations inline
   (visible but functional — better than broken).
 
+## Operation Log
+
+Prism logs every significant action to a file for diagnostics and cross-session
+continuity. See [references/operation-log.md](references/operation-log.md) for
+the full protocol.
+
+- **Log file:** `openspec/changes/{change-name}/prism-log.md`
+- **Logging method:** Always via subagent (Agent tool) — invisible to the user.
+- **When:** On every stage transition, skill invocation, spec generation, drift
+  detection, skip, error, backstep, and each requirement built.
+- **Failure handling:** If logging fails, continue silently. Never surface log
+  errors to the user.
+
 ## How Prism Works — The 6 Stages
 
 On every invocation, determine which stage the user is in using
@@ -70,9 +84,11 @@ Use the **Agent tool** to scan for in-progress work. Prompt the agent:
 >    Look at the artifacts — are tasks complete? Is there a spec?
 > 5. If changes have specs, read the spec files in `openspec/changes/{name}/specs/*/spec.md`
 >    to understand what the user was building.
+> 6. If `openspec/changes/{name}/prism-log.md` exists, read the last 3 entries
+>    to understand where the user left off and what Prism last did.
 >
 > Return EXACTLY one of:
-> - FOUND: {change-name} | {brief description of what's being built} | tasks: N/M complete
+> - FOUND: {change-name} | {brief description of what's being built} | tasks: N/M complete | last action: {from log, or 'no log'}
 > - NONE: no in-progress work found
 > - MULTIPLE: {name1} (N/M tasks), {name2} (N/M tasks)
 > Do NOT return raw JSON or file paths."
@@ -81,6 +97,8 @@ Based on the agent's response:
 - **FOUND:** "You have an in-progress build: **{description}**. Pick up where you left off, or start something new?"
 - **NONE:** Proceed to Stage 1
 - **MULTIPLE:** List them in plain English and ask which to resume
+
+**Log:** If a change was found, use a subagent to log "Scanned for in-progress work" to that change's log per [references/operation-log.md](references/operation-log.md). If no change was found, skip logging (no log file exists yet — it gets created at Stage 1).
 
 ### Stage 1: Understand
 
@@ -143,18 +161,30 @@ If revisions needed: collect feedback, send back to a subagent to update and re-
 
 **Store the change name** — you'll need it for all subsequent stages.
 
-### Stage 2: Plan (Guided via gstack)
+**Log:** Use a subagent to log spec generation and approval per [references/operation-log.md](references/operation-log.md).
 
-Read [references/skill-catalog.md](references/skill-catalog.md) for the recommendation.
+### Stage 2: Plan (Auto-invoked via gstack)
 
-Tell the user: "Your spec is ready. Run `/plan-eng-review` now to lock in the
-architecture. When it's done, come back and tell me."
+Read [references/skill-catalog.md](references/skill-catalog.md) for details.
 
-The user can:
-- **Run the skill** → When they return, ask how it went. Update spec status to `planned`.
-- **Skip planning** → Say "No problem — let's start building."
-- **Planning found problems** → "No worries — let's adjust the spec." Go back to Stage 1
-  Part B to revise the spec based on what planning uncovered.
+Tell the user: "Your spec is ready — I'm going to run a quick architecture review."
+
+Before invoking, read the spec and construct a context summary. Then invoke using the
+**Skill tool:** `skill="plan-eng-review"`, `args="Review the implementation of {feature-name}: {2-3 sentence spec summary}"`
+
+**Fallback:** If the Skill tool errors or produces unexpected results, fall back to
+guided mode: "I couldn't run the review automatically. Run `/plan-eng-review` now and
+come back when it's done."
+
+**Skip:** The user can say "skip planning" BEFORE invocation. Once the skill starts,
+it runs to completion. If skipped: "No problem — let's start building."
+
+After the skill completes, Prism observes the output and auto-advances:
+- **Review passed** → Update spec status to `planned`. Proceed to Stage 3.
+- **Planning found problems** → "The review flagged some issues — let's adjust the spec."
+  Go back to Stage 1 Part B to revise.
+
+**Log:** Use a subagent to log the planning outcome per [references/operation-log.md](references/operation-log.md).
 
 ### Stage 3: Build (Prism Builds Directly)
 
@@ -180,32 +210,57 @@ or something's missing, surface it as a question:
 - User says yes → use a subagent to add the new requirement to the spec and re-validate
 - User says no → remove the extra work, continue per original spec
 
-### Stage 4: Verify (Guided via gstack)
+**Log:** Use a subagent to log each requirement built and any drift detected per [references/operation-log.md](references/operation-log.md).
 
-Read [references/skill-catalog.md](references/skill-catalog.md) for the recommendation.
+### Stage 4: Verify (Auto-invoked via gstack)
 
-Tell the user: "Build looks complete. Run `/qa` now to test everything works."
+Read [references/skill-catalog.md](references/skill-catalog.md) for details.
 
-The user can:
-- **Run /qa** → When they return, ask if QA passed
-  - QA passed → move to Stage 5
-  - QA found issues → "Let me fix those." Go back to Build to address the issues.
-- **Skip verification** → Proceed to Stage 5
+Tell the user: "Build looks complete — I'm going to run QA to make sure everything works."
 
-### Stage 5: Ship (Guided via gstack + Confirmation)
+Before invoking, detect a testable URL (check for dev server, localhost, or deployed URL).
+If no URL is detectable, ask the user: "Where can I test this? Give me a URL or describe
+what to check."
 
-Read [references/skill-catalog.md](references/skill-catalog.md) for the recommendation.
+Invoke using the **Skill tool:** `skill="qa"`, `args="Test the app at {URL or description}"`
 
-Tell the user: "Everything looks good. Run `/ship` now — it'll commit your code and
-create a pull request."
+**Fallback:** If the Skill tool errors, fall back to guided mode: "I couldn't run QA
+automatically. Run `/qa` now and come back when it's done."
 
-After the user returns: **always ask** "Did that go smoothly? Is your code committed and PR created?"
-- User says yes → use a subagent to archive the change:
+**Skip:** The user can say "skip QA" BEFORE invocation. If skipped: proceed to Stage 5.
+
+After the skill completes, Prism observes the output and auto-advances:
+- **QA passed** → Proceed to Stage 5.
+- **QA found issues** → "QA found some issues — let me fix those." Go back to Build.
+
+**Log:** Use a subagent to log the verification outcome per [references/operation-log.md](references/operation-log.md).
+
+### Stage 5: Ship (Auto-invoked via gstack + Confirmation)
+
+Read [references/skill-catalog.md](references/skill-catalog.md) for details.
+
+Tell the user: "Everything looks good — I'm going to commit your code and create a
+pull request."
+
+Invoke using the **Skill tool:** `skill="ship"`
+
+**Fallback:** If the Skill tool errors, fall back to guided mode: "I couldn't ship
+automatically. Run `/ship` now and come back when it's done."
+
+**Skip:** The user can say "skip shipping" BEFORE invocation. If skipped:
+"No problem — your code is ready whenever you want to ship. Just say 'ship' when
+you're ready." The change stays active in OpenSpec (not archived).
+
+After the skill completes, Prism observes the output. If a PR was created successfully:
+- Use a subagent to archive the change:
   > "Run: `openspec archive "{change-name}" -y`
   > This merges the specs into the main openspec/specs/ directory.
   > Return: 'Archived successfully' or describe any error."
-  Tell the user: "All done! Your spec is saved for future reference."
-- User says no → offer to troubleshoot: "What happened? I can help sort it out."
+  Tell the user: "All done! Your code is committed and your spec is saved."
+- If shipping had problems → offer to troubleshoot: "Something went wrong with shipping.
+  Want me to help sort it out?"
+
+**Log:** Use a subagent to log the shipping outcome and archive status per [references/operation-log.md](references/operation-log.md).
 
 ### Spec Changes (via subagent)
 
@@ -234,6 +289,8 @@ When a user requests changes to a completed or in-progress build:
 
 4. On approval, go to Stage 3 (Build) with the new change name.
 
+**Log:** Use a subagent to log the spec change per [references/operation-log.md](references/operation-log.md).
+
 ### Recovery — Going Backwards
 
 The user can always go back to a previous stage:
@@ -243,6 +300,8 @@ The user can always go back to a previous stage:
 - "Let me re-test" → Go to Stage 4
 
 When going back, the spec stays as-is unless the user explicitly asks to change it.
+
+**Log:** Use a subagent to log the backstep per [references/operation-log.md](references/operation-log.md).
 
 ## Rules
 

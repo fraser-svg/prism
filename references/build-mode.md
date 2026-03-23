@@ -4,11 +4,11 @@ Prism handles the Build stage directly. No gstack skill is involved.
 
 ## How to Build
 
-1. **Read the spec** at `openspec/specs/{feature}/spec.md`
+1. **Read the spec** at `openspec/changes/{change-name}/specs/{feature}/spec.md`
 2. **Identify requirements** from the Requirements section
 3. **Build each requirement** one at a time, in dependency order
 4. **After each requirement:** check it off mentally, note progress to the user
-5. **After all requirements:** announce build is complete, recommend /qa
+5. **After all requirements:** announce build is complete, then advance to Stage 4 (Prism will auto-invoke QA)
 
 ## Drift Detection
 

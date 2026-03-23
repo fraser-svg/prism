@@ -14,21 +14,24 @@ On activation, follow this decision tree:
 Stage 1: Understand (sharpening questions → generate spec via subagent)
     │ spec generated in openspec/changes/{name}/specs/
     │
-Stage 2: Plan (recommend /plan-eng-review)
-    │ user can skip → go to Build
+Stage 2: Plan (auto-invoke /plan-eng-review via Skill tool)
+    │ user can skip before invocation → go to Build
     │ planning found problems → go back to Stage 1 to revise
+    │ fallback: if Skill tool fails → guided mode
     │
 Stage 3: Build (Prism builds directly, referencing spec in change dir)
     │ drift detection active
     │ read spec from: openspec/changes/{name}/specs/{feature}/spec.md
     │
-Stage 4: Verify (recommend /qa)
-    │ user can skip → go to Ship
+Stage 4: Verify (auto-invoke /qa via Skill tool)
+    │ user can skip before invocation → go to Ship
     │ QA found issues → go back to Build to fix
+    │ fallback: if Skill tool fails → guided mode
     │
-Stage 5: Ship (recommend /ship — creates PR, NOT a deploy)
-    │ post-ship confirmation: "Is your code committed and PR created?"
+Stage 5: Ship (auto-invoke /ship via Skill tool — creates PR, NOT a deploy)
+    │ Prism observes output, archives change on success
     │ archive change: openspec archive "{name}" -y
+    │ fallback: if Skill tool fails → guided mode
     │
 Done. Change archived. Specs merged to openspec/specs/.
 ```
@@ -44,7 +47,8 @@ Done. Change archived. Specs merged to openspec/specs/.
 | Stage 3 | Stage 4 | All requirements built |
 | Stage 4 | Stage 5 | QA passed or skipped |
 | Stage 4 | Stage 3 | QA found issues, fix them |
-| Stage 5 | Done | User confirms PR created, change archived |
+| Stage 5 | Done | PR created successfully, change archived |
+| Stage 5 | Paused | User skips shipping — change stays active |
 | Any | Stage 1 | User says "change the spec" or "start over" |
 | Any | Stage 3 | User says "fix something" or "I need to change X" |
 
