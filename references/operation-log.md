@@ -42,8 +42,11 @@ Log every significant action — verbose for diagnostics while Prism is being de
 | Spec approved | "User approved spec" | "Approved" or "Approved with revisions" |
 | Stage 2 invoked | "Auto-invoked /plan-eng-review" | Outcome from planning |
 | Stage 2 skipped | "User skipped planning" | "Skipped" |
-| Stage 3 start | "Started build" | Number of requirements |
-| Requirement built | "Built requirement: {name}" | Status |
+| Stage 3 start | "Started build — {R} requirements, {W} workers" | requirement_count: {R}, worker_count: {W} |
+| Worker completed | "Worker completed: {task summary}" | Status, guardian_retries: {N} |
+| Worker failed | "Worker failed: {task summary}" | failure_reason, guardian_retries: {N} |
+| Guardian retry | "Guardian retry: {task summary}" | Diagnosis, rewritten prompt summary |
+| Guardian escalated | "Guardian escalated to user" | failure_reasons (all 3 attempts) |
 | Drift detected | "Drift detected" | Description + user decision |
 | Stage 4 invoked | "Auto-invoked /qa" | QA outcome |
 | Stage 4 skipped | "User skipped QA" | "Skipped" |

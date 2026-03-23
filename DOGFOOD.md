@@ -110,4 +110,25 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 ---
 
+## 9. v2 Validation: Two-Tier Context Split + Guardian (2026-03-23)
+
+**What:** Prism v2 introduces a two-tier context split (Operator holds user intent, Workers get task-only prompts) and a Guardian pattern (diagnose failures, rewrite prompts, respawn). Validate this architecture on 3 real builds.
+
+**Validation tests:**
+
+- [ ] 9.1 **Context firewall test:** During validation build 1, after dispatching the first worker, instruct the worker to report what context it received. Verify it contains ONLY: task description, file list, constraints, shared types. Verify it does NOT contain: personality text ("The Operator"), user conversation history, vision statements, or PRODUCT.md Vision content.
+- [ ] 9.2 **Validation build 1:** Build a real tool using Prism v2. Record: worker_count, guardian_retries, failure_reasons, user_interventions. Did the 80% wall appear?
+- [ ] 9.3 **Validation build 2:** Build a second real tool. Compare metrics to build 1. Is recovery better than v1.1.0.0?
+- [ ] 9.4 **Validation build 3:** Build a third real tool. Compare all 3 builds. Overall: fewer user interventions? Better failure recovery?
+- [ ] 9.5 **Guardian recovery test:** During one of the validation builds, verify the Guardian diagnoses a worker failure, rewrites the prompt, and successfully recovers on retry.
+
+**Success criteria:**
+- At least 2 of 3 builds complete without hitting the 80% wall
+- Guardian successfully recovers from at least 1 worker failure
+- User intervention needed fewer times than with v1.1.0.0
+
+**If validation fails:** Iterate the context split and Guardian inside Claude Code (cheap) before considering standalone CLI extraction (expensive).
+
+---
+
 _Add new entries below. Format: number, date, what happened, expected, severity._

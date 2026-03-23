@@ -2,6 +2,22 @@
 
 All notable changes to Prism are documented here.
 
+## [2.0.0.0] - 2026-03-23
+
+### Changed
+- **Stage 3 (Build): Two-Tier Context Split** — Operator decomposes spec requirements into isolated TaskPrompts and dispatches workers via Agent tool. Workers receive ONLY task description, relevant files, constraints, and shared types. User conversation, personality, and vision are never sent to workers. This firewall prevents context pollution that causes the 80% wall.
+- **Stage 3 (Build): Guardian Pattern** — Replaces "retry once, go inline" with diagnose-rewrite-respawn. On worker failure, the Operator reads the error, diagnoses the cause, rewrites the TaskPrompt with failure context, and dispatches a new worker. Max 3 retries before escalating to user in plain English.
+- **Stage 3 (Build): Status Relay** — After each worker completes, Operator translates the result into a plain-English progress update for the user. Workers are invisible; progress is visible.
+- **references/build-mode.md** — Rewritten with TaskPrompt template, context firewall rules, Guardian protocol, and status relay pattern.
+
+### Added
+- Operation log metrics: worker_count, guardian_retries, failure_reasons for build validation
+- DOGFOOD #9: v2 validation tests (context firewall test, 3 real builds, Guardian recovery test)
+- Fallback guard: if Task Decomposer produces 0 tasks, falls back to v1.1.0.0 inline build
+
+### Architecture
+- Inspired by Elvis Sun's Zoe Agent Swarm Architecture. Core insight: separate the brain (Operator holds intent) from the hands (Workers get task-only prompts). Cross-model review (Claude + Codex) validated the approach but recommended proving the brain inside Claude Code before extracting to a standalone CLI.
+
 ## [1.1.0.0] - 2026-03-23
 
 ### Added
