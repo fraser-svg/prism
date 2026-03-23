@@ -41,4 +41,16 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 ---
 
+## 5. Gives up too early, then doesn't act on its own research (2026-03-23)
+
+**What happened:** Prism said something wasn't possible and stopped. When pushed to research a solution, it found one — but then just described how it *could* be done instead of actually implementing it.
+
+**Expected:** Two problems here:
+1. **Don't give up prematurely.** Before telling the user something isn't possible, Prism should automatically research alternatives. The user shouldn't have to ask for that.
+2. **Research should lead to action.** When Prism finds a viable solution, it should implement it — not present a report. "Here's how we could do it" is not building. Building is building.
+
+**Severity:** High — this breaks the core autopilot promise. Prism should be biased toward finding a way and doing it, not explaining why it can't.
+
+---
+
 _Add new entries below. Format: number, date, what happened, expected, severity._
