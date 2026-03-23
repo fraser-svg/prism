@@ -308,9 +308,14 @@ When a user requests changes to a completed or in-progress build:
 > Return: A plain-English summary of what changed (1-2 sentences)
 > and the new change name."
 
-3. Show the summary: "Here's what's changing: {summary}. Sound right?"
+3. **Verify artifacts exist** using a subagent (same pattern as Part B.5):
+   > "Check that `openspec/changes/{new-change-name}/specs/*/spec.md` exists and is
+   > non-empty. Return VERIFIED or MISSING: {details}."
+   If MISSING: retry the delta subagent once, then fall back to inline.
 
-4. On approval, go to Stage 3 (Build) with the new change name.
+4. Show the summary: "Here's what's changing: {summary}. Sound right?"
+
+5. On approval, go to Stage 3 (Build) with the new change name.
 
 **Log:** Use a subagent to log the spec change per [references/operation-log.md](references/operation-log.md).
 
