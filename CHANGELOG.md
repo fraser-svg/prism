@@ -2,6 +2,25 @@
 
 All notable changes to Prism are documented here.
 
+## [1.0.1.0] - 2026-03-23
+
+### Added
+- Auto-advance: Prism auto-invokes /plan-eng-review, /qa, and /ship via the Skill tool instead of telling users to run them manually
+- Operation log: verbose machine-readable log at openspec/changes/{name}/prism-log.md for diagnostics and cross-session resume
+- Artifact verification (Part B.5): verifies spec files exist on disk before advancing, preventing silent data loss from subagent failures
+- Fallback to guided mode if Skill tool invocation fails
+- Context args: Prism constructs spec summaries to pass to each invoked skill
+
+### Changed
+- Stages 2, 4, 5 now auto-invoke gstack skills with announcements instead of prompting user to run manually
+- Stage 0 resume now reads last 3 log entries for cross-session context
+- Skill catalog rewritten for auto-invocation with skip handling and fallback sections
+- OpenSpec guided-orchestration spec updated to reflect auto-invocation behavior
+
+### Fixed
+- Stale spec path in build-mode.md (was reading from wrong directory during active builds)
+- Subagent trust issue: spec generation could report success without writing files to disk
+
 ## [1.0.0.0] - 2026-03-22
 
 ### Added
