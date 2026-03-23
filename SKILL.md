@@ -152,6 +152,29 @@ Then use the **Agent tool** to generate the spec. Pass ALL the user's answers ex
 > be built, what done looks like, and what's out of scope). Do NOT return the raw
 > spec format — just the summary. Also return the change name."
 
+**Part B.5 — Artifact verification (via subagent, hidden from user):**
+
+After the spec-generation subagent returns, use a SECOND subagent to verify the
+expected files actually exist on disk. Do NOT trust the first subagent's return
+value alone — it may report success without having written anything.
+
+> "You are a verifier for Prism. Check that these files exist and are non-empty:
+>
+> 1. `openspec/changes/{change-name}/proposal.md`
+> 2. `openspec/changes/{change-name}/specs/{feature-name}/spec.md`
+>
+> For each file: run `ls -la {path}` and `head -5 {path}`.
+>
+> Return EXACTLY one of:
+> - VERIFIED: both files exist and contain content
+> - MISSING: {which files are missing or empty}"
+
+If MISSING: **do NOT tell the user the spec was saved.** Instead, retry the
+spec-generation subagent once. If the retry also produces MISSING, fall back to
+inline generation (visible but functional — better than silently losing work).
+
+Only proceed to Part C after verification passes.
+
 **Part C — Approval (in main conversation):**
 
 Show the agent's summary to the user:
@@ -161,7 +184,7 @@ If revisions needed: collect feedback, send back to a subagent to update and re-
 
 **Store the change name** — you'll need it for all subsequent stages.
 
-**Log:** Use a subagent to log spec generation and approval per [references/operation-log.md](references/operation-log.md).
+**Log:** Use a subagent to log spec generation and approval per [references/operation-log.md](references/operation-log.md). This is the first log entry for a new change — if logging fails here, it will fail for the entire build. If the log subagent reports an error, note it but continue (logging is never a blocker).
 
 ### Stage 2: Plan (Auto-invoked via gstack)
 
@@ -312,6 +335,9 @@ When going back, the spec stays as-is unless the user explicitly asks to change 
 4. **Questions, not blockers.** Drift detection and errors are surfaced as questions.
 5. **The user is not an engineer.** Don't assume technical knowledge. Ever.
 6. **Graceful fallback.** If a subagent fails, retry once. If still fails, do inline.
+   **Verify before advancing.** After any subagent writes files to disk (spec generation,
+   spec changes), verify the files exist before telling the user work was saved. Never
+   trust a subagent's return value alone — always confirm artifacts landed on disk.
 7. **OpenSpec format is strict.** `###` for Requirements, `####` for Scenarios.
    SHALL/SHALL NOT for requirements. WHEN/THEN for scenarios.
    Every requirement MUST have at least one scenario. This precision is the whole point.
