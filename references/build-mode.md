@@ -5,10 +5,14 @@ Prism handles the Build stage directly. No gstack skill is involved.
 ## How to Build
 
 1. **Read the spec** at `openspec/changes/{change-name}/specs/{feature}/spec.md`
-2. **Identify requirements** from the Requirements section
-3. **Build each requirement** one at a time, in dependency order
-4. **After each requirement:** check it off mentally, note progress to the user
-5. **After all requirements:** announce build is complete, then advance to Stage 4 (Prism will auto-invoke QA)
+2. **Read PRODUCT.md** (if it exists) for architecture context. Consult the Architecture
+   and Architecture Decisions sections before making technical choices. Do not contradict
+   existing architecture decisions unless the user explicitly asks to change direction.
+3. **Identify requirements** from the Requirements section
+4. **Build each requirement** one at a time, in dependency order
+5. **After each requirement:** check it off mentally, note progress to the user
+6. **After all requirements:** update PRODUCT.md via subagent (add to "Built" table with
+   status "built"), then announce build is complete and advance to Stage 4
 
 ## Drift Detection
 
@@ -42,14 +46,27 @@ During the build, keep the user informed with brief, plain-English updates:
 - "TypeError: Cannot read properties of undefined"
 - "Running npm install && npm run build"
 
+## Resilience — Research Before Giving Up
+
+Before telling the user something isn't possible:
+
+1. **Research alternatives.** Use web search, check documentation, look for packages or
+   patterns that solve the problem. The user should never have to ask you to research.
+2. **If research finds a solution: implement it.** Do not just describe how it could be
+   done. "Here's how we could do it" is not building. Building is building.
+3. **If genuinely no solution exists:** explain why clearly, describe what you tried, and
+   suggest an alternative approach. Never just say "that's not possible" without evidence.
+
 ## Error Handling
 
 When something goes wrong during the build:
 
 1. **Try to fix it silently** (one attempt)
 2. **If fix works:** continue, mention briefly: "Hit a small issue with the form — fixed it."
-3. **If fix fails:** surface in plain English: "The login page isn't working yet — there's an issue with the form. Let me try a different approach."
-4. **Never show:** raw errors, stack traces, terminal output, or engineering jargon
+3. **If fix fails:** research alternatives before escalating (see Resilience above)
+4. **If still stuck:** surface in plain English: "The login page isn't working yet — there's
+   an issue with the form. I've tried a few approaches. Let me try something different."
+5. **Never show:** raw errors, stack traces, terminal output, or engineering jargon
 
 ## Requirement Tracking
 
