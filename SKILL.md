@@ -58,14 +58,13 @@ unless the user uses it first.
 The user is NOT an engineer. They should not see bash commands, file paths, openspec
 CLI output, or tool call noise. To achieve this:
 
-- **Use subagents (Agent tool) for ALL technical operations** except Build stage.
+- **Use subagents (Agent tool) for ALL technical operations** — including Build.
   Subagent tool calls are hidden from the user — only the summary comes back.
 - **The main conversation is ONLY for talking to the user.** Plain English, questions,
   summaries, progress updates.
-- **Build stage exception:** Build runs in the main conversation because the user needs
-  to see progress and respond to drift questions. This means some tool calls will be
-  visible during building — that's the trade-off. Keep your communication plain-English
-  even though the tools are visible.
+- **Build stage:** Workers build via Agent tool (hidden). The Operator stays in the main
+  conversation for status relays ("Login page done, 2 left") and drift questions.
+  Code-writing tool calls are inside workers and invisible to the user.
 - **If a subagent fails:** say "Setting things up took a moment longer than expected —
   let me try that again." Retry once. If still fails, do the operations inline
   (visible but functional — better than broken).
@@ -351,33 +350,112 @@ After the skill completes, proceed to Stage 3.
 
 **Log:** Use a subagent to log the design outcome per [references/operation-log.md](references/operation-log.md).
 
-### Stage 3: Build (Prism Builds Directly)
+### Stage 3: Build (Operator Decomposes, Workers Build)
 
-Read [references/build-mode.md](references/build-mode.md) for detailed instructions.
-
-**This stage runs in the main conversation** — the user needs to see progress and
-respond to drift questions. Some tool calls will be visible; that's OK.
+Read [references/build-mode.md](references/build-mode.md) for the full protocol.
 
 First, read the spec from the **change directory** (not main specs/):
 `openspec/changes/{change-name}/specs/{feature-name}/spec.md`
 
-Prism IS the builder:
-1. Read the spec's Requirements (the `### Requirement:` sections)
-2. Read PRODUCT.md (if it exists) for architecture context — see build-mode.md
-3. Build each requirement, one at a time
-4. After each requirement: check for drift against the spec
-5. Communicate progress in plain English — never show code internals
-6. When all requirements are built: use a subagent to update PRODUCT.md (add to "Built"
-   table with status "built"), then announce completion and move to Stage 4
+**The Operator decomposes and dispatches. Workers build. The user sees progress.**
 
-**Drift detection:** After completing each requirement, compare what's built against
-the spec's `### Requirement:` entries. If something exists that isn't in the spec,
-or something's missing, surface it as a question:
-"You asked for X. This now includes Y. Is that intentional?"
+#### Step 1: Decompose
+
+Read the spec's Requirements (`### Requirement:` sections) and PRODUCT.md (if it
+exists) for architecture context. Then decompose requirements into worker tasks:
+
+- Each requirement becomes one TaskPrompt (or merge small related requirements)
+- Cap at 5 tasks per build. If more than 5 requirements, merge related ones.
+- Minimum 2 tasks for any build with 3+ requirements
+- **GUARD:** If decomposition produces 0 tasks, fall back to building inline —
+  read the spec requirements directly and build each one sequentially in the main
+  conversation (the pre-v2 approach). Log the decomposition failure for debugging.
+
+For each task, prepare a TaskPrompt containing ONLY:
+- **Task description** (1-2 paragraphs, plain English — translated from the requirement)
+- **Files to read first** (paths to relevant existing code, max 10 files)
+- **Constraints** (from spec's "Out of Scope" + PRODUCT.md Architecture Decisions)
+- **Shared context** (TypeScript interfaces, API schemas, database migrations, type
+  definitions — technical contracts that workers need for compatible code)
+
+**CONTEXT FIREWALL:** See [references/build-mode.md](references/build-mode.md) for the
+full list of what workers never receive. The core rule: workers get task + code + constraints.
+They never get user conversation, personality, vision, or other workers' context.
+
+#### Step 2: Dispatch Workers
+
+For each TaskPrompt, dispatch a worker using the **Agent tool**:
+
+> "You are a build worker for Prism. Complete this task:
+>
+> TASK: {task description}
+> FILES TO READ FIRST: {relevant file paths}
+> CONSTRAINTS: {constraints from spec + architecture decisions}
+> SHARED CONTEXT: {interfaces, types, API contracts}
+>
+> Build this task. Write working code. If you hit an error, describe what
+> went wrong and what you tried. Do not improvise beyond the task description."
+
+Workers get Claude Code's full tool suite (Bash, Read, Write, Edit, Grep, Glob)
+automatically through the Agent tool. No runtime needed.
+
+#### Step 3: Status Relay
+
+After each worker completes, translate the result into a plain-English progress
+update for the user:
+- "Login page done. 2 of 4 requirements left."
+- "The scraper is working. Moving on to the scheduler."
+
+If a worker returns an empty or unclear result, **treat it as a failure** and route
+to the Guardian (Step 4). Do NOT count it as progress — an empty response likely
+means the worker crashed or timed out without producing code.
+
+#### Step 4: Guardian (on worker failure)
+
+If a worker returns a failure, the Guardian pattern activates **in the Operator
+context** (which has full build awareness):
+
+1. Read the worker's error output (returned by Agent tool)
+2. Analyze: what went wrong? (missing dependency? wrong file path? unclear
+   requirement? API changed?)
+3. Rewrite the TaskPrompt with:
+   - Additional context about the failure
+   - Corrected file paths or dependencies
+   - Simplified scope if the task was too broad
+4. Dispatch a NEW worker via Agent tool with the rewritten prompt
+5. After 3 failures on the same task: escalate to the user in plain English.
+   Keep the escalation non-technical — the user is NOT an engineer:
+   "I'm having trouble getting the login page to work. I've tried a few
+   different approaches. Can you tell me more about how login should work
+   for your users?"
+
+**This is NOT a retry.** Each Guardian dispatch is smarter than the last because
+the Operator diagnoses the failure and rewrites the prompt with failure context.
+
+#### Step 5: Drift Detection + Completion
+
+After all workers complete, compare what's built against the spec (same as before):
+
+**Check for:**
+- Files or features that exist but aren't in the spec's Requirements
+- Requirements that were supposed to be built but were skipped
+- Scope that grew beyond the spec's "Out of Scope" section
+
+**When drift is detected:**
+- Surface it as a question, never a blocker
+- "You asked for X. This now includes Y. Is that intentional?"
 - User says yes → use a subagent to add the new requirement to the spec and re-validate
 - User says no → remove the extra work, continue per original spec
 
-**Log:** Use a subagent to log each requirement built and any drift detected per [references/operation-log.md](references/operation-log.md).
+**When drift is NOT detected:**
+- Say nothing. Invisible by default.
+
+When all requirements are built and drift is resolved: use a subagent to update
+PRODUCT.md (add to "Built" table with status "built"), then announce completion
+and move to Stage 4.
+
+**Log:** Use a subagent to log the build outcome per [references/operation-log.md](references/operation-log.md).
+Include: worker_count, guardian_retries, failure_reasons.
 
 ### Stage 4: Verify (Auto-invoked via gstack)
 
@@ -517,12 +595,15 @@ When going back, the spec stays as-is unless the user explicitly asks to change 
 ## Rules
 
 1. **Plain English only.** Never use engineering jargon unless the user does first.
-2. **Subagents for technical work.** All OpenSpec commands, file operations, and validation
-   happen inside subagents (except during Build stage).
+2. **Subagents for technical work.** All technical operations happen inside subagents —
+   including Build stage workers. The main conversation is for user communication only.
 3. **Spec is the source of truth.** Every build decision references the spec's Requirements.
 4. **Questions, not blockers.** Drift detection and errors are surfaced as questions.
 5. **The user is not an engineer.** Don't assume technical knowledge. Ever.
-6. **Graceful fallback.** If a subagent fails, retry once. If still fails, do inline.
+6. **Graceful fallback.** If a non-Build subagent fails, retry once. If still fails, do inline.
+   **Build workers are different:** Build worker failures go through the Guardian pattern
+   (diagnose → rewrite → respawn, max 3 attempts) — NOT the generic retry-once fallback.
+   See [references/build-mode.md](references/build-mode.md) for the Guardian protocol.
    **Verify before advancing.** After any subagent writes files to disk (spec generation,
    spec changes), verify the files exist before telling the user work was saved. Never
    trust a subagent's return value alone — always confirm artifacts landed on disk.

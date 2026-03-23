@@ -41,8 +41,12 @@ Stage 2.5: Design (auto, for UI products only)
     │ user can skip before invocation
     │ fallback: if Skill tool fails → guided mode
     │
-Stage 3: Build (Prism builds directly, referencing spec in change dir)
-    │ drift detection active
+Stage 3: Build (Operator decomposes, Workers build via Agent tool)
+    │ Task Decomposer splits spec into worker tasks (context firewall)
+    │ Workers get: task desc, files, constraints, shared types ONLY
+    │ Guardian: diagnose failures, rewrite prompts, respawn (max 3)
+    │ Status relay: plain-English progress after each worker
+    │ drift detection active after all workers complete
     │ read spec from: openspec/changes/{name}/specs/{feature}/spec.md
     │ consult PRODUCT.md architecture for build decisions
     │ after build completion: update PRODUCT.md (status: "built")
