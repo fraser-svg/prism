@@ -15,6 +15,8 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 **Severity:** High — this is a core experience gap. The whole point of Prism is thoughtful building, not rushing.
 
+**Status:** FIXED in v1.1.0.0 — UI products now get automatic /design-consultation before first build (Stage 2.5) and product-level questions include "What should it look like?"
+
 ---
 
 ## 2. Had to manually trigger reviews and shipping (2026-03-23)
@@ -51,6 +53,8 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 **Severity:** High — this breaks the core autopilot promise. Prism should be biased toward finding a way and doing it, not explaining why it can't.
 
+**Status:** FIXED in v1.1.0.0 — Added Resilience protocol to build-mode.md: research alternatives before saying no, implement after researching.
+
 ---
 
 ## 6. No design consultation or design review before first build (2026-03-23)
@@ -65,6 +69,8 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 **Related to:** #1 (rushes into building without design thinking). This is the same root problem — Prism skips the design stage entirely.
 
 **Severity:** High — if the first thing you build looks bad, trust in the tool drops immediately.
+
+**Status:** FIXED in v1.1.0.0 — UI products now auto-invoke /design-consultation before first build (Stage 2.5) and /design-review after QA (Stage 4.5).
 
 ---
 
@@ -99,6 +105,8 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 - Maintains a living architecture document that informs every subsequent change
 
 **Severity:** Critical — this is the difference between "build me a feature" and "build me a product." Without this, Prism is a feature builder, not a product builder.
+
+**Status:** FIXED in v1.1.0.0 — Living Architecture Doc (PRODUCT.md). Prism creates and maintains a per-project PRODUCT.md with vision, architecture, build history, and phase sequencing. Read at every stage transition, updated after Build and Ship. Gaps 1-3 addressed. Gap 4 (parallel workstreams) deferred to TODOS.md.
 
 ---
 

@@ -12,11 +12,44 @@ questions. Prism observes the output and auto-advances to the next stage.
 
 **Invocation:** `Skill tool: skill="plan-eng-review", args="Review the implementation of {feature-name}: {spec summary}"`
 
-**Args:** Read the spec and construct a 2-3 sentence context summary. Include the feature name and key requirements.
+**Args:** Read the spec and construct a 2-3 sentence context summary. Include the feature name and key requirements. If PRODUCT.md exists, include a brief summary of the architecture section so the review has product context.
 
 **After skill completes:** Prism observes the review output and auto-advances.
-- Review passed → proceed to Build
+- Review passed → proceed to Build (or Design stage for UI products)
 - Planning found problems → offer to revise the spec: "The review flagged some issues — let's adjust the spec."
+- Review recommended architecture changes → update PRODUCT.md Architecture Decisions table via subagent before proceeding
+
+## Design Stage → /design-consultation (UI products only)
+
+**When:** After Plan stage, ONLY if both conditions are met:
+1. The product is a UI product (see references/stage-routing.md for detection)
+2. No DESIGN.md exists in the project
+
+**Announcement text:** "Before we start building, let me set up a visual direction for this product."
+
+**Invocation:** `Skill tool: skill="design-consultation"`
+
+**After skill completes:** DESIGN.md is created. Proceed to Build.
+
+**Skip:** User can say "skip design" before invocation. If skipped: "No problem — we'll build first and review the design after."
+
+**Fallback:** "I couldn't run the design step automatically. Run `/design-consultation` now and come back when it's done."
+
+## Design Review Stage → /design-review (UI products only)
+
+**When:** After QA (Verify) stage, ONLY if the product is a UI product.
+
+**Announcement text:** "QA looks good — let me do a quick visual check before we ship."
+
+**Invocation:** `Skill tool: skill="design-review"`
+
+**After skill completes:** Prism observes the output.
+- Design review passed → proceed to Ship
+- Design review found issues → "The design review flagged some visual issues — let me fix those." Go back to Build.
+
+**Skip:** User can say "skip design review" before invocation.
+
+**Fallback:** "I couldn't run the design review automatically. Run `/design-review` now and come back when it's done."
 
 ## Verify Stage → /qa
 
@@ -29,7 +62,7 @@ questions. Prism observes the output and auto-advances to the next stage.
 **Args:** Detect a testable URL (dev server, localhost, deployed URL). If not detectable, ask the user before invoking.
 
 **After skill completes:** Prism observes the QA output and auto-advances.
-- QA passed → proceed to Ship
+- QA passed → proceed to Ship (or Design Review for UI products)
 - QA found issues → offer to fix: "QA found some issues — let me fix those." Go back to Build.
 
 ## Ship Stage → /ship
