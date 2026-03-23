@@ -1,94 +1,172 @@
 # Prism
 
-AI concierge for building software. Say what you want built. Prism writes the spec, builds it, tests it, and ships it.
+Prism is how I finally started shipping.
+
+If you’ve ever been excited about building something with AI and then completely lost halfway through, this is for you.
+
+I kept hitting the same wall:
+- Things started strong  
+- Then got messy  
+- The AI hallucinated, agreed with bad ideas, or broke things  
+- And somewhere around 80 percent, everything fell apart  
+
+I never shipped anything.
+
+Prism fixes that.
+
+It is an AI that does not just talk about building software. It actually handles the entire process for you.
+
+You bring the idea.  
+Prism does the rest.
 
 No engineering knowledge required.
 
-## What It Does
+---
 
-Prism turns a conversation into working software through a 6-stage pipeline:
+## What Prism Does
+
+You describe what you want in plain English.
+
+Prism turns that into real, working software by guiding it through a structured process:
 
 | Stage | What Happens |
 |-------|-------------|
-| **0. Resume** | Picks up where you left off if there's work in progress |
-| **1. Understand** | Asks 2-4 plain-English questions to nail down scope |
-| **2. Plan** | Runs an architecture review to catch problems early |
-| **3. Build** | Decomposes the spec into tasks, dispatches workers, relays progress |
-| **4. Verify** | Runs QA to make sure everything works |
-| **5. Ship** | Commits, creates a PR, archives the spec |
+| **0. Resume** | Picks up where you left off |
+| **1. Understand** | Asks a few simple questions to clarify your idea |
+| **2. Plan** | Thinks through how it should be built before touching code |
+| **3. Build** | Actually builds it step by step |
+| **4. Verify** | Checks that everything works properly |
+| **5. Ship** | Finalises everything and prepares it to go live |
 
-UI products get two bonus stages: **Design** (2.5) sets up a visual direction before building, and **Design Review** (4.5) catches visual issues before shipping.
+If you are building something visual like a website, it also:
+- Designs it first  
+- Reviews the design before shipping  
 
-## How It Works
+So you do not just get something functional. You get something that actually looks right.
 
-Prism is a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code) that orchestrates two tools under the hood:
+---
 
-- **[OpenSpec](https://github.com/fission-ai/openspec)** - Structured spec generation, validation, and change tracking. Every requirement uses SHALL/SHALL NOT with WHEN/THEN scenarios so there's no ambiguity about what "done" looks like.
-- **[gstack](https://github.com/fraser-svg/gstack)** - Planning (`/plan-eng-review`), QA (`/qa`), design (`/design-consultation`, `/design-review`), and shipping (`/ship`).
+## Why This Exists
 
-The user never sees either tool. All technical operations run inside subagents. The main conversation is plain English only.
+Most AI coding tools feel magical until they do not.
 
-### The Operator
+They:
+- Agree with everything you say  
+- Do not catch bad ideas  
+- Lose track of the bigger picture  
+- Break when things get complex  
 
-Prism speaks with The Operator personality: warm, precise, action-oriented. Pattern recognition from thousands of product conversations compressed into a single voice that gives a damn whether you succeed. British English, no corporate jargon, no filler.
+Prism was built to solve that.
 
-### Two-Tier Build Architecture (v2)
+It adds structure, memory, and discipline to the process so you can actually finish what you start.
 
-Stage 3 uses a two-tier context split inspired by [Zoe Agent Swarm Architecture](https://x.com/AISunElvis):
+---
 
-- **Operator** holds the full picture: user intent, spec, product context, build progress
-- **Workers** get only their task: description, relevant files, constraints, shared types
+## How It Works (Simple Version)
 
-Workers never see the user conversation, personality layer, or other workers' context. This firewall prevents context pollution that causes builds to stall at ~80% completion.
+Prism acts like a small team:
 
-When a worker fails, the **Guardian pattern** activates: the Operator diagnoses the failure, rewrites the task prompt with failure context, and dispatches a new worker. Up to 3 attempts before escalating to the user in plain English.
+- Something that understands your idea  
+- Something that plans it properly  
+- Something that builds it  
+- Something that tests it  
 
-### Living Product Context
+All coordinated together.
 
-Prism creates and maintains a `PRODUCT.md` file that tracks your product's vision, architecture decisions, what's been built, and what's next. Each build reads it for context and updates it on completion.
+You just talk to it normally.  
+Everything else happens behind the scenes.
+
+---
+
+## What Makes It Different
+
+### It does not rush into coding
+It slows down just enough to actually understand and plan first.
+
+### It does not forget what you are building
+It keeps a living memory of your product. What it is, what has been built, and what comes next.
+
+### It does not fall apart halfway through
+Most AI tools break at around 80 percent.
+
+Prism is designed specifically to get past that point.
+
+### It fixes its own mistakes
+If something fails, it:
+- Figures out why  
+- Rewrites the task  
+- Tries again  
+
+Like a real team would.
+
+---
+
+## Under the Hood (Light Explanation)
+
+You do not need to understand this to use Prism, but here is the idea:
+
+Prism separates:
+- Thinking, which is the big picture decisions  
+- From doing, which is the actual work  
+
+There is an Operator that holds the full vision, and Workers that handle small, focused tasks.
+
+This prevents the chaos that usually happens when one AI tries to do everything at once.
+
+There is also a retry system called the Guardian pattern. If something goes wrong, Prism diagnoses the issue, adjusts, and tries again instead of failing outright.
+
+---
 
 ## Install
 
 ### Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CLI)
-- [OpenSpec](https://github.com/fission-ai/openspec): `npm install -g @fission-ai/openspec@latest`
-- [gstack](https://github.com/fraser-svg/gstack) (for planning, QA, and shipping stages)
+- Claude Code  
+- OpenSpec  
+- gstack  
+
+```bash
+npm install -g @fission-ai/openspec@latest
+````
+
+---
 
 ### Setup
-
-Copy the `prism/` directory to your Claude Code skills folder:
 
 ```bash
 cp -r prism/ ~/.claude/skills/prism/
 ```
 
-Or clone directly:
+or:
 
 ```bash
 git clone https://github.com/fraser-svg/prism.git ~/.claude/skills/prism/
 ```
 
+---
+
 ## Usage
 
-Start any Claude Code conversation and type:
+Start a Claude Code conversation:
 
 ```
 /prism
 ```
 
-Then describe what you want to build. Prism handles the rest.
+Then just describe what you want.
+
+---
 
 ### Examples
 
 ```
 /prism
-Build me a landing page for my SaaS product with a waitlist signup form.
+Build me a landing page for my SaaS with a waitlist form.
 ```
 
 ```
 /prism
-I need a CLI tool that scrapes job postings from LinkedIn and saves them to a spreadsheet.
+Create a tool that tracks my workouts.
 ```
 
 ```
@@ -96,52 +174,55 @@ I need a CLI tool that scrapes job postings from LinkedIn and saves them to a sp
 Add dark mode to my app.
 ```
 
-### Going Back
+---
 
-You can always go back to a previous stage:
-- "Let's change the spec" - back to Stage 1
-- "Let me re-plan this" - back to Stage 2
-- "I need to fix something" - back to Stage 3
-- "Let me re-test" - back to Stage 4
+### You Stay in Control
 
-### Skipping Stages
+You can always say:
 
-Say "skip planning", "skip QA", "skip design", or "skip shipping" before any stage runs.
+* Let’s rethink this
+* Change the plan
+* Fix this part
+
+Prism will move back to the right stage and continue from there.
+
+---
 
 ## Project Structure
 
 ```
 prism/
-├── SKILL.md              # Main skill definition (thin dispatcher)
-├── VERSION               # Current version
-├── CHANGELOG.md          # Full version history
+├── SKILL.md
+├── VERSION
+├── CHANGELOG.md
 ├── references/
-│   ├── build-mode.md     # Two-tier build architecture + Guardian pattern
-│   ├── stage-routing.md  # Stage detection decision tree
-│   ├── spec-format.md    # OpenSpec format rules
-│   ├── skill-catalog.md  # gstack skill invocation patterns
-│   ├── product-context.md # PRODUCT.md protocol
-│   ├── operation-log.md  # Diagnostic logging protocol
-│   └── personality.md    # The Operator voice
-├── hooks/                # Enforcement hooks
-├── openspec/             # OpenSpec workspace
-├── templates/            # Spec and config templates
-└── app/                  # Prism application code
+├── hooks/
+├── openspec/
+├── templates/
+└── app/
 ```
 
-## Version History
+---
 
-| Version | Date | Highlights |
-|---------|------|-----------|
-| **2.0.0.0** | 2026-03-23 | Two-tier build with Operator/Worker split, Guardian pattern, context firewall |
-| **1.1.0.0** | 2026-03-23 | Living product context (PRODUCT.md), auto-design stages, resilience protocol |
-| **1.0.1.0** | 2026-03-23 | Auto-advance through gstack skills, operation logging, artifact verification |
-| **1.0.0.0** | 2026-03-22 | Prism Autopilot: 6-stage pipeline with OpenSpec + gstack orchestration |
-| **0.3.0** | 2026-03-22 | Adaptive Socratic depth, acceptance criteria, The Operator personality |
-| **0.2.0** | 2026-03-21 | Enforcement hooks, progressive disclosure |
-| **0.1.0** | 2026-03-20 | Initial release |
+## The Point
 
-See [CHANGELOG.md](CHANGELOG.md) for full details.
+Prism exists so that you do not need to be an engineer to build things anymore.
+
+You do not need to understand:
+
+* Architecture
+* Frameworks
+* Tooling
+
+You just need ideas.
+
+---
+
+## One Line
+
+Prism turns your ideas into real software without you needing to know how to build it.
+
+---
 
 ## Licence
 
