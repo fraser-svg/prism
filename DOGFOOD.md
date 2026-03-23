@@ -53,4 +53,19 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 ---
 
+## 6. No design consultation or design review before first build (2026-03-23)
+
+**What happened:** Prism built v1 without running /design-consultation or /design-review. The result looked bad. No design system, no visual direction, no review of the output before shipping.
+
+**Expected:** For any build with a UI, Prism should:
+- Run /design-consultation (or equivalent) before building to establish visual direction
+- Run /design-review after building to catch visual issues before shipping
+- These should be automatic, not something the user has to remember to ask for
+
+**Related to:** #1 (rushes into building without design thinking). This is the same root problem — Prism skips the design stage entirely.
+
+**Severity:** High — if the first thing you build looks bad, trust in the tool drops immediately.
+
+---
+
 _Add new entries below. Format: number, date, what happened, expected, severity._
