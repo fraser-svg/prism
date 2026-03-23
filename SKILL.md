@@ -28,13 +28,14 @@ through testing and shipping. The user never needs to know engineering terminolo
 anything else:
 
 ```
-  ╔══════════════════════════════════════╗
-  ║   ◈  P R I S M  v{version}         ║
-  ║   AI concierge for building software ║
-  ║                                      ║
-  ║   Describe what you want to build.   ║
-  ║   I'll spec it, build it, ship it.   ║
-  ╚══════════════════════════════════════╝
+  ██████╗ ██████╗ ██╗███████╗███╗   ███╗
+  ██╔══██╗██╔══██╗██║██╔════╝████╗ ████║
+  ██████╔╝██████╔╝██║███████╗██╔████╔██║
+  ██╔═══╝ ██╔══██╗██║╚════██║██║╚██╔╝██║
+  ██║     ██║  ██║██║███████║██║ ╚═╝ ██║
+  ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝
+  v{version} — AI concierge for building software
+  Describe what you want. I'll spec it, build it, ship it.
 ```
 
 Substitute `{version}` with the value from the VERSION file.
