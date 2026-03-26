@@ -120,6 +120,31 @@ CLI output, or tool call noise. To achieve this:
   let me try that again." Retry once. If still fails, do the operations inline
   (visible but functional — better than broken).
 
+## Auto-Save — Crash Protection
+
+Prism automatically commits and pushes work-in-progress to GitHub at every
+milestone. See [references/auto-save.md](references/auto-save.md) for the full
+protocol.
+
+- **When:** After spec generation, spec approval, planning, design, each worker
+  completion, and QA/design-review fixes.
+- **How:** Subagent runs `git add -A && git commit && git push` — silent, non-blocking.
+- **Branch:** If on main/master, create `prism/{change-name}` branch first.
+- **Commit format:** `wip: {description} [prism auto-save]`
+- **Failures are silent.** Never interrupt the user for a save failure.
+
+## Session Context — Cross-Session Memory
+
+Prism captures a structured session summary so returning to the project feels
+like picking up a conversation. See [references/session-context.md](references/session-context.md)
+for the full protocol.
+
+- **File:** `openspec/changes/{change-name}/session-context.md`
+- **Captures:** Current state, key decisions, user preferences, what was discussed,
+  what was rejected, open questions, next steps.
+- **Updated:** After Stage 1 approval, Stage 2, each worker, Stage 4, before Stage 5.
+- **Used by Stage 0 Resume** to provide rich context on re-entry.
+
 ## Operation Log
 
 Prism logs every significant action to a file for diagnostics and cross-session
@@ -164,6 +189,10 @@ Use the **Agent tool** to scan for in-progress work AND product context. Prompt 
 >    to understand what the user was building.
 > 7. If `openspec/changes/{name}/prism-log.md` exists, read the last 3 entries
 >    to understand where the user left off and what Prism last did.
+> 8. If `openspec/changes/{name}/session-context.md` exists, read it IN FULL.
+>    This contains key decisions, user preferences, what was discussed, what was
+>    rejected, open questions, and planned next steps from the previous session.
+> 9. If `.prism/session-context.md` exists, read it for product-level context.
 >
 > Return EXACTLY one of:
 > - PRODUCT_RESUME: {product-name} | {change-name} | {description} | tasks: N/M complete | last action: {from log}
@@ -171,10 +200,18 @@ Use the **Agent tool** to scan for in-progress work AND product context. Prompt 
 > - FOUND: {change-name} | {description} | tasks: N/M complete | last action: {from log, or 'no log'}
 > - NONE: no in-progress work found
 > - MULTIPLE: {name1} (N/M tasks), {name2} (N/M tasks)
+>
+> If session-context.md was found, ALSO include:
+> - CONTEXT: {key decisions | user preferences | open questions | next steps}
+>
 > Do NOT return raw JSON or file paths."
 
 Based on the agent's response:
 - **PRODUCT_RESUME:** "You're building **{product}**. Picking up **{description}**. Want to continue, or work on something else?"
+  If CONTEXT was returned, use it to enrich the resume message — reference key decisions
+  and state what was about to happen next. E.g.: "You're building **Encounter**. We were
+  building the login page — chose session-based auth over JWT. Two requirements left.
+  Want to continue?"
 - **PRODUCT_NEXT:** "You're building **{product}**. Last time we shipped **{phase}**. Ready to start **{next phase}**?"
   - User confirms → Proceed to Stage 1 with product context for next phase
   - User wants something else → Proceed to Stage 1 with product context for their request
@@ -366,6 +403,11 @@ inline generation (visible but functional — better than silently losing work).
 
 Only proceed to Part C after verification passes.
 
+**Part B.6 — Auto-save (via subagent, hidden from user):**
+
+After verification passes, auto-save per [references/auto-save.md](references/auto-save.md).
+Milestone description: "spec generated for {change-name}".
+
 **Part C — Approval (in main conversation):**
 
 Show the agent's summary to the user:
@@ -376,6 +418,10 @@ If revisions needed: collect feedback, send back to a subagent to update and re-
 **Store the change name** — you'll need it for all subsequent stages.
 
 **Log:** Use a subagent to log spec generation and approval per [references/operation-log.md](references/operation-log.md). This is the first log entry for a new change — if logging fails here, it will fail for the entire build. If the log subagent reports an error, note it but continue (logging is never a blocker).
+
+**Auto-save:** After logging, auto-save per [references/auto-save.md](references/auto-save.md). Milestone: "spec approved for {change-name}".
+
+**Session context:** After approval, update session context per [references/session-context.md](references/session-context.md) with the user's answers, decisions, and preferences from the Understand stage.
 
 ### Stage 2: Plan (Auto-invoked via gstack)
 
@@ -403,6 +449,10 @@ After the skill completes, Prism observes the output and auto-advances:
 
 **Log:** Use a subagent to log the planning outcome per [references/operation-log.md](references/operation-log.md).
 
+**Auto-save:** After planning, auto-save per [references/auto-save.md](references/auto-save.md). Milestone: "planning complete for {change-name}".
+
+**Session context:** Update session context with architecture decisions from planning.
+
 ### Stage 2.5: Design (Auto-invoked, UI products only)
 
 Read [references/skill-catalog.md](references/skill-catalog.md) for details on `/design-consultation`.
@@ -424,6 +474,8 @@ they're not an engineer. Just build without a design system.
 After the skill completes, proceed to Stage 3.
 
 **Log:** Use a subagent to log the design outcome per [references/operation-log.md](references/operation-log.md).
+
+**Auto-save:** After design, auto-save per [references/auto-save.md](references/auto-save.md). Milestone: "design complete for {change-name}".
 
 ### Stage 3: Build (Operator Decomposes, Workers Build)
 
@@ -485,6 +537,10 @@ update for the user:
 - "Login page done. 2 of 4 requirements left."
 - "The scraper is working. Moving on to the scheduler."
 
+**Auto-save after each worker:** After a worker completes successfully, auto-save
+per [references/auto-save.md](references/auto-save.md). Milestone: "built {task summary} ({N}/{total} requirements)".
+This ensures every completed requirement is pushed to GitHub immediately.
+
 If a worker returns an empty or unclear result, **treat it as a failure** and route
 to the Guardian (Step 4). Do NOT count it as progress — an empty response likely
 means the worker crashed or timed out without producing code.
@@ -536,6 +592,8 @@ and move to Stage 4.
 **Log:** Use a subagent to log the build outcome per [references/operation-log.md](references/operation-log.md).
 Include: worker_count, guardian_retries, failure_reasons.
 
+**Session context:** Update session context with build progress, issues encountered, and decisions made during drift detection.
+
 ### Stage 4: Verify (Auto-invoked via gstack)
 
 Read [references/skill-catalog.md](references/skill-catalog.md) for details.
@@ -559,6 +617,10 @@ After the skill completes, Prism observes the output and auto-advances:
 - **QA found issues** → "QA found some issues — let me fix those." Go back to Build.
 
 **Log:** Use a subagent to log the verification outcome per [references/operation-log.md](references/operation-log.md).
+
+**Auto-save:** If QA found issues and fixes were applied, auto-save per [references/auto-save.md](references/auto-save.md). Milestone: "QA fixes applied for {change-name}".
+
+**Session context:** Update session context with QA results and any fixes applied.
 
 ### Stage 4.5: Design Review (Auto-invoked, UI products only)
 
@@ -591,7 +653,9 @@ Read [references/skill-catalog.md](references/skill-catalog.md) for details.
 Tell the user: "Everything looks good — I'm going to commit your code and create a
 pull request."
 
-Invoke using the **Skill tool:** `skill="ship"`
+**Before invoking /ship:** If auto-save commits exist on this branch (commits with
+`[prism auto-save]` in the message), tell /ship to squash them into a clean commit.
+Pass this context: `skill="ship"`, `args="Squash any commits containing [prism auto-save] into the final commit before creating the PR."`
 
 **Fallback:** If the Skill tool errors, fall back to guided mode: "I couldn't ship
 automatically. Run `/ship` now and come back when it's done."
