@@ -2,6 +2,18 @@
 
 All notable changes to Prism are documented here.
 
+## [2.0.1.0] - 2026-03-26
+
+### Added
+- **Session Awareness** — Three defenses against silent session loss: status prefix on every message (`PRISM · Stage N · what's happening`), session loss recovery (auto-resumes if last activity < 2 hours), and working directory anchor in every subagent prompt
+- **Working directory anchor** — Every subagent prompt now includes `WORKING DIRECTORY: {project_root}` to prevent workers from accidentally operating on the skill directory or home directory instead of the user's project
+- **Project root resolution** — On every invocation, Prism resolves and stores `{project_root}` via `git rev-parse --show-toplevel` before any other action
+
+### Fixed
+- Subagents could analyse the wrong directory (e.g., the Prism skill repo instead of the user's project) when the working directory was ambiguous
+- No visible indicator that Prism was active after initial invocation — users could lose the session without knowing
+- Session loss on Claude Code permission mode change left users thinking they were still in Prism
+
 ## [2.0.0.0] - 2026-03-23
 
 ### Changed
