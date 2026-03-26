@@ -2,6 +2,16 @@
 
 All notable changes to Prism are documented here.
 
+## [2.2.0.0] - 2026-03-26
+
+### Added
+- **Auto-Update** — Prism checks for updates from GitHub on every invocation. If a newer version is available, it pulls it silently and shows "Updated: v{old} → v{new}" below the banner. No manual re-clone needed. If the fetch fails or Prism wasn't installed via git, it stays silent.
+- **Enhanced Running Indicator** — Replaced the simple status prefix with a visually distinct status bar: thick left bar (▌), horizontal rule separator, and closing bar on longer messages. Creates an unmistakable visual block that makes it obvious you're inside Prism, not raw Claude Code.
+
+### Changed
+- Status format updated from `🔨 PRISM · Stage N · ...` to `▌ PRISM · Stage N · ...` with horizontal rule separator
+- Longer messages now get a closing `── PRISM ──` bar for bookending
+
 ## [2.1.0.0] - 2026-03-26
 
 ### Added
