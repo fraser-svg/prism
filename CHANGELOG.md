@@ -2,6 +2,20 @@
 
 All notable changes to Prism are documented here.
 
+## [2.1.0.0] - 2026-03-26
+
+### Added
+- **Auto-Save Protocol** — Prism automatically commits and pushes WIP to a remote feature branch after every milestone: spec generation, spec approval, planning, design, each worker completion, and QA/design-review fixes. Crash = lose at most one worker's worth of work, not everything. Commits use `wip: {description} [prism auto-save]` format. Push failures are silent and non-blocking. (DOGFOOD #10)
+- **Session Context Protocol** — Prism writes a structured session summary (`session-context.md`) capturing key decisions, user preferences, what was discussed, what was rejected, open questions, and planned next steps. Stage 0 Resume reads this file to provide rich context on re-entry, so returning feels like picking up a conversation instead of starting over. (DOGFOOD #11)
+- New reference file: `references/auto-save.md` — full auto-save protocol
+- New reference file: `references/session-context.md` — full session context protocol
+
+### Changed
+- Stage 0 Resume subagent now reads `session-context.md` and returns CONTEXT line with decisions, preferences, and next steps
+- Resume messages enriched with session context (e.g., "We were building the login page — chose sessions over JWT. Two requirements left.")
+- Every stage now includes auto-save and session-context update triggers
+- Stage 3 (Build) auto-saves after each worker completion, not just at build end
+
 ## [2.0.1.0] - 2026-03-26
 
 ### Added
