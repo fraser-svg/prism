@@ -57,6 +57,10 @@ This is the ONLY thing a worker sees:
 ```
 You are a build worker for Prism. Complete this task:
 
+WORKING DIRECTORY: {project_root}
+All file operations must be relative to this directory. Do NOT read or modify
+files outside it.
+
 TASK: {task description — 1-2 paragraphs, plain English}
 FILES TO READ FIRST: {relevant file paths, max 10}
 CONSTRAINTS: {from spec "Out of Scope" + architecture decisions}
