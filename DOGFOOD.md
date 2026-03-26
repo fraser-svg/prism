@@ -131,4 +131,28 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 ---
 
+## 10. No auto-push — laptop crash lost all work (2026-03-26)
+
+**What happened:** User's laptop crashed mid-build. All work was lost because nothing had been committed or pushed to GitHub. Git operations only happen at Stage 5 (Ship), so everything before that — specs, code from workers, QA fixes — sits uncommitted on disk.
+
+**Expected:** Prism should automatically commit and push work-in-progress to a remote branch at every milestone (spec generated, each worker completed, QA fixes, etc.). The user should never lose more than one worker's worth of work.
+
+**Severity:** Critical — data loss is the worst possible UX failure.
+
+**Status:** FIXED in v2.1.0.0 — Auto-save protocol added. Prism commits and pushes WIP to a feature branch after every milestone. See references/auto-save.md.
+
+---
+
+## 11. Context loss on re-entry — Prism forgets everything (2026-03-26)
+
+**What happened:** Every time context is cleared or the user returns to the repo, Prism has no idea what was discussed. It doesn't remember decisions, preferences, what was tried, or what was about to happen. Stage 0 Resume only reads the last 3 log entries (which are action summaries, not conversation context).
+
+**Expected:** Prism should capture a structured session summary (decisions made, user preferences, what was discussed, what was rejected, open questions, next steps) and read it back on resume. Returning should feel like picking up a conversation.
+
+**Severity:** High — makes Prism feel "stupid and slow" because it re-asks questions already answered and loses the thread of discussion.
+
+**Status:** FIXED in v2.1.0.0 — Session context protocol added. Prism writes session-context.md at key milestones and reads it during Stage 0 Resume. See references/session-context.md.
+
+---
+
 _Add new entries below. Format: number, date, what happened, expected, severity._
