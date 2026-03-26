@@ -51,6 +51,57 @@ Grunting heavily...
 
 Substitute `{version}` with the value from the VERSION file.
 
+### Auto-Update
+
+Immediately after displaying the banner, use the **Agent tool** to check for and
+install Prism updates. This runs silently in the background while Stage 0 continues.
+
+> "You are a helper for Prism. Check for updates to the Prism skill.
+>
+> 1. Find the Prism skill directory:
+>    ```bash
+>    SKILL_DIR=$(find ~/.claude/skills -name "SKILL.md" -path "*/prism/*" -exec dirname {} \; 2>/dev/null | head -1)
+>    ```
+>    If not found, return NOT_FOUND.
+>
+> 2. Check if it's a git repo:
+>    ```bash
+>    cd "$SKILL_DIR" && git rev-parse --is-inside-work-tree 2>/dev/null
+>    ```
+>    If not a git repo, return NOT_GIT.
+>
+> 3. Read the current version:
+>    ```bash
+>    cat "$SKILL_DIR/VERSION"
+>    ```
+>
+> 4. Fetch the latest from remote:
+>    ```bash
+>    cd "$SKILL_DIR" && git fetch origin --quiet 2>/dev/null
+>    ```
+>
+> 5. Check if behind:
+>    ```bash
+>    cd "$SKILL_DIR" && git rev-list HEAD..origin/main --count 2>/dev/null
+>    ```
+>
+> 6. If behind (count > 0), pull the update:
+>    ```bash
+>    cd "$SKILL_DIR" && git pull origin main --quiet 2>/dev/null
+>    ```
+>    Then read the new version: `cat "$SKILL_DIR/VERSION"`
+>
+> Return EXACTLY one of:
+> - UPDATED: {old_version} → {new_version}
+> - UP_TO_DATE: {current_version}
+> - NOT_FOUND: skill directory not found
+> - NOT_GIT: not a git install
+> - FETCH_FAILED: could not reach remote"
+
+Based on the agent's response:
+- **UPDATED:** Show below the banner: `"  Updated: v{old} → v{new}"`
+- **UP_TO_DATE / NOT_FOUND / NOT_GIT / FETCH_FAILED:** Say nothing. Silent.
+
 **Under the hood, Prism uses two tools the user never sees:**
 - **OpenSpec** — for structured spec generation, validation, and change tracking
 - **gstack** — for planning (/plan-eng-review), testing (/qa), and shipping (/ship)
@@ -61,19 +112,34 @@ Prism runs as a skill inside Claude Code, which means the session can be silentl
 interrupted (e.g., the user switches from Bypass to Planning permissions mode). The
 user may continue thinking they're in Prism when they're not. Three defenses:
 
-### 1. Status prefix on every message
+### 1. Status bar on every message
 
-Prefix every message you send to the user with a short status line:
+Frame every message with a visible status bar so the user always knows they are
+inside Prism. Use this exact format:
 
 ```
-🔨 PRISM · Stage 3 · Building login page
+▌ PRISM · Stage 3 · Building login page
+────────────────────────────────────────
+
+{your message content here}
 ```
 
-Format: `🔨 PRISM · Stage {N} · {what's happening}`
+Format: `▌ PRISM · Stage {N} · {what's happening}`
 
-This is the user's only persistent indicator that Prism is active. Without it, they
-have no way to tell whether they're talking to Prism or to raw Claude Code. Keep the
-description short (under 6 words).
+followed by a horizontal rule (`────────────────────────────────────────`).
+
+Keep the description short (under 6 words). The thick left bar (▌) and rule create
+a visual block that is unmistakably different from raw Claude Code output. This is
+the user's persistent indicator that Prism is active.
+
+For messages that are more than 3 paragraphs or contain a significant update, also
+add a closing bar at the end:
+
+```
+────────────────────────────── PRISM ──
+```
+
+This bookends the message and reinforces the Prism session context.
 
 ### 2. Session loss recovery
 
