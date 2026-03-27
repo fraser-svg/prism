@@ -20,6 +20,11 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
+# --- Stage constants (canonical mapping) ---
+# Registry uses string stages. Checkpoint uses numeric. This is the rosetta stone.
+# understand=1, plan=2, design=2.5, build=3, verify=4, design_review=4.5, ship=5, archived=done
+STAGE_MAP='{"understand":1,"plan":2,"design":2.5,"build":3,"verify":4,"design_review":4.5,"ship":5,"archived":99}'
+
 # --- Helpers ---
 _sanitize_arg() {
   # Strip shell metacharacters from user-influenced strings
@@ -125,8 +130,16 @@ cmd_init() {
   mkdir -p "$dir"
 
   if [ -f "$reg" ]; then
-    _write_output "SKIP: registry already exists" "$(cat "$reg")"
-    return 0
+    # Check if change name matches — if different, this is a new build
+    local existing_change; existing_change=$(jq -r '.change.name // ""' "$reg" 2>/dev/null || echo "")
+    if [ "$existing_change" = "$change" ]; then
+      _write_output "SKIP: registry already exists for $change" "$(cat "$reg")"
+      return 0
+    fi
+    # Different change — archive old, create new
+    local now_ts; now_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    jq --arg ts "$now_ts" '.change.stage = "archived" | .change.archived_at = $ts' "$reg" > "${reg}.archived.$(date +%s)" 2>/dev/null || true
+    rm -f "$reg" "${reg}.bak"
   fi
 
   local now; now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -220,12 +233,21 @@ cmd_update() {
     return 1
   fi
 
-  # Deep merge patch into .change
+  # Deep merge patch into .change, and auto-sync checkpoint.stage (numeric) when change.stage updates
   local patch_file; patch_file="/tmp/prism-patch-$$.json"
   printf '%s' "$patch" > "$patch_file"
 
-  _locked_write "$root" '.change *= $patch' --slurpfile patch "$patch_file"
-  rm -f "$patch_file"
+  local map_file; map_file="/tmp/prism-stage-map-$$.json"
+  printf '%s' "$STAGE_MAP" > "$map_file"
+
+  _locked_write "$root" \
+    '.change *= $patch[0]
+     | if $patch[0].stage then
+         .checkpoint.stage = ($map[0][$patch[0].stage] // .checkpoint.stage)
+       else . end' \
+    --slurpfile patch "$patch_file" \
+    --slurpfile map "$map_file"
+  rm -f "$patch_file" "$map_file"
 
   local json; json=$(cat "$reg")
   _write_output "OK: updated change fields" "$json"
@@ -307,6 +329,22 @@ cmd_log() {
   _write_output "OK: logged $event_type ($count events)" "$(cat "$reg")"
 }
 
+cmd_reset() {
+  local root="$1"
+  local change; change=$(_sanitize_arg "$2")
+  local dir; dir=$(_registry_dir "$root")
+  local reg; reg=$(_registry_path "$root")
+
+  if [ -f "$reg" ]; then
+    local old_change; old_change=$(jq -r '.change.name // "unknown"' "$reg" 2>/dev/null || echo "unknown")
+    rm -f "$reg" "${reg}.bak"
+    local reset_json; reset_json=$(jq -n --arg prev "$old_change" '{"status":"reset","previous":$prev}')
+    _write_output "OK: reset registry (was: $old_change)" "$reset_json"
+  else
+    _write_output "OK: no registry to reset" '{"status":"clean"}'
+  fi
+}
+
 cmd_archive() {
   local root="$1"
   local change; change=$(_sanitize_arg "$2")
@@ -367,13 +405,17 @@ case "$CMD" in
     [ -z "$EVENT_TYPE" ] || [ -z "$MESSAGE" ] && { echo "ERROR: log <type> <message> required" >&2; exit 1; }
     cmd_log "$ROOT" "$CHANGE" "$EVENT_TYPE" "$MESSAGE"
     ;;
+  reset)
+    [ -z "$CHANGE" ] && CHANGE="_"
+    cmd_reset "$ROOT" "$CHANGE"
+    ;;
   archive)
     [ -z "$CHANGE" ] && { echo "ERROR: change name required" >&2; exit 1; }
     cmd_archive "$ROOT" "$CHANGE"
     ;;
   *)
     echo "ERROR: unknown command: $CMD" >&2
-    echo "Commands: init, status, update, worker, log, archive" >&2
+    echo "Commands: init, status, update, worker, log, reset, archive" >&2
     exit 1
     ;;
 esac

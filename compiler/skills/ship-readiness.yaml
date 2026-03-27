@@ -1,0 +1,155 @@
+name: ship-readiness
+display_name: Ship Readiness
+version: 1.0.0
+description: >
+  Runs the pre-ship checklist for a completed Prism build: squashes auto-save
+  commits, creates a pull request, archives the OpenSpec change, and updates
+  PRODUCT.md to reflect shipped status.
+
+trigger_patterns:
+  - "ship( it)?$"
+  - "deploy( this)?$"
+  - "create (a )?pull request"
+  - "open (a )?pr"
+  - "push (to )?(main|prod|production)"
+  - "we.re done"
+  - "release"
+
+purpose: >
+  Closes the loop on a completed build by producing a clean git history, a
+  reviewable pull request, and updated product memory. Without this step,
+  auto-save commits accumulate as noise and PRODUCT.md stays stale. This skill
+  is the canonical "done" gate for every Prism build cycle.
+
+inputs:
+  - name: change_name
+    type: string
+    required: true
+    description: >
+      The OpenSpec change name (e.g., "add-auth"). Used to locate the spec,
+      archive the change, and label the squash commit.
+  - name: project_root
+    type: filepath
+    required: true
+    description: Absolute path to the project root.
+  - name: squash_message
+    type: string
+    required: false
+    description: >
+      Optional override for the squash commit message. Defaults to
+      "feat: {change_name} — built by Prism".
+
+outputs:
+  - name: pr_url
+    type: string
+    description: >
+      URL of the created pull request. Surfaced to the user in plain English.
+  - name: squash_commit_sha
+    type: string
+    description: >
+      SHA of the squash commit. Written to the registry for audit trail.
+  - name: archived_spec_path
+    type: file
+    description: >
+      Path to the archived OpenSpec change directory. Confirms the change was
+      cleanly closed.
+
+tool_restrictions:
+  allowed:
+    - Bash
+    - Read
+    - Write
+    - Edit
+    - Grep
+    - Glob
+
+scripts:
+  - name: registry-archive
+    path: $SKILL_DIR/scripts/prism-registry.sh
+    when: on_complete
+  - name: final-save
+    path: $SKILL_DIR/scripts/prism-save.sh
+    when: on_start
+
+stages:
+  - name: preflight
+    description: >
+      Verify the build is actually done: all spec requirements are addressed,
+      QA passed, no uncommitted changes outside auto-save commits. If anything
+      looks incomplete, surface to the Operator before proceeding.
+    auto_advance: false
+  - name: squash
+    description: >
+      Squash all `wip:` auto-save commits on the current branch into one clean
+      commit with a conventional-commit message (feat/fix/chore). Preserve
+      non-wip commits (user-authored or milestone commits).
+    auto_advance: true
+  - name: push
+    description: >
+      Push the squashed branch to origin. If push is rejected (non-fast-forward),
+      rebase on main and retry once.
+    auto_advance: true
+  - name: create_pr
+    description: >
+      Create a pull request via `gh pr create`. Title from change_name, body
+      includes: what was built (plain English), test instructions, and the
+      Prism auto-generated notice.
+    auto_advance: true
+  - name: archive_spec
+    description: >
+      Run `openspec archive "{change_name}" -y` to mark the change as shipped.
+      If openspec is not installed, move the change directory to
+      openspec/archive/{change_name}/.
+    auto_advance: true
+  - name: update_product_md
+    description: >
+      Update PRODUCT.md: set current phase status to "shipped", add the change
+      to the shipped history, and suggest the next logical phase.
+    auto_advance: false
+
+rules:
+  - "Never squash commits that are not prefixed with 'wip:' — preserve user-authored commits."
+  - "The squash commit message MUST follow conventional commits format (feat:, fix:, chore:)."
+  - "If gh CLI is not installed, output the PR details as markdown and tell the user to create it manually."
+  - "If push is rejected, rebase on main (not merge) and retry exactly once."
+  - "Archive the OpenSpec change only AFTER the PR is successfully created."
+  - "PRODUCT.md update runs only after archive succeeds — in that order."
+  - "If any step fails, surface to Operator with the exact error — do not silently skip steps."
+  - "The PR body must be in plain English. No raw spec syntax, no engineering jargon."
+  - "Include the Prism version in the PR body footer for audit trail."
+  - "If there are no auto-save commits to squash (user built manually), skip squash stage."
+
+examples:
+  - input: "add-auth: Ship the authentication feature"
+    expected_behavior: >
+      Squashes all `wip: spec generated for add-auth` and `wip: built auth
+      middleware (1/3)` commits into one `feat: add-auth — built by Prism`.
+      Creates PR with title "feat: add-auth" and plain-English body. Archives
+      openspec/changes/add-auth/. Updates PRODUCT.md. Returns PR URL.
+  - input: "user-dashboard: Ship with custom message 'feat: user dashboard v1'"
+    expected_behavior: >
+      Uses custom squash message. Creates PR. All other steps identical.
+
+eval_cases:
+  - name: pr_url_returned
+    input: "test-feature: Ship"
+    expected_output_contains:
+      - "github.com"
+      - "pull"
+    expected_output_excludes:
+      - "error"
+      - "failed"
+  - name: squash_conventional_commit
+    input: "add-login: Ship"
+    expected_output_contains:
+      - "feat:"
+    expected_output_excludes:
+      - "wip:"
+  - name: plain_english_pr_body
+    input: "contact-form: Ship the contact form"
+    expected_output_contains:
+      - "contact form"
+    expected_output_excludes:
+      - "SHALL"
+      - "WHEN"
+      - "THEN"
