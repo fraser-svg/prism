@@ -2,6 +2,17 @@
 
 All notable changes to Prism are documented here.
 
+## [3.0.1.0] - 2026-03-27
+
+### Added
+- **Central API Key Vault** — Store API keys in macOS Keychain once, auto-inject into every project. Commands: `prism: connect`, `prism: disconnect`, `prism: status`, `prism: inject`. Supports 4 providers (Anthropic, OpenAI, Vercel, Stripe). Zero key copy-paste after initial setup.
+- New reference file: `references/key-management.md` — full key vault protocol with security model, error handling, and credential precedence (Keychain > env var > localStorage)
+- OS detection gate at Stage 0 — gracefully skips key vault on non-macOS systems
+
+### Fixed
+- Inject script uses bash 3.2 compatible syntax (macOS default) instead of associative arrays
+- Inject hardened against Codex adversarial findings: temp file cleanup trap, end-marker validation, monorepo TARGET_DIR support, keychain lock detection, corrupt block reporting
+
 ## [3.0.0.0] - 2026-03-26
 
 ### Changed — The Reliability Rewrite
