@@ -2,6 +2,65 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.0.0] - 2026-03-27
+
+### Changed — The Owned Runtime
+
+Prism transforms from a smart skill into an owned product-engineering system. Six phases executed in one session. 211 tests pass.
+
+### Phase A: Unify the Truth
+- **Registry reset command** — `prism-registry.sh reset` eliminates stale registry state when starting fresh builds
+- **Smart init** — Registry init now detects different change names and auto-archives the old one instead of silently keeping stale state
+- **Canonical stage mapping** — String stages (understand/plan/build/verify/ship) and numeric stages (1/2/3/4/5) are now auto-synced between registry and checkpoint via `STAGE_MAP`
+- **OpenSpec fallback** — Spec generation falls back to `mkdir -p` when openspec CLI is not installed, matching scan's existing graceful degradation
+- **Worker-level checkpoints** — Stage 3 now checkpoints after every worker completion, not just at stage transitions. Reduces context compaction blast radius.
+- **Stale docs cleaned** — README project structure updated, DOGFOOD.md references fixed
+
+### Phase B: Upgrade Product Memory
+- **Split document model** — Product memory splits from a single PRODUCT.md into 5 purpose-specific files: product.md (what/why), architecture.md (technical shape), roadmap.md (sequencing), state.md (current status), decisions.md (ADR log)
+- **`prism-state.sh`** — New script: read, update, migrate, status commands for managing split product memory
+- **Templates** — 5 templates in `templates/` with HTML comment instructions for each section
+- **Auto-migration** — `prism-state.sh migrate` converts legacy PRODUCT.md into split files without data loss
+- **Scan integration** — `prism-scan.sh` now reports `product_memory.model` (split/legacy/none)
+
+### Phase C: Build the Native Supervisor
+- **`prism-supervisor.sh`** — Deterministic task graph manager: plan (validates DAG), next (returns unblocked tasks), status (counts), complete (marks done + unlocks), fail (retry/abandon)
+- **Kahn's algorithm** — Pure bash+jq cycle detection prevents invalid dependency graphs
+- **Transitive blocking** — When a task is abandoned (3 failed retries), all downstream dependents are automatically blocked
+- **Idempotent operations** — Double-complete is a no-op. Status is always recoverable from persisted graph state.
+- **SKILL.md integration** — Stage 3 now validates task graphs via supervisor before dispatching workers, and queries supervisor for next-ready tasks after each completion
+
+### Phase D: Native Reviews and Verification
+- **5 native review prompts** in `references/reviews/`: planning-review.md, engineering-review.md, qa-review.md, design-review.md, ship-readiness.md
+- **Self-contained Agent prompts** — Each review works as a standalone prompt with defined inputs, output format, and example output
+- **Canonical + adapter architecture** — Native reviews are the canonical Prism reviews. External gstack skills are optional enhanced adapters.
+- **Automatic fallback** — If gstack skills are unavailable, Prism falls back to native reviews. No user action required.
+
+### Phase E: Skill/Adapter Compiler
+- **Canonical skill source schema** — `compiler/skill-schema.json` defines the standard format for any Prism skill
+- **3 example skills** — spec-generator.yaml, build-worker.yaml, ship-readiness.yaml in canonical YAML format
+- **`prism-compile.sh`** — Compiler with 4 commands: validate (schema check), claude (generates SKILL.md), codex (generates AGENTS.md), all (batch compile)
+- **Cross-platform generation** — Same canonical source produces both Claude and Codex bundles
+
+### Phase F: Safe Self-Improvement
+- **`prism-telemetry.sh`** — Append-only JSONL telemetry: record, summary, failures with clustering
+- **`prism-improve.sh`** — Improvement proposals with eval gates: propose, list, eval, promote, reject
+- **`prism-eval.sh`** — Eval suite: run (pattern matching), baseline (snapshot), compare (regression detection)
+- **Hard rule enforced** — No live production mutation without eval-backed promotion. Proposals must pass all eval cases before promotion is allowed.
+
+### Added
+- `scripts/prism-state.sh` — product memory management (30 tests)
+- `scripts/prism-supervisor.sh` — task graph supervisor (44 tests)
+- `scripts/prism-telemetry.sh` — build telemetry capture
+- `scripts/prism-improve.sh` — safe improvement proposals
+- `scripts/prism-eval.sh` — eval suite with baselines
+- `compiler/skill-schema.json` — canonical skill source schema
+- `compiler/prism-compile.sh` — skill compiler (35 tests)
+- `compiler/skills/` — 3 canonical skill sources
+- `references/reviews/` — 5 native review prompts
+- `templates/product.md`, `architecture.md`, `roadmap.md`, `state.md`, `decisions.md`
+- Test suite: 39 → 211 tests
+
 ## [3.0.1.0] - 2026-03-27
 
 ### Added

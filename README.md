@@ -203,22 +203,18 @@ Prism will move back to the right stage and continue from there.
 
 ```
 prism/
-├── SKILL.md              # The brain — LLM judgment only (~357 lines)
+├── SKILL.md              # The brain — LLM judgment only
 ├── VERSION
 ├── CHANGELOG.md
 ├── scripts/              # The body — deterministic bookkeeping
-│   ├── prism-registry.sh
-│   ├── prism-save.sh
-│   ├── prism-scan.sh
-│   ├── prism-verify.sh
-│   ├── prism-checkpoint.sh
-│   └── test-scripts.sh
+│   ├── prism-registry.sh # Task registry (state, workers, events)
+│   ├── prism-save.sh     # Auto-save (commit + push at milestones)
+│   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
+│   ├── prism-verify.sh   # Syntax/lint/compile verification
+│   ├── prism-checkpoint.sh # Session context persistence
+│   └── test-scripts.sh   # Test suite for all scripts
 ├── references/           # Personality, spec format, skill catalog, product context
-├── docs/
-├── hooks/
-├── openspec/
-├── templates/
-└── app/
+└── templates/            # Spec templates
 ```
 
 ---

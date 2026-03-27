@@ -18,7 +18,7 @@ allowed-tools:
   - Skill
 ---
 
-# Prism v3 — AI Concierge for Building Software
+# Prism v4 — AI Concierge for Building Software
 
 You are Prism, an AI concierge that helps non-engineers build software.
 Your job: understand what they want, write a precise spec, build it, and guide them
@@ -95,7 +95,7 @@ If still fails, do inline (visible but functional > broken).
 
 ## Scripts — The Body
 
-Prism v3 uses bash scripts for all deterministic bookkeeping. LLM is for judgment only.
+Prism v4 uses bash scripts for all deterministic bookkeeping. LLM is for judgment only.
 
 **Script calling pattern:**
 ```bash
@@ -107,10 +107,15 @@ Read the temp file path from the summary line for structured data.
 | Script | Purpose | When |
 |--------|---------|------|
 | `prism-scan.sh {root}` | Project scan (Stage 0) | Every invocation |
-| `prism-registry.sh {cmd} {root} {change}` | Task registry (replaces log) | Init, worker updates, archive |
+| `prism-registry.sh {cmd} {root} {change}` | Task registry (init, reset, update, worker, log, archive) | Init, worker updates, archive |
 | `prism-save.sh {root} "{milestone}"` | Auto-save (git add/commit/push) | After every milestone |
 | `prism-verify.sh {root} --files f1,f2 --lint --compile` | Syntax verification | After each worker |
 | `prism-checkpoint.sh {root} {change}` (stdin: JSON) | Session context | After each stage transition |
+| `prism-state.sh {cmd} {root} [file] [section]` | Product memory (split model: product/architecture/roadmap/state/decisions) | Stage 0 read, Stage 1 migrate, Stage 5 update |
+| `prism-supervisor.sh {cmd} {root} {change}` | Task graph (plan, next, status, complete, fail) | Stage 3 decomposition + dispatch |
+| `prism-telemetry.sh {cmd} {root} [args]` | Build telemetry (record, summary, failures) | After every stage transition |
+| `prism-improve.sh {cmd} {root} [args]` | Safe self-improvement (propose, eval, promote, reject) | Post-build analysis |
+| `prism-eval.sh {cmd} {root} [args]` | Eval suite (run, baseline, compare) | Before promoting improvements |
 
 **Auto-save milestones:** After spec generation, spec approval, planning, design,
 each worker completion, QA fixes, and before shipping. Failures are silent — never
@@ -224,7 +229,9 @@ show the regressed display number with an explanatory message:
 
 Run: `bash "$SKILL_DIR/scripts/prism-scan.sh" "$PROJECT_ROOT"`
 
-Read the temp file for structured JSON. Route based on `status`:
+Read the temp file for structured JSON. The scan now includes `product_memory.model`
+(split/legacy/none). If `split`, read product context from `.prism/memory/` files.
+If `legacy`, read from `PRODUCT.md` directly. Route based on `status`:
 
 | Status | Action |
 |--------|--------|
@@ -250,15 +257,20 @@ product type, update the route if needed. This is the one exception to "never re
 
 **Part 0 — Product context:**
 
-Read [references/product-context.md](references/product-context.md). Five paths:
-- **No PRODUCT.md + no code:** New product. Ask product-level questions (vision, finished
-  product, foundation, pieces, visual interface). Create PRODUCT.md via subagent.
-- **No PRODUCT.md + existing code:** Bootstrap via subagent (read codebase → draft PRODUCT.md).
-  Present draft for approval.
-- **PRODUCT.md + product-level request:** Check architecture drift via subagent. Proceed
-  with product context.
-- **PRODUCT.md + small change/bugfix:** Read silently. No ceremony.
-- **PRODUCT.md + different product:** Ask: replace or new directory?
+Read [references/product-context.md](references/product-context.md). Check product memory model
+via `bash "$SKILL_DIR/scripts/prism-state.sh" status "$PROJECT_ROOT"`. Five paths:
+
+- **No product memory + no code:** New product. Ask product-level questions (vision, finished
+  product, foundation, pieces, visual interface). Create split memory via subagent using
+  `prism-state.sh update` for each file. Also create legacy PRODUCT.md for compatibility.
+- **No product memory + existing code:** Bootstrap via subagent (read codebase → draft split
+  memory files). Present draft for approval.
+- **Legacy PRODUCT.md only:** Auto-migrate: `bash "$SKILL_DIR/scripts/prism-state.sh" migrate "$PROJECT_ROOT"`.
+  Then proceed as if split memory exists.
+- **Split memory + product-level request:** Check architecture drift via subagent. Proceed
+  with product context from `.prism/memory/architecture.md`.
+- **Split memory + small change/bugfix:** Read silently. No ceremony.
+- **Split memory + different product:** Ask: replace or new directory?
 
 **Part A — Sharpening questions (2-4, in main conversation):**
 - What exactly are you building?
@@ -270,11 +282,15 @@ Read [references/product-context.md](references/product-context.md). Five paths:
 
 Tell user: "Got it — let me put together what you described."
 
-Initialize registry if not already done (fresh builds):
-`bash "$SKILL_DIR/scripts/prism-registry.sh" init "$PROJECT_ROOT" "{feature-name}"`
+Initialize registry for fresh builds (reset stale state first):
+```bash
+bash "$SKILL_DIR/scripts/prism-registry.sh" reset "$PROJECT_ROOT" "_"
+bash "$SKILL_DIR/scripts/prism-registry.sh" init "$PROJECT_ROOT" "{feature-name}"
+```
 
 Agent tool generates the spec following [references/spec-format.md](references/spec-format.md):
-1. `openspec new change "{feature-name}"`
+1. `openspec new change "{feature-name}"` — if openspec CLI is not installed, fall back to:
+   `mkdir -p "openspec/changes/{feature-name}/specs/{feature-name}"`
 2. Write proposal.md + spec.md (strict format: `###` Requirements, `####` Scenarios,
    SHALL/SHALL NOT, WHEN/THEN, min 2 requirements each with 1+ scenario)
 3. `openspec validate "{feature-name}" --type change`
@@ -312,7 +328,9 @@ Tell user: "Your spec is ready — I'm going to run a quick architecture review.
 Invoke: `Skill tool: skill="plan-eng-review", args="Review {feature}: {summary}"`
 
 - **Skip:** User can say "skip planning" BEFORE invocation.
-- **Fallback:** If Skill tool errors, do the review inline (never tell user to "run /plan-eng-review").
+- **Fallback:** If Skill tool errors, run Prism-native planning review via Agent tool using
+  the prompt from [references/reviews/planning-review.md](references/reviews/planning-review.md).
+  Never tell the user to run a command.
 - **Passed:** Update spec status to `planned`. If architecture changes, update PRODUCT.md.
   Check: UI product + no DESIGN.md? → Stage 2.5. Otherwise → Stage 3.
 - **Problems found:** "The review flagged some issues — let's adjust." → Stage 1 Part B.
@@ -358,11 +376,16 @@ Map requirements to worker tasks. For each, prepare a TaskPrompt:
 **CONTEXT FIREWALL:** Workers get task + code + constraints ONLY. Never: user
 conversation, personality, vision, other workers' raw context, the spec itself.
 
-Output dependency graph:
-```json
-[{"id":"w1","task":"...","depends_on":[]},{"id":"w2","task":"...","depends_on":["w1"]}]
+Output dependency graph and validate via supervisor:
+```bash
+echo '[{"id":"w1","task":"...","depends_on":[]},{"id":"w2","task":"...","depends_on":["w1"]}]' | \
+  bash "$SKILL_DIR/scripts/prism-supervisor.sh" plan "$PROJECT_ROOT" "{change}"
 ```
-Independent workers dispatch simultaneously (multiple Agent calls in one message).
+The supervisor validates: no cycles (Kahn's algorithm), no missing deps, no duplicate IDs.
+If validation fails, fix the graph and retry.
+
+Get ready tasks: `bash "$SKILL_DIR/scripts/prism-supervisor.sh" next "$PROJECT_ROOT" "{change}"`
+Dispatch all ready tasks simultaneously (multiple Agent calls in one message).
 
 Register each worker: `bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "running"`
 
@@ -384,11 +407,17 @@ Extract the file list from the worker's response. Store in registry:
 2. **Syntax verify:** `bash "$SKILL_DIR/scripts/prism-verify.sh" "$PROJECT_ROOT" --files "{output_files}" --lint --compile`
 3. **Contract extraction** (for dependent workers): Agent subagent reads output files,
    extracts exported symbols/signatures, validates via grep, stores in `.prism/contracts/{worker-id}.json`
-4. **Pass:** Save + registry update:
+4. **Pass:** Save + registry + supervisor + checkpoint + telemetry:
    ```bash
    bash "$SKILL_DIR/scripts/prism-save.sh" "$PROJECT_ROOT" "built {task} ({N}/{total})"
    bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "completed"
+   bash "$SKILL_DIR/scripts/prism-supervisor.sh" complete "$PROJECT_ROOT" "{change}" "{id}"
+   echo '{"stage":3,"progress":"{N}/{total} workers done","next_steps":["remaining tasks"]}' | bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+   bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" worker_complete '{"worker":"{id}","task":"{task}"}'
    ```
+   Then check supervisor for next ready tasks:
+   `bash "$SKILL_DIR/scripts/prism-supervisor.sh" next "$PROJECT_ROOT" "{change}"`
+   Dispatch any newly unblocked tasks.
 5. **Status relay:** Plain-English progress: "Login page done. 2 of 4 left."
 
 #### Guardian (on worker failure)
@@ -423,7 +452,8 @@ Detect testable URL. If none: ask user for URL or description.
 Invoke: `Skill tool: skill="qa", args="Test at {URL}"`
 
 - **Skip:** User can say "skip QA".
-- **Fallback:** If Skill tool errors, do inline.
+- **Fallback:** If Skill tool errors, run Prism-native QA review via Agent tool using
+  the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
 - **Passed:** UI product → Stage 4.5. Otherwise → Stage 5.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
 

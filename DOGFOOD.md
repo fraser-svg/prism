@@ -139,7 +139,7 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 **Severity:** Critical — data loss is the worst possible UX failure.
 
-**Status:** FIXED in v2.1.0.0 — Auto-save protocol added. Prism commits and pushes WIP to a feature branch after every milestone. See references/auto-save.md.
+**Status:** FIXED in v3.0.0.0 — Auto-save protocol added via `prism-save.sh`. Prism commits and pushes WIP to a feature branch after every milestone.
 
 ---
 
@@ -151,7 +151,7 @@ Collected during active use. Don't fix yet — finish dogfooding first, then bat
 
 **Severity:** High — makes Prism feel "stupid and slow" because it re-asks questions already answered and loses the thread of discussion.
 
-**Status:** FIXED in v2.1.0.0 — Session context protocol added. Prism writes session-context.md at key milestones and reads it during Stage 0 Resume. See references/session-context.md.
+**Status:** FIXED in v3.0.0.0 — Session context protocol added via `prism-checkpoint.sh`. Prism writes session-context.md at key milestones and reads it during Stage 0 Resume.
 
 ---
 

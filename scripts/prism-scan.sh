@@ -45,7 +45,7 @@ command -v jq >/dev/null 2>&1 && HAS_JQ=true
 HAS_OPENSPEC=false
 command -v openspec >/dev/null 2>&1 && HAS_OPENSPEC=true
 
-# --- 2. Check PRODUCT.md ---
+# --- 2. Check PRODUCT.md (legacy) ---
 HAS_PRODUCT=false
 PRODUCT_NAME="null"
 PRODUCT_VISION="null"
@@ -56,6 +56,30 @@ if [ -f "PRODUCT.md" ]; then
     PRODUCT_NAME=$(head -20 PRODUCT.md | grep '^# ' | head -1 | sed 's/^# //' || echo "")
     PRODUCT_VISION=$(head -20 PRODUCT.md | sed -n '/^# /,/^$/p' | tail -n +2 | head -3 | tr '\n' ' ' | xargs || echo "")
   fi
+fi
+
+# --- 2b. Check split product memory model ---
+MEMORY_DIR=".prism/memory"
+MEMORY_FILES="product.md architecture.md roadmap.md state.md decisions.md"
+MEMORY_MODEL="none"
+MEMORY_FILES_FOUND="[]"
+MEMORY_FILE_COUNT=0
+
+if [ -d "$MEMORY_DIR" ]; then
+  for mf in $MEMORY_FILES; do
+    if [ -f "$MEMORY_DIR/$mf" ]; then
+      MEMORY_FILE_COUNT=$((MEMORY_FILE_COUNT + 1))
+      if [ "$HAS_JQ" = true ]; then
+        MEMORY_FILES_FOUND=$(printf '%s' "$MEMORY_FILES_FOUND" | jq --arg f "$mf" '. += [$f]')
+      fi
+    fi
+  done
+fi
+
+if [ "$MEMORY_FILE_COUNT" -gt 0 ]; then
+  MEMORY_MODEL="split"
+elif [ "$HAS_PRODUCT" = true ]; then
+  MEMORY_MODEL="legacy"
 fi
 
 # --- 3. List active changes ---
@@ -123,10 +147,16 @@ HAS_V2_LOG=false
 [ -f "prism-log.md" ] && HAS_V2_LOG=true
 
 # --- 7. Determine status ---
+# Product context exists if legacy PRODUCT.md OR split memory model is present
+HAS_PRODUCT_CONTEXT=false
+if [ "$HAS_PRODUCT" = true ] || [ "$MEMORY_MODEL" = "split" ]; then
+  HAS_PRODUCT_CONTEXT=true
+fi
+
 STATUS="NONE"
-if [ "$HAS_PRODUCT" = true ] && [ "$CHANGE_COUNT" -gt 0 ]; then
+if [ "$HAS_PRODUCT_CONTEXT" = true ] && [ "$CHANGE_COUNT" -gt 0 ]; then
   STATUS="PRODUCT_RESUME"
-elif [ "$HAS_PRODUCT" = true ] && [ "$CHANGE_COUNT" -eq 0 ]; then
+elif [ "$HAS_PRODUCT_CONTEXT" = true ] && [ "$CHANGE_COUNT" -eq 0 ]; then
   STATUS="PRODUCT_NEXT"
 elif [ "$CHANGE_COUNT" -gt 1 ]; then
   STATUS="MULTIPLE"
@@ -150,16 +180,20 @@ if [ "$HAS_JQ" = true ]; then
     --argjson has_session "$( [ -n "$SESSION_FILE" ] && echo 'true' || echo 'false' )" \
     --arg session_file "$SESSION_FILE" \
     --argjson has_v2_log "$( [ "$HAS_V2_LOG" = true ] && echo 'true' || echo 'false' )" \
+    --arg memory_model "$MEMORY_MODEL" \
+    --argjson memory_files "$MEMORY_FILES_FOUND" \
+    --argjson memory_file_count "$MEMORY_FILE_COUNT" \
     '{
       status: $status,
       product: { exists: $has_product, name: $product_name, vision: $product_vision },
       openspec: { cli_available: $has_openspec, changes: $changes, change_count: $change_count },
       registry: { status: $registry_status, stage: $registry_stage, workers: $registry_workers },
       session: { exists: $has_session, file: $session_file },
-      v2_compat: { has_prism_log: $has_v2_log }
+      v2_compat: { has_prism_log: $has_v2_log },
+      product_memory: { model: $memory_model, files: $memory_files, file_count: $memory_file_count }
     }')
 else
-  JSON="{\"status\":\"$STATUS\",\"product\":{\"exists\":$HAS_PRODUCT},\"change_count\":$CHANGE_COUNT}"
+  JSON="{\"status\":\"$STATUS\",\"product\":{\"exists\":$HAS_PRODUCT},\"change_count\":$CHANGE_COUNT,\"product_memory\":{\"model\":\"$MEMORY_MODEL\",\"file_count\":$MEMORY_FILE_COUNT}}"
 fi
 
 _write_output "OK: status=$STATUS changes=$CHANGE_COUNT product=$HAS_PRODUCT" "$JSON"
