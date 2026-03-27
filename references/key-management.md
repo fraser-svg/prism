@@ -98,20 +98,22 @@ grep -qxF '.env.local' .gitignore 2>/dev/null || echo '.env.local' >> .gitignore
 **Step 2: Build and write via single pipeline**
 
 ```bash
-# Provider-to-env-var mapping
-declare -A ENV_VAR=(
-  [anthropic]="ANTHROPIC_API_KEY"
-  [openai]="OPENAI_API_KEY"
-  [vercel]="VERCEL_TOKEN"
-  [stripe]="STRIPE_SECRET_KEY"
-)
+# Map provider to env var (bash 3.2 compatible — no associative arrays)
+env_var_for() {
+  case "$1" in
+    anthropic) echo "ANTHROPIC_API_KEY" ;;
+    openai)    echo "OPENAI_API_KEY" ;;
+    vercel)    echo "VERCEL_TOKEN" ;;
+    stripe)    echo "STRIPE_SECRET_KEY" ;;
+  esac
+}
 
 # Build the prism-managed block in a temp file
 TMPFILE=$(mktemp /tmp/prism-env-XXXXXX)
 echo "# --- prism-managed:start ---" > "$TMPFILE"
 for provider in anthropic openai vercel stripe; do
   KEY=$(security find-generic-password -s "prism-$provider" -a "prism" -w 2>/dev/null) && \
-  echo "${ENV_VAR[$provider]}=$KEY" >> "$TMPFILE"
+  echo "$(env_var_for "$provider")=$KEY" >> "$TMPFILE"
 done
 echo "# --- prism-managed:end ---" >> "$TMPFILE"
 
