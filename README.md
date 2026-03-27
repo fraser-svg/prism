@@ -117,14 +117,14 @@ Like a real team would.
 You do not need to understand this to use Prism, but here is the idea:
 
 Prism separates:
-- Thinking, which is the big picture decisions  
-- From doing, which is the actual work  
+- The brain (SKILL.md), which handles judgment, understanding, and decisions
+- The body (bash scripts), which handles all the bookkeeping like saving, verifying, and tracking progress
 
-There is an Operator that holds the full vision, and Workers that handle small, focused tasks.
+There is an Operator that holds the full vision, and Workers that handle small, focused tasks. Independent tasks run simultaneously. Dependent tasks wait for what they need.
 
 This prevents the chaos that usually happens when one AI tries to do everything at once.
 
-There is also a retry system called the Guardian pattern. If something goes wrong, Prism diagnoses the issue, adjusts, and tries again instead of failing outright.
+There is also a retry system called the Guardian pattern. If something goes wrong, Prism researches the issue, diagnoses it, rewrites the task, and tries again instead of failing outright.
 
 ---
 
@@ -203,10 +203,18 @@ Prism will move back to the right stage and continue from there.
 
 ```
 prism/
-├── SKILL.md
+├── SKILL.md              # The brain — LLM judgment only (~357 lines)
 ├── VERSION
 ├── CHANGELOG.md
-├── references/
+├── scripts/              # The body — deterministic bookkeeping
+│   ├── prism-registry.sh
+│   ├── prism-save.sh
+│   ├── prism-scan.sh
+│   ├── prism-verify.sh
+│   ├── prism-checkpoint.sh
+│   └── test-scripts.sh
+├── references/           # Personality, spec format, skill catalog, product context
+├── docs/
 ├── hooks/
 ├── openspec/
 ├── templates/

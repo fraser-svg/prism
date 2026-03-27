@@ -2,6 +2,36 @@
 
 All notable changes to Prism are documented here.
 
+## [3.0.0.0] - 2026-03-26
+
+### Changed — The Reliability Rewrite
+- **Brain/Body split:** SKILL.md rewritten from 840 → 357 lines. LLM handles judgment only (understanding, decomposition, diagnosis). Deterministic bookkeeping moved to 5 bash scripts.
+- **Scripts replace subagents:** `prism-registry.sh` (JSON task registry with flock + .bak recovery), `prism-save.sh` (smart auto-save with blocklist, not allowlist), `prism-scan.sh` (project scan with graceful openspec degradation), `prism-verify.sh` (post-worker syntax verification), `prism-checkpoint.sh` (session context persistence). Full test suite at `scripts/test-scripts.sh` (39 tests).
+- **Progressive disclosure:** Specs auto-generate silently, user sees a plain-English numbered checklist for approval. Raw spec hidden unless ambiguous or requested.
+- **Blocklist-based save:** Replaces the extension allowlist. Any language's source files get saved. Credential files (`*credential*`, `*secret*`, `.env*`, `*.pem`, etc.) are blocked.
+- **Inline builds for small changes:** 1-2 requirements build directly in conversation (no worker decomposition overhead).
+- **Shared Artifact Bridging:** After each worker, contracts are extracted, validated via grep, and stored in `.prism/contracts/`. Dependent workers get validated type signatures, not raw context.
+- **Registry with concurrency safety:** `.prism/registry.json` uses mkdir-based locking and atomic writes (write to tmp → mv). Auto-recovers from `.bak` on corruption.
+- **Script-to-LLM interface:** Scripts write full JSON to temp files, print one-line summaries to stdout. SKILL.md uses Read tool on temp files for structured data.
+- **Dependency-graph workers:** Independent workers dispatch simultaneously via multiple Agent calls in one message. Dependent workers wait.
+- **Coherent rollback:** On parallel batch failure, checks cross-worker imports before partial rollback. Conservative default: roll back entire batch.
+
+### Removed
+- `references/build-mode.md` — merged into SKILL.md Stage 3
+- `references/stage-routing.md` — merged into SKILL.md stage flow
+- `references/session-context.md` — replaced by `prism-checkpoint.sh`
+- `references/operation-log.md` — replaced by `prism-registry.sh`
+- `references/auto-save.md` — replaced by `prism-save.sh`
+- ~15 LLM subagent calls per build for bookkeeping (git, logging, verification, session context)
+
+### Added
+- `scripts/prism-registry.sh` — JSON task registry
+- `scripts/prism-save.sh` — smart auto-save
+- `scripts/prism-scan.sh` — project scan
+- `scripts/prism-verify.sh` — post-worker syntax verification
+- `scripts/prism-checkpoint.sh` — session context persistence
+- `scripts/test-scripts.sh` — 39-test suite covering happy + error paths
+
 ## [2.2.0.0] - 2026-03-26
 
 ### Added
