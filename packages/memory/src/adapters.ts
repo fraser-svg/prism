@@ -1,17 +1,13 @@
-import { execFile, spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { promisify } from "node:util";
-
 import type { AbsolutePath } from "@prism/core";
-
-const execFileAsync = promisify(execFile);
+import {
+  execFileAsync,
+  execScriptWithJsonInput,
+  parseScriptJson,
+  resolveScriptPath,
+  type ScriptExecutionResult,
+} from "@prism/core";
 
 type MemoryModel = "none" | "legacy" | "split";
-
-export interface ScriptExecutionResult<T> {
-  summary: string;
-  data: T;
-}
 
 export interface PrismStateReadResult {
   model: MemoryModel;
@@ -39,56 +35,7 @@ export interface PrismCheckpointResult extends PrismCheckpointPayload {
 }
 
 function scriptPath(name: string): AbsolutePath {
-  return new URL(`../../../scripts/${name}`, import.meta.url).pathname as AbsolutePath;
-}
-
-async function parseScriptJson<T>(stdout: string): Promise<ScriptExecutionResult<T>> {
-  const [summaryPart, outputPathPart] = stdout.trim().split("→").map((part) => part.trim());
-  if (!outputPathPart) {
-    throw new Error(`Script output did not include a temp file path: ${stdout}`);
-  }
-
-  const json = await readFile(outputPathPart, "utf8");
-  return {
-    summary: summaryPart,
-    data: JSON.parse(json) as T,
-  };
-}
-
-async function execScriptWithJsonInput(
-  script: AbsolutePath,
-  args: string[],
-  payload: unknown
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(script, args, {
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve(stdout);
-        return;
-      }
-
-      reject(new Error(`Script exited ${code ?? "unknown"}: ${stderr}`));
-    });
-
-    child.stdin.write(`${JSON.stringify(payload)}\n`);
-    child.stdin.end();
-  });
+  return resolveScriptPath(import.meta.url, name);
 }
 
 export async function readProductMemory(

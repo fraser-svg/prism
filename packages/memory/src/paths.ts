@@ -1,4 +1,5 @@
 import type { AbsolutePath, EntityId } from "@prism/core";
+import { validateEntityId } from "@prism/core";
 import type {
   CheckpointArtifactPaths,
   PlanArtifactPaths,
@@ -52,7 +53,7 @@ export function specPaths(
   projectRoot: AbsolutePath,
   specId: EntityId
 ): SpecArtifactPaths {
-  const specDir = joinPath(projectPaths(projectRoot).specsDir, specId);
+  const specDir = joinPath(projectPaths(projectRoot).specsDir, validateEntityId(specId));
   return {
     specDir,
     specFile: joinPath(specDir, "spec.md"),
@@ -64,7 +65,7 @@ export function planPaths(
   projectRoot: AbsolutePath,
   planId: EntityId
 ): PlanArtifactPaths {
-  const planDir = joinPath(projectPaths(projectRoot).plansDir, planId);
+  const planDir = joinPath(projectPaths(projectRoot).plansDir, validateEntityId(planId));
   return {
     planDir,
     planFile: joinPath(planDir, "plan.md"),
@@ -77,7 +78,7 @@ export function reviewPaths(
   projectRoot: AbsolutePath,
   specId: EntityId
 ): ReviewArtifactPaths {
-  const reviewDir = joinPath(projectPaths(projectRoot).reviewsDir, specId);
+  const reviewDir = joinPath(projectPaths(projectRoot).reviewsDir, validateEntityId(specId));
   return {
     reviewDir,
     planningReview: joinPath(reviewDir, "planning-review.md"),
@@ -104,7 +105,7 @@ export function runPaths(
   projectRoot: AbsolutePath,
   runId: EntityId
 ): RunArtifactPaths {
-  const runDir = joinPath(projectPaths(projectRoot).runsDir, runId);
+  const runDir = joinPath(projectPaths(projectRoot).runsDir, validateEntityId(runId));
   return {
     runDir,
     summaryFile: joinPath(runDir, "summary.md"),

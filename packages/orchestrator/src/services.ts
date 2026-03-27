@@ -78,9 +78,11 @@ export async function resumeProject(
     : null;
 
   const workflow = createInitialWorkflowState(projectId, null);
+  const blockers = registry?.checkpoint?.open_questions ?? [];
   if (registry?.change?.stage) {
     const phase = mapRegistryStageToWorkflowPhase(registry.change.stage);
     workflow.phase = phase;
+    workflow.blockers = blockers;
     workflow.transitionHistory = [
       {
         from: "resume",
@@ -93,7 +95,7 @@ export async function resumeProject(
   const summary: WorkflowCheckpointSummary = {
     phase: workflow.phase,
     activeSpecId: workflow.activeSpecId,
-    blockers: registry?.checkpoint?.open_questions ?? [],
+    blockers,
     nextActions: registry?.checkpoint?.next_steps ?? [],
   };
 
@@ -127,17 +129,19 @@ export async function updateWorkflowCheckpoint(
   return result.data;
 }
 
+export type RegistryStage =
+  | "understand"
+  | "plan"
+  | "build"
+  | "verify"
+  | "ship"
+  | "design"
+  | "design_review";
+
 export async function setWorkflowStage(
   projectRoot: AbsolutePath,
   changeName: string,
-  stage:
-    | "understand"
-    | "plan"
-    | "build"
-    | "verify"
-    | "ship"
-    | "design"
-    | "design_review"
+  stage: RegistryStage
 ): Promise<RegistryStatusResult> {
   const result = await updateRegistryChange(projectRoot, changeName, { stage });
   return result.data;
@@ -148,12 +152,8 @@ export async function createExecutionPlan(
   changeName: string,
   graph: SupervisorTaskInput[]
 ): Promise<ExecutionPlanningResult> {
-  const [plan, status] = await Promise.all([
-    planTaskGraph(projectRoot, changeName, graph),
-    planTaskGraph(projectRoot, changeName, graph).then(() =>
-      readTaskGraphStatus(projectRoot, changeName)
-    ),
-  ]);
+  const plan = await planTaskGraph(projectRoot, changeName, graph);
+  const status = await readTaskGraphStatus(projectRoot, changeName);
 
   return {
     plan: plan.data,
@@ -203,11 +203,13 @@ function mapRegistryStageToWorkflowPhase(
     case "build":
       return "execute";
     case "verify":
+    case "design":
     case "design_review":
       return "verify";
     case "ship":
       return "release";
     default:
-      return "resume";
+      console.warn(`Unknown registry stage "${stage}", falling back to "understand"`);
+      return "understand";
   }
 }

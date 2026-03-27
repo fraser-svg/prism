@@ -1,15 +1,5 @@
-import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { promisify } from "node:util";
-
 import type { AbsolutePath } from "@prism/core";
-
-const execFileAsync = promisify(execFile);
-
-export interface ScriptExecutionResult<T> {
-  summary: string;
-  data: T;
-}
+import { execFileAsync, parseScriptJson, resolveScriptPath, type ScriptExecutionResult } from "@prism/core";
 
 export interface VerifyOptions {
   files?: string[];
@@ -33,20 +23,7 @@ export interface VerifyResult {
 }
 
 function scriptPath(name: string): AbsolutePath {
-  return new URL(`../../../scripts/${name}`, import.meta.url).pathname as AbsolutePath;
-}
-
-async function parseScriptJson<T>(stdout: string): Promise<ScriptExecutionResult<T>> {
-  const [summaryPart, outputPathPart] = stdout.trim().split("→").map((part) => part.trim());
-  if (!outputPathPart) {
-    throw new Error(`Script output did not include a temp file path: ${stdout}`);
-  }
-
-  const json = await readFile(outputPathPart, "utf8");
-  return {
-    summary: summaryPart,
-    data: JSON.parse(json) as T,
-  };
+  return resolveScriptPath(import.meta.url, name);
 }
 
 export async function runVerification(
