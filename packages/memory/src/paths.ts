@@ -1,0 +1,124 @@
+import type { AbsolutePath, EntityId } from "@prism/core";
+import { validateEntityId } from "@prism/core";
+import type {
+  CheckpointArtifactPaths,
+  PlanArtifactPaths,
+  PrismProjectPaths,
+  ProjectArtifactLocator,
+  ReviewArtifactPaths,
+  RunArtifactPaths,
+  SpecArtifactPaths,
+} from "./contracts";
+
+function joinPath(base: string, ...parts: string[]): AbsolutePath {
+  return [base.replace(/\/$/, ""), ...parts].join("/") as AbsolutePath;
+}
+
+export const MEMORY_FILE_CONTRACTS = [
+  { key: "product", relativePath: ".prism/memory/product.md", required: true },
+  {
+    key: "architecture",
+    relativePath: ".prism/memory/architecture.md",
+    required: true,
+  },
+  { key: "roadmap", relativePath: ".prism/memory/roadmap.md", required: true },
+  { key: "state", relativePath: ".prism/memory/state.md", required: true },
+  {
+    key: "decisions",
+    relativePath: ".prism/memory/decisions.md",
+    required: true,
+  },
+] as const;
+
+export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
+  const prismDir = joinPath(projectRoot, ".prism");
+  return {
+    projectRoot,
+    prismDir,
+    memoryDir: joinPath(prismDir, "memory"),
+    specsDir: joinPath(prismDir, "specs"),
+    plansDir: joinPath(prismDir, "plans"),
+    reviewsDir: joinPath(prismDir, "reviews"),
+    runsDir: joinPath(prismDir, "runs"),
+    checkpointsDir: joinPath(prismDir, "checkpoints"),
+    evalsDir: joinPath(prismDir, "evals"),
+    proposalsDir: joinPath(prismDir, "proposals"),
+    telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
+    registryFile: joinPath(prismDir, "registry.json"),
+    taskGraphFile: joinPath(prismDir, "task-graph.json"),
+  };
+}
+
+export function specPaths(
+  projectRoot: AbsolutePath,
+  specId: EntityId
+): SpecArtifactPaths {
+  const specDir = joinPath(projectPaths(projectRoot).specsDir, validateEntityId(specId));
+  return {
+    specDir,
+    specFile: joinPath(specDir, "spec.md"),
+    metadataFile: joinPath(specDir, "metadata.json"),
+  };
+}
+
+export function planPaths(
+  projectRoot: AbsolutePath,
+  planId: EntityId
+): PlanArtifactPaths {
+  const planDir = joinPath(projectPaths(projectRoot).plansDir, validateEntityId(planId));
+  return {
+    planDir,
+    planFile: joinPath(planDir, "plan.md"),
+    metadataFile: joinPath(planDir, "metadata.json"),
+    taskGraphFile: joinPath(planDir, "task-graph.json"),
+  };
+}
+
+export function reviewPaths(
+  projectRoot: AbsolutePath,
+  specId: EntityId
+): ReviewArtifactPaths {
+  const reviewDir = joinPath(projectPaths(projectRoot).reviewsDir, validateEntityId(specId));
+  return {
+    reviewDir,
+    planningReview: joinPath(reviewDir, "planning-review.md"),
+    engineeringReview: joinPath(reviewDir, "engineering-review.md"),
+    qaReview: joinPath(reviewDir, "qa-review.md"),
+    designReview: joinPath(reviewDir, "design-review.md"),
+    shipReadinessReview: joinPath(reviewDir, "ship-readiness.md"),
+  };
+}
+
+export function checkpointPaths(
+  projectRoot: AbsolutePath
+): CheckpointArtifactPaths {
+  const checkpointsDir = projectPaths(projectRoot).checkpointsDir;
+  return {
+    checkpointsDir,
+    latestJson: joinPath(checkpointsDir, "latest.json"),
+    latestMarkdown: joinPath(checkpointsDir, "latest.md"),
+    historyDir: joinPath(checkpointsDir, "history"),
+  };
+}
+
+export function runPaths(
+  projectRoot: AbsolutePath,
+  runId: EntityId
+): RunArtifactPaths {
+  const runDir = joinPath(projectPaths(projectRoot).runsDir, validateEntityId(runId));
+  return {
+    runDir,
+    summaryFile: joinPath(runDir, "summary.md"),
+    verificationFile: joinPath(runDir, "verification.json"),
+    reviewIndexFile: joinPath(runDir, "review-index.json"),
+  };
+}
+
+export const prismArtifactLocator: ProjectArtifactLocator = {
+  projectPaths,
+  specPaths,
+  planPaths,
+  reviewPaths,
+  checkpointPaths,
+  runPaths,
+};

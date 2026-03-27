@@ -2,6 +2,25 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.1.0] - 2026-03-27
+
+### Added — Prism Core Architecture Foundation
+- **5 TypeScript packages** — `@prism/core`, `@prism/memory`, `@prism/orchestrator`, `@prism/guardian`, `@prism/execution` with clean module boundaries and workspace references
+- **Domain model** — Full entity definitions (Spec, Plan, ReviewFinding, Run, WorkflowState) with branded types for EntityId, AbsolutePath, ISODateString
+- **Shared script utilities** — `@prism/core` extracts duplicated adapter code (parseScriptJson, execScriptWithJsonInput, execFileAsync, resolveScriptPath) from 4 packages into one
+- **Path traversal prevention** — `validateEntityId()` blocks malicious entity IDs in all path-constructing functions (specPaths, planPaths, reviewPaths, runPaths)
+- **Workflow state machine** — 8-phase lifecycle (understand, identify_problem, spec, plan, execute, verify, release, resume) with transition history tracking
+- **Artifact path system** — Typed path resolvers for specs, plans, reviews, checkpoints, and runs under `.prism/`
+- **Architecture documentation** — ADRs (Prism Core First, Hybrid Local Storage, Bounded Modules), module boundaries, storage layout, domain model spec, milestone tracker, quality gates
+
+### Fixed
+- `createExecutionPlan` called `planTaskGraph` twice in parallel instead of plan-then-read-status sequentially
+- `resumeProject` failed to copy blockers into `workflow.blockers` (only populated in summary)
+- `mapRegistryStageToWorkflowPhase` dead-ended unknown stages at "resume" instead of falling back to "understand" with a warning
+- `mapRegistryStageToWorkflowPhase` missing case for "design" stage (now maps to "verify")
+- `tsconfig.base.json` removed fragile `typeRoots` pointing at `app/node_modules/@types`
+- Extracted `RegistryStage` as a named type export instead of inline union
+
 ## [4.0.0.0] - 2026-03-27
 
 ### Changed — The Owned Runtime
