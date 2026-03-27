@@ -124,6 +124,48 @@ progress, decisions, preferences, next_steps.
 
 Determine the current stage using scan results and user intent.
 
+### Key Vault — OS Detection (runs before Stage 0)
+
+On every invocation, check if the macOS Keychain is available:
+
+```bash
+[ "$(uname)" = "Darwin" ] && command -v security >/dev/null 2>&1 && echo "KEYCHAIN_AVAILABLE" || echo "KEYCHAIN_UNAVAILABLE"
+```
+
+If KEYCHAIN_AVAILABLE, also check connected providers (no secrets exposed):
+
+```bash
+for p in anthropic openai vercel stripe; do
+  security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null && echo "$p: connected" || echo "$p: not connected"
+done
+```
+
+Store the result. If any providers are connected, auto-inject at the start of every
+project. See [references/key-management.md](references/key-management.md) for the
+full protocol.
+
+If KEYCHAIN_UNAVAILABLE: skip silently. Key management is macOS-only.
+
+### Key Management Commands
+
+These commands use the `prism:` prefix to avoid false positives.
+
+| Command | What it does |
+|---------|-------------|
+| `prism: connect <provider>` | Store an API key in macOS Keychain (one-time setup) |
+| `prism: disconnect <provider>` | Remove a key from Keychain |
+| `prism: status` | Show which providers are connected |
+| `prism: inject` | Write connected keys to .env.local |
+
+Supported providers: `anthropic`, `openai`, `vercel`, `stripe`.
+
+**Security rules:**
+- Agent NEVER executes commands containing secrets. Prints the template, user runs it.
+- Inject runs as a single shell pipeline. Keys never enter the LLM context.
+- .gitignore is verified BEFORE inject writes .env.local.
+
+Full reference: [references/key-management.md](references/key-management.md)
+
 ### Stage Display Routes
 
 After Stage 0 scan completes, determine the display route based on product type.
