@@ -111,6 +111,7 @@ Read the temp file path from the summary line for structured data.
 | `prism-save.sh {root} "{milestone}"` | Auto-save (git add/commit/push) | After every milestone |
 | `prism-verify.sh {root} --files f1,f2 --lint --compile` | Syntax verification | After each worker |
 | `prism-checkpoint.sh {root} {change}` (stdin: JSON) | Session context | After each stage transition |
+| `prism-state.sh {root}` | Generate STATE.md | Every invocation (Stage 0) |
 
 **Auto-save milestones:** After spec generation, spec approval, planning, design,
 each worker completion, QA fixes, and before shipping. Failures are silent — never
@@ -224,6 +225,10 @@ show the regressed display number with an explanatory message:
 
 Run: `bash "$SKILL_DIR/scripts/prism-scan.sh" "$PROJECT_ROOT"`
 
+Then generate STATE.md for rich resume context:
+`bash "$SKILL_DIR/scripts/prism-state.sh" "$PROJECT_ROOT"`
+Read STATE.md for fast context recovery (active change, stage, blockers, next steps).
+
 Read the temp file for structured JSON. Route based on `status`:
 
 | Status | Action |
@@ -252,9 +257,10 @@ product type, update the route if needed. This is the one exception to "never re
 
 Read [references/product-context.md](references/product-context.md). Five paths:
 - **No PRODUCT.md + no code:** New product. Ask product-level questions (vision, finished
-  product, foundation, pieces, visual interface). Create PRODUCT.md via subagent.
-- **No PRODUCT.md + existing code:** Bootstrap via subagent (read codebase → draft PRODUCT.md).
-  Present draft for approval.
+  product, foundation, pieces, visual interface). Create PRODUCT.md, ARCHITECTURE.md,
+  and DECISIONS.md from templates in `templates/product-memory/` via subagent.
+- **No PRODUCT.md + existing code:** Bootstrap via subagent (read codebase → draft
+  PRODUCT.md, ARCHITECTURE.md, DECISIONS.md). Present draft for approval.
 - **PRODUCT.md + product-level request:** Check architecture drift via subagent. Proceed
   with product context.
 - **PRODUCT.md + small change/bugfix:** Read silently. No ceremony.
@@ -313,7 +319,7 @@ Invoke: `Skill tool: skill="plan-eng-review", args="Review {feature}: {summary}"
 
 - **Skip:** User can say "skip planning" BEFORE invocation.
 - **Fallback:** If Skill tool errors, do the review inline (never tell user to "run /plan-eng-review").
-- **Passed:** Update spec status to `planned`. If architecture changes, update PRODUCT.md.
+- **Passed:** Update spec status to `planned`. If architecture changes, update ARCHITECTURE.md. Append decisions to DECISIONS.md.
   Check: UI product + no DESIGN.md? → Stage 2.5. Otherwise → Stage 3.
 - **Problems found:** "The review flagged some issues — let's adjust." → Stage 1 Part B.
 
@@ -413,7 +419,7 @@ After all workers complete:
 - Missing requirements? → Log and flag
 - No drift → silent
 
-Update PRODUCT.md ("built" status) via subagent. Checkpoint. → Stage 4.
+Update PRODUCT.md ("built" status) via subagent. If architecture changed during build, update ARCHITECTURE.md and append decisions to DECISIONS.md. Checkpoint. → Stage 4.
 
 ### Stage 4: Verify (Auto-invoked via gstack)
 
@@ -450,9 +456,11 @@ Invoke: `Skill tool: skill="ship", args="Squash [prism auto-save] commits into f
 
 On success:
 1. Archive: `openspec archive "{change}" -y` (via subagent)
-2. Update PRODUCT.md: status → "shipped", suggest next phase
-3. Registry: `bash "$SKILL_DIR/scripts/prism-registry.sh" archive "$PROJECT_ROOT" "{change}"`
-4. Tell user: "All done! When you're ready, the next piece is **{next phase}**."
+2. Update PRODUCT.md: phases status → "shipped", update "What's Been Built", suggest next phase
+3. Update ARCHITECTURE.md to reflect final shipped architecture
+4. Append shipping decision to DECISIONS.md (deployment strategy, notable choices)
+5. Registry: `bash "$SKILL_DIR/scripts/prism-registry.sh" archive "$PROJECT_ROOT" "{change}"`
+6. Tell user: "All done! When you're ready, the next piece is **{next phase}**."
 
 On failure: "Something went wrong with shipping. Want me to help sort it out?"
 

@@ -825,3 +825,90 @@ The blocklist also checks filename substrings case-insensitively for `credential
 4. **Single-threaded builds.** No parallel workstreams for multi-track products.
 5. **TypeScript-only verification.** `prism-verify.sh` only checks JS/TS linting and compilation.
 6. **macOS-only key vault.** No Windows/Linux Keychain equivalent.
+
+
+## 11. Product Memory Model
+
+### 4-File Model
+
+Product memory is split across four files at the project root:
+
+| File | Authority | Purpose |
+|------|-----------|---------|
+| `PRODUCT.md` | Authoritative, manual | Product identity: vision, user, finished product, phases, what's been built |
+| `ARCHITECTURE.md` | Authoritative, semi-auto | Technical shape: stack, patterns, data model, boundaries, diagram |
+| `DECISIONS.md` | Authoritative, append-only | Architecture Decision Records (ADR format). Never edited, only appended. |
+| `STATE.md` | Generated, never hand-edited | Current position: active change, stage, blockers, next steps |
+
+**Authority hierarchy:** PRODUCT.md is ground truth for direction. Archived specs are ground truth for what was built. ARCHITECTURE.md is ground truth for technical decisions. DECISIONS.md is the immutable record of why decisions were made.
+
+**Creation:** Stage 1 Part 0 creates PRODUCT.md, ARCHITECTURE.md, and DECISIONS.md from templates. STATE.md is generated on every invocation.
+
+**Update schedule:**
+
+| File | Stage 1 | Stage 2 | Stage 3 | Stage 5 |
+|------|---------|---------|---------|---------|
+| PRODUCT.md | Create | — | — | Update phases, built table |
+| ARCHITECTURE.md | Create | Update if changes | Update if drift | Update shipped arch |
+| DECISIONS.md | Create | Append | Append | Append |
+| STATE.md | Generate | Generate | Generate | Generate |
+
+### STATE.md Generation
+
+`prism-state.sh` reads registry, PRODUCT.md, DECISIONS.md, and session context to produce a generated STATE.md. Called at Stage 0 on every invocation for fast context recovery.
+
+**Input sources:**
+- `.prism/registry.json` — change name, stage, workers, checkpoint, events
+- `PRODUCT.md` — phase info (read but not parsed deeply)
+- `DECISIONS.md` — last 5 ADR headings
+- `openspec/changes/*/session-context.md` — last session context
+
+**Output:** `STATE.md` at project root + JSON summary to temp file.
+
+### Templates
+
+Product memory templates live in `templates/product-memory/`:
+
+| Template | Creates |
+|----------|---------|
+| `PRODUCT.md.tmpl` | Product identity with Vision, User, Finished Product, Phases, What's Been Built |
+| `ARCHITECTURE.md.tmpl` | Technical shape with Stack, Structure, Data Model, Boundaries, Diagram |
+| `DECISIONS.md.tmpl` | Empty decisions log with ADR template in a comment block |
+
+Templates use `{name}` placeholder for product name substitution.
+
+
+## 12. Scripts (continued)
+
+### 12.1 prism-state.sh
+
+**Purpose:** Generate STATE.md from registry and product data for fast context recovery.
+
+**Invocation:** `bash "$SKILL_DIR/scripts/prism-state.sh" "$PROJECT_ROOT"`
+
+**Inputs:** Project root directory (positional argument).
+
+**Outputs (JSON):**
+
+```json
+{
+  "status": "generated",
+  "timestamp": "ISO 8601 UTC",
+  "change": "string",
+  "stage": "string",
+  "stage_label": "string",
+  "branch": "string",
+  "workers": { "completed": "number", "total": "number" },
+  "last_save": "string",
+  "last_action": "string",
+  "has_registry": "boolean",
+  "has_product": "boolean",
+  "has_decisions": "boolean"
+}
+```
+
+**Side effects:** Writes `STATE.md` to project root.
+
+**Dependencies:** `jq` (optional: degrades to minimal JSON).
+
+**Error handling:** Returns exit 0 with generated output on all logical paths. Handles missing registry, missing PRODUCT.md, and missing DECISIONS.md gracefully by using defaults.

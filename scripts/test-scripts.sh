@@ -285,6 +285,74 @@ _assert_contains "invalid JSON rejected" "$OUT" "ERROR\|invalid"
 
 # ============================================================
 echo ""
+echo "=== prism-state.sh ==="
+# ============================================================
+
+_teardown
+_setup
+
+# No registry, no product files — should still generate STATE.md
+OUT=$("$SCRIPT_DIR/prism-state.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "generates STATE.md without registry" "$OUT" "OK: STATE.md generated"
+_assert "STATE.md exists" "$([ -f "$TEST_ROOT/STATE.md" ] && echo yes || echo no)" "yes"
+_assert_contains "STATE.md has header" "$(cat "$TEST_ROOT/STATE.md")" "# State"
+_assert_contains "STATE.md has do-not-edit notice" "$(cat "$TEST_ROOT/STATE.md")" "do not edit manually"
+
+# With registry — should include change info
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-feature" 2>/dev/null
+OUT=$("$SCRIPT_DIR/prism-state.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "STATE.md with registry has change name" "$(cat "$TEST_ROOT/STATE.md")" "test-feature"
+_assert_contains "STATE.md with registry has stage" "$(cat "$TEST_ROOT/STATE.md")" "understand"
+
+# Read temp file JSON
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-state-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  HAS_REG=$(jq -r '.has_registry' "$TEMP_FILE")
+  _assert "JSON has_registry=true" "$HAS_REG" "true"
+  JSON_STAGE=$(jq -r '.stage' "$TEMP_FILE")
+  _assert "JSON stage=understand" "$JSON_STAGE" "understand"
+else
+  _assert "could read state temp file" "no" "yes"
+fi
+
+# With PRODUCT.md
+echo "# Product: TestApp" > "$TEST_ROOT/PRODUCT.md"
+OUT=$("$SCRIPT_DIR/prism-state.sh" "$TEST_ROOT" 2>/dev/null)
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-state-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  HAS_PROD=$(jq -r '.has_product' "$TEMP_FILE")
+  _assert "JSON has_product=true" "$HAS_PROD" "true"
+else
+  _assert "could read state temp file with product" "no" "yes"
+fi
+
+# With DECISIONS.md
+cat > "$TEST_ROOT/DECISIONS.md" << 'DEC'
+# Decisions: TestApp
+
+### ADR-1: Use SQLite
+**Date:** 2026-03-27
+
+### ADR-2: REST over GraphQL
+**Date:** 2026-03-27
+DEC
+OUT=$("$SCRIPT_DIR/prism-state.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "STATE.md includes recent decisions" "$(cat "$TEST_ROOT/STATE.md")" "ADR-1"
+_assert_contains "STATE.md includes second decision" "$(cat "$TEST_ROOT/STATE.md")" "ADR-2"
+
+# Missing root directory
+OUT=$("$SCRIPT_DIR/prism-state.sh" "/nonexistent/path" 2>&1 || true)
+_assert_contains "missing root errors" "$OUT" "ERROR"
+
+# Output format correctness
+_assert_contains "has Active Work section" "$(cat "$TEST_ROOT/STATE.md")" "## Active Work"
+_assert_contains "has Progress section" "$(cat "$TEST_ROOT/STATE.md")" "## Progress"
+_assert_contains "has Blockers section" "$(cat "$TEST_ROOT/STATE.md")" "## Blockers"
+_assert_contains "has Next Steps section" "$(cat "$TEST_ROOT/STATE.md")" "## Next Steps"
+_assert_contains "has Recent Decisions section" "$(cat "$TEST_ROOT/STATE.md")" "## Recent Decisions"
+
+# ============================================================
+echo ""
 echo "=== SUMMARY ==="
 # ============================================================
 
