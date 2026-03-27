@@ -114,6 +114,18 @@ _write_output() {
   printf '%s → %s\n' "$summary" "$out"
 }
 
+
+_migrate_v1_to_v2() {
+  # Auto-migrate version 1 registries to version 2 (add task_graph field)
+  local root="$1"
+  local reg; reg=$(_registry_path "$root")
+  if [ ! -f "$reg" ]; then return 0; fi
+  local version; version=$(jq -r '.version // 1' "$reg" 2>/dev/null)
+  if [ "$version" = "1" ]; then
+    _locked_write "$root" '.version = 2 | if has("task_graph") | not then .task_graph = null else . end'
+  fi
+}
+
 # --- Commands ---
 
 cmd_init() {
@@ -138,7 +150,7 @@ cmd_init() {
     --arg started "$now" \
     --arg branch "$branch" \
     '{
-      version: 1,
+      version: 2,
       change: {
         name: $name,
         stage: "understand",
@@ -150,6 +162,7 @@ cmd_init() {
         requirement_count: null,
         spec_path: null
       },
+      task_graph: null,
       workers: [],
       checkpoint: {
         stage: null,
@@ -169,6 +182,7 @@ cmd_init() {
 
 cmd_status() {
   local root="$1"
+  _migrate_v1_to_v2 "$root"
   local reg; reg=$(_registry_path "$root")
 
   if [ ! -f "$reg" ]; then
@@ -200,6 +214,7 @@ cmd_status() {
 cmd_update() {
   local root="$1"
   local change; change=$(_sanitize_arg "$2")
+  _migrate_v1_to_v2 "$root"
   local reg; reg=$(_registry_path "$root")
 
   if [ ! -f "$reg" ]; then
@@ -236,6 +251,7 @@ cmd_worker() {
   local change; change=$(_sanitize_arg "$2")
   local worker_id; worker_id=$(_sanitize_arg "$3")
   local status; status=$(_sanitize_arg "$4")
+  _migrate_v1_to_v2 "$root"
   local reg; reg=$(_registry_path "$root")
 
   if [ ! -f "$reg" ]; then

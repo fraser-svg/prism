@@ -112,6 +112,7 @@ Read the temp file path from the summary line for structured data.
 | `prism-verify.sh {root} --files f1,f2 --lint --compile` | Syntax verification | After each worker |
 | `prism-checkpoint.sh {root} {change}` (stdin: JSON) | Session context | After each stage transition |
 | `prism-state.sh {root}` | Generate STATE.md | Every invocation (Stage 0) |
+| `prism-supervisor.sh {cmd} {root} {change}` | Task graph lifecycle | Stage 3 (3+ requirements) |
 
 **Auto-save milestones:** After spec generation, spec approval, planning, design,
 each worker completion, QA fixes, and before shipping. Failures are silent — never
@@ -353,24 +354,34 @@ Build directly in conversation. After completion, still run v3 bookkeeping:
 4. Checkpoint: pipe JSON to `bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"`
 Then proceed to Stage 4.
 
-#### Decomposition (3+ requirements)
+#### Decomposition (3+ requirements) — Supervisor-managed
 
-Map requirements to worker tasks. For each, prepare a TaskPrompt:
+Map requirements to worker tasks. For each, prepare a task entry with:
 - Task description (plain English)
 - Files to read first (max 10)
 - Constraints (from spec + PRODUCT.md Architecture Decisions)
-- Shared context (types, interfaces, API contracts from prior workers)
+- Dependencies on other tasks
 
 **CONTEXT FIREWALL:** Workers get task + code + constraints ONLY. Never: user
 conversation, personality, vision, other workers' raw context, the spec itself.
 
-Output dependency graph:
-```json
-[{"id":"w1","task":"...","depends_on":[]},{"id":"w2","task":"...","depends_on":["w1"]}]
+**a) Plan the task graph:**
+```bash
+echo '{"tasks":[
+  {"id":"t1","name":"Login page","requirement":"### Requirement: Auth","depends_on":[],"files_to_read":["src/auth.ts"],"constraints":["use existing middleware"],"estimated_files":3},
+  {"id":"t2","name":"Dashboard","requirement":"### Requirement: Dashboard","depends_on":["t1"],"files_to_read":["src/pages/"],"constraints":[],"estimated_files":5}
+]}' | bash "$SKILL_DIR/scripts/prism-supervisor.sh" plan "$PROJECT_ROOT" "{change}"
 ```
-Independent workers dispatch simultaneously (multiple Agent calls in one message).
 
-Register each worker: `bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "running"`
+**b) Dispatch loop:**
+1. `bash "$SKILL_DIR/scripts/prism-supervisor.sh" next "$PROJECT_ROOT" "{change}"` to get dispatchable tasks
+2. For each ready task, dispatch worker via Agent tool (independent tasks dispatch simultaneously)
+3. On worker success: `bash "$SKILL_DIR/scripts/prism-supervisor.sh" complete "$PROJECT_ROOT" "{change}" "{task-id}"` — get newly ready tasks — dispatch
+4. On worker failure: `bash "$SKILL_DIR/scripts/prism-supervisor.sh" fail "$PROJECT_ROOT" "{change}" "{task-id}"` — Guardian diagnoses — `bash "$SKILL_DIR/scripts/prism-supervisor.sh" reset "$PROJECT_ROOT" "{change}" "{task-id}"` — re-dispatch
+5. Loop until all tasks completed or blocked
+6. Use `bash "$SKILL_DIR/scripts/prism-supervisor.sh" status "$PROJECT_ROOT" "{change}"` for progress updates
+
+Register each worker in the legacy registry too: `bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "running"`
 
 #### Worker dispatch
 

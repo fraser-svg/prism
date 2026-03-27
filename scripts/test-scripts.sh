@@ -354,6 +354,143 @@ _assert_contains "has Recent Decisions section" "$(cat "$TEST_ROOT/STATE.md")" "
 # ============================================================
 echo ""
 echo "=== SUMMARY ==="
+
+# ============================================================
+echo ""
+echo "=== prism-supervisor.sh ==="
+# ============================================================
+
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+
+# Plan: valid graph accepted
+GRAPH='{"tasks":[{"id":"t1","name":"Login page","requirement":"Auth","depends_on":[],"files_to_read":["src/auth.ts"],"constraints":["use middleware"],"estimated_files":3},{"id":"t2","name":"Dashboard","requirement":"Dashboard","depends_on":["t1"],"files_to_read":[],"constraints":[],"estimated_files":5}]}'
+OUT=$(echo "$GRAPH" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>/dev/null)
+_assert_contains "plan: valid graph accepted" "$OUT" "OK: planned 2 tasks"
+
+# Verify task statuses: t1=ready, t2=pending
+T1_STATUS=$(jq -r '.task_graph.tasks[0].status' "$TEST_ROOT/.prism/registry.json")
+T2_STATUS=$(jq -r '.task_graph.tasks[1].status' "$TEST_ROOT/.prism/registry.json")
+_assert "plan: t1 is ready" "$T1_STATUS" "ready"
+_assert "plan: t2 is pending" "$T2_STATUS" "pending"
+
+# Plan: cycles rejected
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+CYCLE_GRAPH='{"tasks":[{"id":"t1","name":"A","depends_on":["t2"]},{"id":"t2","name":"B","depends_on":["t1"]}]}'
+OUT=$(echo "$CYCLE_GRAPH" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>&1 || true)
+_assert_contains "plan: cycles rejected" "$OUT" "cycle"
+
+# Plan: bad dependency reference rejected
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+BAD_DEP='{"tasks":[{"id":"t1","name":"A","depends_on":["t99"]}]}'
+OUT=$(echo "$BAD_DEP" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>&1 || true)
+_assert_contains "plan: bad dep reference rejected" "$OUT" "non-existent"
+
+# Plan: duplicate IDs rejected
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+DUPE_IDS='{"tasks":[{"id":"t1","name":"A","depends_on":[]},{"id":"t1","name":"B","depends_on":[]}]}'
+OUT=$(echo "$DUPE_IDS" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>&1 || true)
+_assert_contains "plan: duplicate IDs rejected" "$OUT" "duplicate"
+
+# Next: returns ready tasks, respects dependencies
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+echo "$GRAPH" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>/dev/null
+OUT=$("$SCRIPT_DIR/prism-supervisor.sh" next "$TEST_ROOT" "test-change" 2>/dev/null)
+_assert_contains "next: returns ready tasks" "$OUT" "1 tasks ready"
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-supervisor-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  READY_ID=$(jq -r '.ready_tasks[0].id' "$TEMP_FILE")
+  _assert "next: t1 is ready" "$READY_ID" "t1"
+else
+  _assert "next: could read temp file" "no" "yes"
+fi
+
+# Complete: marks done, promotes dependents
+OUT=$("$SCRIPT_DIR/prism-supervisor.sh" complete "$TEST_ROOT" "test-change" "t1" 2>/dev/null)
+_assert_contains "complete: marks done" "$OUT" "t1 completed"
+T2_STATUS=$(jq -r '.task_graph.tasks[1].status' "$TEST_ROOT/.prism/registry.json")
+_assert "complete: t2 promoted to ready" "$T2_STATUS" "ready"
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-supervisor-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  NEWLY_READY=$(jq -r '.newly_ready | length' "$TEMP_FILE")
+  _assert "complete: reports newly ready" "$NEWLY_READY" "1"
+fi
+
+# Fail: increments retries
+OUT=$("$SCRIPT_DIR/prism-supervisor.sh" fail "$TEST_ROOT" "test-change" "t2" 2>/dev/null)
+_assert_contains "fail: marks failed" "$OUT" "t2"
+T2_RETRIES=$(jq -r '.task_graph.tasks[1].retries' "$TEST_ROOT/.prism/registry.json")
+_assert "fail: retries incremented" "$T2_RETRIES" "1"
+T2_STATUS=$(jq -r '.task_graph.tasks[1].status' "$TEST_ROOT/.prism/registry.json")
+_assert "fail: status is failed (not blocked yet)" "$T2_STATUS" "failed"
+
+# Fail: blocks after max retries (fail twice more to reach 3)
+"$SCRIPT_DIR/prism-supervisor.sh" reset "$TEST_ROOT" "test-change" "t2" 2>/dev/null
+"$SCRIPT_DIR/prism-supervisor.sh" fail "$TEST_ROOT" "test-change" "t2" 2>/dev/null
+"$SCRIPT_DIR/prism-supervisor.sh" reset "$TEST_ROOT" "test-change" "t2" 2>/dev/null
+"$SCRIPT_DIR/prism-supervisor.sh" fail "$TEST_ROOT" "test-change" "t2" 2>/dev/null
+T2_STATUS=$(jq -r '.task_graph.tasks[1].status' "$TEST_ROOT/.prism/registry.json")
+_assert "fail: blocks after max retries" "$T2_STATUS" "blocked"
+
+# Reset: allows guardian retry
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+SIMPLE='{"tasks":[{"id":"t1","name":"A","depends_on":[]}]}'
+echo "$SIMPLE" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>/dev/null
+"$SCRIPT_DIR/prism-supervisor.sh" fail "$TEST_ROOT" "test-change" "t1" 2>/dev/null
+OUT=$("$SCRIPT_DIR/prism-supervisor.sh" reset "$TEST_ROOT" "test-change" "t1" 2>/dev/null)
+_assert_contains "reset: allows retry" "$OUT" "t1 reset to ready"
+T1_STATUS=$(jq -r '.task_graph.tasks[0].status' "$TEST_ROOT/.prism/registry.json")
+_assert "reset: status is ready" "$T1_STATUS" "ready"
+
+# Reset: rejects non-failed task
+OUT=$("$SCRIPT_DIR/prism-supervisor.sh" reset "$TEST_ROOT" "test-change" "t1" 2>&1 || true)
+_assert_contains "reset: rejects non-failed" "$OUT" "not failed"
+
+# Status: correct counts
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+THREE_TASKS='{"tasks":[{"id":"t1","name":"A","depends_on":[]},{"id":"t2","name":"B","depends_on":["t1"]},{"id":"t3","name":"C","depends_on":["t1"]}]}'
+echo "$THREE_TASKS" | "$SCRIPT_DIR/prism-supervisor.sh" plan "$TEST_ROOT" "test-change" 2>/dev/null
+"$SCRIPT_DIR/prism-supervisor.sh" complete "$TEST_ROOT" "test-change" "t1" 2>/dev/null
+OUT=$("$SCRIPT_DIR/prism-supervisor.sh" status "$TEST_ROOT" "test-change" 2>/dev/null)
+_assert_contains "status: correct counts" "$OUT" "1/3 completed"
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-supervisor-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  COMPLETED=$(jq '.completed' "$TEMP_FILE")
+  READY=$(jq '.ready' "$TEMP_FILE")
+  TOTAL=$(jq '.total' "$TEMP_FILE")
+  _assert "status: completed=1" "$COMPLETED" "1"
+  _assert "status: ready=2" "$READY" "2"
+  _assert "status: total=3" "$TOTAL" "3"
+fi
+
+# Version migration: v1 registry auto-upgrades
+_teardown
+_setup
+"$SCRIPT_DIR/prism-registry.sh" init "$TEST_ROOT" "test-change" 2>/dev/null
+# Manually downgrade to v1 (remove task_graph, set version to 1)
+jq '.version = 1 | del(.task_graph)' "$TEST_ROOT/.prism/registry.json" > "$TEST_ROOT/.prism/registry.json.tmp" && mv "$TEST_ROOT/.prism/registry.json.tmp" "$TEST_ROOT/.prism/registry.json"
+V_BEFORE=$(jq '.version' "$TEST_ROOT/.prism/registry.json")
+_assert "migration: starts as v1" "$V_BEFORE" "1"
+# Trigger migration via status command
+"$SCRIPT_DIR/prism-registry.sh" status "$TEST_ROOT" 2>/dev/null
+V_AFTER=$(jq '.version' "$TEST_ROOT/.prism/registry.json")
+HAS_TG=$(jq 'has("task_graph")' "$TEST_ROOT/.prism/registry.json")
+_assert "migration: upgraded to v2" "$V_AFTER" "2"
+_assert "migration: has task_graph field" "$HAS_TG" "true"
+
 # ============================================================
 
 _teardown

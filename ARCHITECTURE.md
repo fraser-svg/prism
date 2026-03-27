@@ -912,3 +912,142 @@ Templates use `{name}` placeholder for product name substitution.
 **Dependencies:** `jq` (optional: degrades to minimal JSON).
 
 **Error handling:** Returns exit 0 with generated output on all logical paths. Handles missing registry, missing PRODUCT.md, and missing DECISIONS.md gracefully by using defaults.
+
+
+## 13. Supervisor (Task Graph Lifecycle)
+
+### 13.1 prism-supervisor.sh
+
+**Purpose:** Formal task graph lifecycle manager. Manages decomposition, dependency tracking, and dispatch coordination for builds with 3+ requirements. The supervisor is NOT a separate process — it is a structured JSON state machine managed by bash, with the LLM (SKILL.md) as the brain.
+
+**Invocation:**
+```
+bash "$SKILL_DIR/scripts/prism-supervisor.sh" plan     <root> <change>             # stdin: task graph JSON
+bash "$SKILL_DIR/scripts/prism-supervisor.sh" next     <root> <change>             # returns dispatchable tasks
+bash "$SKILL_DIR/scripts/prism-supervisor.sh" complete <root> <change> <task-id>   # mark task done
+bash "$SKILL_DIR/scripts/prism-supervisor.sh" fail     <root> <change> <task-id>   # mark task failed
+bash "$SKILL_DIR/scripts/prism-supervisor.sh" status   <root> <change>             # full status summary
+bash "$SKILL_DIR/scripts/prism-supervisor.sh" reset    <root> <change> <task-id>   # reset for guardian retry
+```
+
+**Inputs:**
+- `plan`: positional args + task graph JSON on stdin
+- `next`: positional args only
+- `complete`: positional args + optional `PRISM_TASK_OUTPUT` env var (JSON array of file paths)
+- `fail`: positional args + optional `PRISM_FAIL_REASON` env var (string)
+- `status`: positional args only
+- `reset`: positional args only
+
+**State storage:** All state is stored in the `task_graph` field of `registry.json` (version 2). No separate files.
+
+**Dependencies:** `jq` (required).
+
+### 13.2 Task Graph JSON Schema (stdin for `plan`)
+
+```json
+{
+  "tasks": [
+    {
+      "id": "string (user-friendly, e.g. t1, t2)",
+      "name": "string (plain-English task name)",
+      "requirement": "string | null (spec requirement reference)",
+      "depends_on": ["string (task IDs this depends on)"],
+      "files_to_read": ["string (file paths for worker context)"],
+      "constraints": ["string (build constraints)"],
+      "estimated_files": "number | null"
+    }
+  ]
+}
+```
+
+### 13.3 Registry Version 2 Format
+
+Registry version 2 extends version 1 with the `task_graph` field:
+
+```json
+{
+  "version": 2,
+  "change": { "..." },
+  "task_graph": {
+    "planned_at": "ISO 8601 UTC timestamp",
+    "tasks": [
+      {
+        "id": "string",
+        "name": "string",
+        "requirement": "string | null",
+        "depends_on": ["string"],
+        "files_to_read": ["string"],
+        "constraints": ["string"],
+        "estimated_files": "number | null",
+        "status": "pending | ready | running | completed | failed | blocked",
+        "worker_id": "string | null",
+        "retries": "number (starts at 0)",
+        "max_retries": "number (default 3)",
+        "started_at": "ISO 8601 UTC timestamp | null",
+        "completed_at": "ISO 8601 UTC timestamp | null",
+        "output_files": ["string"],
+        "contracts": {},
+        "failure_reason": "string | null"
+      }
+    ]
+  },
+  "workers": ["..."],
+  "checkpoint": { "..." },
+  "contracts": {},
+  "events": ["..."]
+}
+```
+
+**Backward compatibility:** When `prism-registry.sh` encounters a version 1 registry, it auto-migrates by setting `version: 2` and adding `task_graph: null`. The migration runs at the start of `status`, `update`, and `worker` commands.
+
+**Task statuses:**
+- `pending`: dependencies not yet met
+- `ready`: all dependencies completed, available for dispatch
+- `running`: dispatched to a worker (set by SKILL.md, not by the supervisor)
+- `completed`: worker finished successfully
+- `failed`: worker failed (retries < max_retries, Guardian can reset)
+- `blocked`: worker failed too many times (retries >= max_retries)
+
+### 13.4 Supervisor Lifecycle
+
+```
+plan → next → dispatch → complete/fail → next → dispatch → ... → all completed
+```
+
+1. **Plan:** Operator reads spec, creates task graph JSON, pipes to `prism-supervisor.sh plan`. The plan command validates the graph (structure, cycles, dependency references), sets initial statuses (no deps = "ready", others = "pending"), and writes to registry.
+
+2. **Next:** Returns all tasks with status "ready". These can be dispatched in parallel via Agent tool.
+
+3. **Dispatch:** SKILL.md dispatches each ready task as a worker via Agent tool. The supervisor itself does not dispatch — the LLM brain decides when and how to dispatch.
+
+4. **Complete:** Marks a task as "completed". Checks all dependents: if all their dependencies are now complete, promotes them to "ready". Returns the newly ready tasks for immediate dispatch.
+
+5. **Fail:** Marks a task as "failed", increments retries. If retries >= max_retries, marks as "blocked" instead. Guardian pattern applies: diagnose failure, rewrite prompt, then reset.
+
+6. **Reset:** Sets a failed/blocked task back to "ready" for Guardian retry. Must be explicitly called after Guardian rewrites the prompt.
+
+7. **Status:** Returns a full summary: total tasks, completed, running, failed, blocked, ready, pending, planned_at, and critical path length.
+
+### 13.5 Cycle Detection Algorithm
+
+Uses Kahn's algorithm implemented in jq:
+
+1. Build an in-degree map (count of dependencies per task)
+2. Initialize a queue with all tasks that have in-degree 0 (no dependencies)
+3. While queue is not empty:
+   a. Remove a task from the queue, increment processed count
+   b. For each task that depends on the removed task, decrement its in-degree
+   c. If any task's in-degree reaches 0, add it to the queue
+4. If processed count equals total tasks: no cycle. Otherwise: cycle detected.
+
+The algorithm runs during `plan` and rejects graphs with cycles before writing to the registry.
+
+### 13.6 Design Decisions
+
+**Not a separate process:** The supervisor is a structured JSON state machine, not a Python daemon or separate bash process. The LLM (SKILL.md) acts as the brain; the supervisor script is the spine. This avoids adding runtime dependencies and leverages the existing registry + locking infrastructure.
+
+**Task IDs are user-friendly:** `t1`, `t2` instead of UUIDs. The task graph is small (typically 3-10 tasks) and exists within a single build session.
+
+**Dual registration:** Workers are registered in both the supervisor task graph (formal lifecycle) and the legacy workers array (backward compatibility with existing status/checkpoint code).
+
+**max_retries = 3:** Matches the existing Guardian pattern (max 3 attempts per task) defined in SKILL.md.
