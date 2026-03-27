@@ -1,16 +1,35 @@
 # Prism TODOs
 
-## Reduce verbose logs to milestone-only
+## ~~Reduce verbose logs to milestone-only~~ — DONE in v3
+Replaced by `prism-registry.sh` JSON events. Only significant actions are logged.
 
-**What:** Switch Prism's operation log from verbose (every action) to milestone-only (stage transitions only).
+## Git Worktree Workers (deferred from v3)
 
-**Why:** Verbose logging adds subagent overhead and creates noise in the change directory. It's useful now for diagnosing Prism's behavior while the autopilot pipeline is being developed, but should be trimmed once stable.
+**What:** `prism-worktree.sh` — true parallel file isolation via git worktrees for large builds (6+ requirements).
 
-**When:** After 3-5 successful full-lifecycle dogfood runs with the auto-advance pipeline working reliably.
+**Why:** When multiple workers modify the same files, merge conflicts arise. Worktrees give each worker an isolated copy. Deferred from v3 because there's no evidence users regularly hit 6+ requirement builds.
 
-**How:** Update `references/operation-log.md` to remove per-requirement and per-drift log entries. Keep only: stage transitions, skill invocations, skips, errors, backsteps.
+**When:** After data shows >10% of builds have 6+ requirements.
 
-**Depends on:** Auto-advance pipeline (Commit 2) being stable and tested.
+**How:** `git worktree add .prism/worktrees/{name} -b prism/worker/{name}` per worker, merge back with conflict reporting. Workers would run in isolated directories.
+
+## Prompt Learning (deferred from v3)
+
+**What:** `prism-learn.sh` — store successful prompt patterns and reuse them in future builds.
+
+**Why:** After 3+ successes with the same task type, mark the prompt pattern as "proven." Deferred from v3 because pattern reuse mechanism needs more design (staleness detection, selection logic).
+
+**When:** After v3 is stable and we have data on which prompt patterns succeed vs fail.
+
+**How:** Read/write patterns section of `.prism/registry.json`. Feed proven patterns into worker prompt generation.
+
+## Multi-Factor Complexity Heuristic (v3.1)
+
+**What:** Replace simple requirement-count heuristic (1-2 = inline, 3+ = workers) with multi-factor: requirement count + estimated files touched + coupling to existing code.
+
+**Why:** One requirement can touch 40 files. Requirement count alone is a poor proxy for build complexity.
+
+**When:** After v3 dogfooding reveals cases where the heuristic chose wrong.
 
 ## Tool Routing (P2)
 
