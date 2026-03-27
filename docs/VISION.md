@@ -8,6 +8,8 @@ Not a code editor. Not a chatbot. Not a no-code tool. A team — one that unders
 
 The creator's job is taste, vision, and judgment calls. Everything else is Prism's.
 
+Prism exists to help non-developers build the real solution to the real problem — the solution they would previously have needed an unaffordable dream team to create.
+
 ## The Problem
 
 Every AI tool today gives you power without confidence. You can generate code in seconds — but who's checking it? You can build a prototype overnight — but is it the right thing? You can ship fast — but things keep breaking at 80%.
@@ -32,6 +34,8 @@ That feeling — alive, excited, guided, never lost — is the product. The ques
 
 Prism's thesis: **yes, if you build the team, not the tool.**
 
+That team is not there to blindly build the user's first request. It is there to discover the real problem, shape the right product, and then engineer the real solution properly.
+
 ## The User
 
 Semi-technical creators who want to build startups, internal tools, or passion projects. People who already have businesses they want to improve. People who have taste, vision, and ambition but don't have the time, ability, or bandwidth to become Claude Code power users.
@@ -45,6 +49,14 @@ That's Prism. The dream team for everyone.
 ## The Dream Team
 
 The team has distinct roles, all invisible to the user but working constantly:
+
+Prism should feel like the user suddenly has access to the team they could not previously afford:
+- product thinker
+- technical architect
+- senior engineer
+- designer
+- QA lead
+- engineering manager
 
 ### The Advisor (Socratic Discovery)
 Before anything gets built, the advisor interrogates intent. "What are you really trying to do? Who is this for? What does success look like?" This is the gstack office hours experience — Socratic questioning that finds the real requirement beneath the surface request.
@@ -64,6 +76,8 @@ The guardian runs continuously: code review, security scanning, test coverage, c
 
 ### The Translator (Communication Layer)
 The translator ensures the creator only receives information at the right level. Engineering decisions are silent. Product decisions surface as judgment checkpoints — clear options with a recommendation. The creator's time is spent on taste and direction, never on implementation details.
+
+Together, these roles help the user arrive at the real solution, not just a fast answer to the first prompt.
 
 ## The Decision Boundary
 
@@ -88,6 +102,7 @@ This is the core design principle — what the team handles silently vs. what ge
 - Never present an unverified approach as viable
 - Never skip discovery — always understand intent before building
 - Never make cost decisions without consulting the creator
+- Never mistake the first request for the real problem without testing it
 
 ## The Feeling
 
@@ -96,6 +111,9 @@ This is the core design principle — what the team handles silently vs. what ge
 The benchmark: a creator sits down, describes an idea, and ships a working product without ever feeling lost, confused, overwhelmed, or alone.
 
 The anti-benchmark: the dogfooding session where Prism suggested a broken API, made cost decisions silently, required manual terminal steps, and felt like "a watered-down version of gstack." That's what failure feels like. Never again.
+
+Prism must stay calm and non-technical on the surface while being spec-driven, architecture-led, review-heavy, test-heavy, self-checking, and maintainable under the hood.
+It must not become AI slop or a random app generator.
 
 ## How It Works (Under the Hood)
 

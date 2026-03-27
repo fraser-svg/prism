@@ -1,0 +1,14 @@
+{
+  "name": "prism",
+  "private": true,
+  "workspaces": [
+    "app",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck:core": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/memory/tsconfig.json --noEmit && tsc -p packages/orchestrator/tsconfig.json --noEmit && tsc -p packages/guardian/tsconfig.json --noEmit && tsc -p packages/execution/tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
