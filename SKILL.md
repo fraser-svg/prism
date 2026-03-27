@@ -63,12 +63,20 @@ If UPDATED: show `"  Updated: v{old} → v{new}"` below banner. Otherwise silent
 
 ### Status bar (every message)
 ```
-▌ PRISM · Stage {N} · {what's happening}
+▌ PRISM · Stage {display_N} of {total} · {what's happening}
 ────────────────────────────────────────
 
 {message content}
 ```
 For messages >3 paragraphs, add closing bar: `────────────────────────────── PRISM ──`
+
+**Stage 0 exception:** During Stage 0 (Resume/scan), show no stage number:
+```
+▌ PRISM · Starting up...
+```
+
+**Display mapping:** Use the route determined at Stage 0 to convert internal stage
+numbers to display numbers. See "Stage Display Routes" below for the mapping tables.
 
 ### Working directory anchor (every subagent)
 Every Agent tool prompt MUST start with:
@@ -77,7 +85,7 @@ Every Agent tool prompt MUST start with:
 
 ### Context compaction safety
 If context is about to be compacted mid-build, trigger an emergency checkpoint:
-`echo '{"stage":N,"progress":"...","decisions":[...],"next_steps":["..."]}' | bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"`
+`echo '{"stage":N,"stage_route":"A|B|C","stage_total":5|6|7,"progress":"...","decisions":[...],"next_steps":["..."]}' | bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"`
 followed by: `bash "$SKILL_DIR/scripts/prism-save.sh" "$PROJECT_ROOT" "emergency checkpoint before compaction"`
 
 ### Terminal cleanliness
@@ -109,7 +117,8 @@ each worker completion, QA fixes, and before shipping. Failures are silent — n
 interrupt the user for a save failure.
 
 **Checkpoint updates:** After Stage 1 approval, Stage 2, each worker, Stage 4,
-before Stage 5. Pipe JSON with: stage, progress, decisions, preferences, next_steps.
+before Stage 5. Pipe JSON with: stage, stage_route (A/B/C), stage_total (5/6/7),
+progress, decisions, preferences, next_steps.
 
 ## The 6 Stages
 
@@ -157,6 +166,60 @@ Supported providers: `anthropic`, `openai`, `vercel`, `stripe`.
 
 Full reference: [references/key-management.md](references/key-management.md)
 
+### Stage Display Routes
+
+After Stage 0 scan completes, determine the display route based on product type.
+The route is a snapshot, determined once per session. Never recompute mid-session.
+
+**Route A — Non-UI product (total = 5):**
+
+| Internal | Display | Label |
+|----------|---------|-------|
+| 0 | — | Starting up... |
+| 1 | 1 | Understand |
+| 2 | 2 | Plan |
+| 3 | 3 | Build |
+| 4 | 4 | Verify |
+| 5 | 5 | Ship |
+
+**Route B — UI product with DESIGN.md (total = 6):**
+
+| Internal | Display | Label |
+|----------|---------|-------|
+| 0 | — | Starting up... |
+| 1 | 1 | Understand |
+| 2 | 2 | Plan |
+| 3 | 3 | Build |
+| 4 | 4 | Verify |
+| 4.5 | 5 | Design Review |
+| 5 | 6 | Ship |
+
+**Route C — UI product without DESIGN.md (total = 7):**
+
+| Internal | Display | Label |
+|----------|---------|-------|
+| 0 | — | Starting up... |
+| 1 | 1 | Understand |
+| 2 | 2 | Plan |
+| 2.5 | 3 | Design |
+| 3 | 4 | Build |
+| 4 | 5 | Verify |
+| 4.5 | 6 | Design Review |
+| 5 | 7 | Ship |
+
+**Route determination:** After Stage 0 scan, check:
+- If NOT a UI product → Route A (total = 5)
+- If UI product AND DESIGN.md exists → Route B (total = 6)
+- If UI product AND no DESIGN.md → Route C (total = 7)
+
+**Skipped stages:** If a user skips a stage (e.g., "skip design"), the total stays the
+same. The counter jumps forward (e.g., "Stage 2 of 7" → "Stage 4 of 7"). This is less
+confusing than dynamically changing the total.
+
+**Stage regressions:** When Prism sends a user back (e.g., QA fails → Stage 3 for fixes),
+show the regressed display number with an explanatory message:
+`▌ PRISM · Stage 3 of 5 · fixing QA issues`
+
 ### Stage 0: Resume
 
 Run: `bash "$SKILL_DIR/scripts/prism-scan.sh" "$PROJECT_ROOT"`
@@ -174,6 +237,14 @@ Read the temp file for structured JSON. Route based on `status`:
 Initialize registry (only if resuming an existing change):
 `bash "$SKILL_DIR/scripts/prism-registry.sh" init "$PROJECT_ROOT" "{change}"`
 For NONE/PRODUCT_NEXT: registry init happens in Stage 1 after the change name is created.
+
+**Determine display route:** After scan completes, determine the stage display route
+(A/B/C) using the rules in "Stage Display Routes" above. On resume, read route from
+checkpoint JSON (`stage_route`, `stage_total`). Include route in all subsequent checkpoints.
+
+**New projects (NONE status):** Product type is unknown until Stage 1 creates PRODUCT.md.
+Default to Route A (total = 5). After Stage 1 Part 0 (Product context) determines the
+product type, update the route if needed. This is the one exception to "never recompute."
 
 ### Stage 1: Understand
 

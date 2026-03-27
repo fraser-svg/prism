@@ -5,6 +5,12 @@ All notable changes to Prism are documented here.
 ## [3.0.1.0] - 2026-03-27
 
 ### Added
+- **Stage progress counter** — Status bar now shows "Stage 1 of 5" instead of just "Stage 1", so users know how many stages remain and where they are in the workflow.
+- **Three display routes** (A/B/C) mapping internal stage numbers to user-facing sequential numbers. Route A (non-UI, 5 stages), Route B (UI with DESIGN.md, 6 stages), Route C (UI without DESIGN.md, 7 stages).
+- **Stage regression display** — When Prism sends a user back (e.g., QA fails), the counter honestly regresses with an explanatory message ("Stage 3 of 5 · fixing QA issues").
+- **Checkpoint integration** — `stage_route` and `stage_total` persisted in checkpoint JSON so the display survives context compaction and session resume.
+- **New project default** — Fresh projects (no PRODUCT.md) default to Route A. Route updates after Stage 1 determines the product type.
+- Skipped stages keep the total fixed (counter jumps forward rather than changing the denominator).
 - **Central API Key Vault** — Store API keys in macOS Keychain once, auto-inject into every project. Commands: `prism: connect`, `prism: disconnect`, `prism: status`, `prism: inject`. Supports 4 providers (Anthropic, OpenAI, Vercel, Stripe). Zero key copy-paste after initial setup.
 - New reference file: `references/key-management.md` — full key vault protocol with security model, error handling, and credential precedence (Keychain > env var > localStorage)
 - OS detection gate at Stage 0 — gracefully skips key vault on non-macOS systems
