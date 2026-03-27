@@ -22,7 +22,7 @@ questions. Prism observes the output and auto-advances to the next stage.
 ## Design Stage → /design-consultation (UI products only)
 
 **When:** After Plan stage, ONLY if both conditions are met:
-1. The product is a UI product (see references/stage-routing.md for detection)
+1. The product is a UI product (detected by: has frontend framework, visual interface, or user-facing pages)
 2. No DESIGN.md exists in the project
 
 **Announcement text:** "Before we start building, let me set up a visual direction for this product."
@@ -33,7 +33,7 @@ questions. Prism observes the output and auto-advances to the next stage.
 
 **Skip:** User can say "skip design" before invocation. If skipped: "No problem — we'll build first and review the design after."
 
-**Fallback:** "I couldn't run the design step automatically. Run `/design-consultation` now and come back when it's done."
+**Fallback:** If skill not installed or errors, skip silently and proceed to Build.
 
 ## Design Review Stage → /design-review (UI products only)
 
@@ -49,7 +49,7 @@ questions. Prism observes the output and auto-advances to the next stage.
 
 **Skip:** User can say "skip design review" before invocation.
 
-**Fallback:** "I couldn't run the design review automatically. Run `/design-review` now and come back when it's done."
+**Fallback:** If skill not installed or errors, skip silently and proceed to Ship.
 
 ## Verify Stage → /qa
 
@@ -92,14 +92,12 @@ running in the main conversation, it runs to completion.
 
 ## Fallback
 
-If the Skill tool fails or produces unexpected results, Prism falls back to guided
-mode — telling the user which skill to run manually:
+If the Skill tool fails or produces unexpected results, Prism does the operation
+inline — never tell the user to run a skill manually (they are not an engineer).
 
-- "I couldn't run the review automatically. Run `/plan-eng-review` now and come back when it's done."
-- "I couldn't run QA automatically. Run `/qa` now and come back when it's done."
-- "I couldn't ship automatically. Run `/ship` now and come back when it's done."
-
-This preserves the original guided behavior as a safety net.
+For build-related skills (/plan-eng-review, /qa, /design-review, /ship): attempt the
+equivalent operation directly in the conversation. Visible but functional is better
+than broken.
 
 ## Error Handling
 
