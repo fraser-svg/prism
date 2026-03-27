@@ -2,13 +2,12 @@
 
 ## Current Phase
 
-Phase 0: Build Brain and Repo Operating System
+Phase 2: Spec-Driven Workflow Enforcement
 
 Purpose:
-- lock the architecture direction
-- formalize operating rules
-- make future work artifact-first
-- prevent a reckless rewrite
+- turn the documented lifecycle into an enforced control plane
+- make specs, plans, reviews, and release state runtime requirements
+- prevent drift back into hidden-state or prompt-led execution
 
 ## Repo Truth
 
@@ -17,13 +16,15 @@ What exists now:
 - substantial deterministic shell infrastructure
 - compiler, hooks, review references, and planning notes
 - an exploratory app shell with early Forge-style UI ideas
+- typed core packages for domain, memory, orchestration, guardian, and execution
+- passing shell-script regression coverage for the current runtime substrate
 
 What is still missing:
-- a repo-wide operating system
-- a locked target architecture for Prism Core
-- a durable milestone structure
-- explicit quality gates and definition of done
-- a clean separation between prototype UI exploration and owned core architecture
+- executable lifecycle gates tied to canonical artifacts
+- canonical repositories for specs, plans, reviews, runs, and release state
+- approval-aware execution policy
+- review and release orchestration inside the guardian layer
+- resume semantics that rely on durable artifacts instead of transitional registry state
 
 ## Architecture Direction
 
@@ -81,20 +82,24 @@ Exit criteria:
 - durable schemas and artifact contracts exist
 - memory and orchestration stop depending on implicit prompt structure
 
-### M2. Workflow Engine
+### M2. Spec-Driven Workflow Engine
 
 Goal:
-- make `discover -> spec -> plan -> execute -> verify -> ship -> resume` explicit
+- make `discover -> spec -> plan -> execute -> verify -> ship -> resume` explicit and enforceable
 
 Scope:
 - state machine
 - workflow transitions
+- artifact gating
 - approval boundaries
-- checkpoint model
+- checkpoint and release-state semantics
 - resumability rules
+- registry-to-entity transition policy
 
 Exit criteria:
 - one project can move through the lifecycle with durable state
+- execution is blocked without required artifacts
+- release readiness is derived from evidence, not optimism
 
 ### M3. Execution and Guardian
 
@@ -143,16 +148,16 @@ Exit criteria:
 
 ### Now
 
-- finalize repo operating docs
-- lock architecture and milestones
-- map existing scripts and artifacts into the target system
-- define core entities and artifact contracts
+- lock M2 as the spec-driven workflow enforcement stage
+- define canonical lifecycle repositories and gate evaluation
+- move resume and phase transitions onto durable artifacts
+- make approvals and release evidence first-class runtime inputs
 
 ### Next
 
-- choose Prism Core package/module layout
-- define local storage and memory model
-- define workflow state machine and checkpoint semantics
+- expand guardian review orchestration and release-state derivation
+- make execution intents approval-aware
+- prove one end-to-end lifecycle with durable resume
 
 ### Later
 
@@ -185,10 +190,10 @@ Exit criteria:
 
 ## Immediate Next Moves
 
-1. Convert existing Prism mechanisms into a formal Prism Core map.
-2. Define the canonical domain entities and storage/artifact layout.
-3. Decide package boundaries for core, memory, orchestration, guardian, and execution.
-4. Identify which current scripts remain canonical versus which become adapters or legacy compatibility.
+1. Lock the M2 lifecycle contract and gate matrix in a durable spec.
+2. Define canonical repositories for spec, plan, checkpoint, review, verification, and release artifacts.
+3. Refactor orchestration to advance from canonical artifact state rather than registry strings.
+4. Add guardian-driven review and release evidence before any desktop-facing expansion.
 
 ## Working Rules
 
