@@ -1,5 +1,9 @@
 # Prism: The Dream Team
 
+> **Note:** This is the product vision and business model document.
+> For the current technical architecture, see `/ARCHITECTURE.md`.
+> For the hosted platform roadmap, see `ROADMAP.md` in this directory.
+
 ## What Prism Is
 
 Prism gives every creator a world-class founding team.

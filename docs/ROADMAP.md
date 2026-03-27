@@ -1,6 +1,12 @@
 # Prism: Technical Roadmap
 
 > How Prism goes from a Claude Code skill to a paid hosted platform.
+>
+> **Note:** This document describes the aspirational hosted platform roadmap.
+> Some references are pre-v3 (e.g. "~1400 line SKILL.md" is now 357 lines;
+> the brain/body split replaced the monolithic skill). The migration concepts
+> remain valid but the starting point has evolved.
+> For the current technical architecture, see `/ARCHITECTURE.md`.
 
 ## The Architecture Problem (and Solution)
 
