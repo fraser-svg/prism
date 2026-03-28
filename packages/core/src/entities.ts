@@ -16,6 +16,7 @@ import type {
   SpecStatus,
   SpecType,
   TaskStatus,
+  WorkflowPhase,
 } from "./common";
 
 export interface Workspace extends AuditStamp {
@@ -130,15 +131,7 @@ export interface WorkflowRun extends AuditStamp {
   id: EntityId;
   projectId: EntityId;
   specId: EntityId;
-  phase:
-    | "understand"
-    | "identify_problem"
-    | "spec"
-    | "plan"
-    | "execute"
-    | "verify"
-    | "release"
-    | "resume";
+  phase: WorkflowPhase;
   status: RunStatus;
   initiator: "user" | "system";
   startedAt: ISODateString;
@@ -150,20 +143,13 @@ export interface Checkpoint extends AuditStamp {
   projectId: EntityId;
   runId: EntityId | null;
   activeSpecId: EntityId | null;
-  phase:
-    | "understand"
-    | "identify_problem"
-    | "spec"
-    | "plan"
-    | "execute"
-    | "verify"
-    | "release"
-    | "resume";
+  phase: WorkflowPhase;
   progressSummary: string;
   keyDecisions: string[];
   blockers: string[];
   nextRecommendedActions: string[];
   lastVerificationSummary: string | null;
+  approvalsPending?: ApprovalRequirement[];
 }
 
 export interface ReviewFinding {
@@ -231,4 +217,24 @@ export interface ProviderProfile extends AuditStamp {
   authMethod: "env" | "keychain" | "token" | "other";
   configReference: string | null;
   availabilityStatus: "available" | "degraded" | "unavailable";
+}
+
+export interface WorkflowTransition {
+  from: WorkflowPhase;
+  to: WorkflowPhase;
+  reason:
+    | "progress"
+    | "regression"
+    | "approval_pause"
+    | "resume"
+    | "verification_failure";
+}
+
+export interface WorkflowState {
+  phase: WorkflowPhase;
+  projectId: EntityId;
+  activeSpecId: EntityId | null;
+  approvalsPending: ApprovalRequirement[];
+  blockers: string[];
+  transitionHistory: WorkflowTransition[];
 }
