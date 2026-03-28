@@ -100,7 +100,13 @@ Prism dual-writes to the typed core at every stage transition. Bridge calls are
 
 **Bridge calling pattern:**
 ```bash
-BRIDGE_RESULT=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" <command> <args> 2>/dev/null) || true
+BRIDGE="npx tsx --tsconfig $SKILL_DIR/packages/orchestrator/tsconfig.json $SKILL_DIR/packages/orchestrator/src/cli.ts"
+BRIDGE_RESULT=$($BRIDGE <command> <args> 2>/dev/null) || true
+```
+
+**Batch pattern** (use when a stage transition has 2+ bridge calls):
+```bash
+BATCH_RESULT=$(echo '[{"command":"cmd1","args":[...],"stdin":{...}},{"command":"cmd2","args":[...]}]' | $BRIDGE batch 2>/dev/null) || true
 ```
 
 Bridge failures produce empty `BRIDGE_RESULT`. Always check before parsing.
@@ -151,12 +157,38 @@ On every invocation, check if the macOS Keychain is available:
 [ "$(uname)" = "Darwin" ] && command -v security >/dev/null 2>&1 && echo "KEYCHAIN_AVAILABLE" || echo "KEYCHAIN_UNAVAILABLE"
 ```
 
-If KEYCHAIN_AVAILABLE, also check connected providers (no secrets exposed):
+If KEYCHAIN_AVAILABLE, check connected providers with caching (1-hour TTL):
 
 ```bash
-for p in anthropic openai vercel stripe; do
-  security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null && echo "$p: connected" || echo "$p: not connected"
-done
+# Portable timeout function (macOS has no GNU timeout)
+_prism_timeout() {
+  local secs=$1; shift
+  "$@" &
+  local pid=$!
+  ( sleep "$secs" && kill "$pid" 2>/dev/null ) &
+  local watchdog=$!
+  wait "$pid" 2>/dev/null
+  local rc=$?
+  kill "$watchdog" 2>/dev/null 2>&1; wait "$watchdog" 2>/dev/null
+  return $rc
+}
+
+KEYCHAIN_CACHE="/tmp/prism-keychain-${UID:-0}-cache"
+if [ -f "$KEYCHAIN_CACHE" ] && [ "$(( $(date +%s) - $(stat -f%m "$KEYCHAIN_CACHE") ))" -lt 3600 ]; then
+  # Cache hit — read via grep (NOT source, for security)
+  for p in anthropic openai vercel stripe; do
+    eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
+  done
+else
+  # Cache miss — probe each provider (2s timeout per probe)
+  for p in anthropic openai vercel stripe; do
+    _prism_timeout 2 security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null \
+      && echo "PRISM_KEY_$p=connected" || echo "PRISM_KEY_$p=disconnected"
+  done > "$KEYCHAIN_CACHE"
+  for p in anthropic openai vercel stripe; do
+    eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
+  done
+fi
 ```
 
 Store the result. If any providers are connected, auto-inject at the start of every
@@ -243,10 +275,12 @@ show the regressed display number with an explanatory message:
 
 Run: `bash "$SKILL_DIR/scripts/prism-scan.sh" "$PROJECT_ROOT"`
 
-**Bridge (after scan):** Call bridge resume for richer context. If bridge disagrees with
-scan, log the discrepancy but trust the scan.
+**Bridge (after scan):** Call bridge resume for richer context — only when typed artifacts
+don't already exist. If bridge disagrees with scan, log the discrepancy but trust the scan.
 ```bash
-BRIDGE_RESUME=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" resume "$PROJECT_ROOT" 2>/dev/null) || true
+if [ ! -f "$PROJECT_ROOT/.prism/checkpoints/latest.json" ]; then
+  BRIDGE_RESUME=$($BRIDGE resume "$PROJECT_ROOT" 2>/dev/null) || true
+fi
 ```
 
 Read the temp file for structured JSON. The scan now includes `product_memory.model`
@@ -339,11 +373,12 @@ Store the change name for all subsequent stages.
 
 **After approval:** Save, checkpoint, update registry stage to "planned".
 
-**Bridge (after spec approval):** Dual-write spec to typed core and check spec→plan gate.
+**Bridge (after spec approval):** Dual-write spec to typed core and check spec→plan gate (single batch call).
 ```bash
-echo '{"title":"{feature}","type":"change","status":"approved","acceptanceCriteria":["{req1}","{req2}"]}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-spec "$PROJECT_ROOT" "{change}" 2>/dev/null || true
-GATE_RESULT=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" gate-check "$PROJECT_ROOT" spec plan --spec-id "{change}" 2>/dev/null) || true
+BATCH_RESULT=$(echo '[
+  {"command":"write-spec","args":["'"$PROJECT_ROOT"'","{change}"],"stdin":{"title":"{feature}","type":"change","status":"approved","acceptanceCriteria":["{req1}","{req2}"]}},
+  {"command":"gate-check","args":["'"$PROJECT_ROOT"'","spec","plan","--spec-id","{change}"]}
+]' | $BRIDGE batch 2>/dev/null) || true
 ```
 
 ### Stage 2: Plan (Auto-invoked via gstack)
@@ -352,11 +387,16 @@ Read [references/skill-catalog.md](references/skill-catalog.md).
 
 Tell user: "Your spec is ready — I'm going to run a quick architecture review."
 
-Invoke: `Skill tool: skill="plan-eng-review", args="Review {feature}: {summary}"`
+Before invoking, check if the skill exists on disk to avoid a slow error path:
+```bash
+[ -f "$HOME/.claude/skills/gstack/plan-eng-review/SKILL.md" ] && echo "SKILL_AVAILABLE" || echo "SKILL_MISSING"
+```
+If SKILL_AVAILABLE: `Skill tool: skill="plan-eng-review", args="Review {feature}: {summary}"`
+If SKILL_MISSING: Skip directly to native fallback (no Skill tool invocation).
 
 - **Skip:** User can say "skip planning" BEFORE invocation.
-- **Fallback:** If Skill tool errors, run Prism-native planning review via Agent tool using
-  the prompt from [references/reviews/planning-review.md](references/reviews/planning-review.md).
+- **Fallback:** If Skill tool errors OR skill is missing, run Prism-native planning review
+  via Agent tool using the prompt from [references/reviews/planning-review.md](references/reviews/planning-review.md).
   Never tell the user to run a command.
 - **Passed:** Update spec status to `planned`. If architecture changes, update PRODUCT.md.
   Check: UI product + no DESIGN.md? → Stage 2.5. Otherwise → Stage 3.
@@ -365,14 +405,13 @@ Invoke: `Skill tool: skill="plan-eng-review", args="Review {feature}: {summary}"
 Auto-save: `"planning complete for {change}"`
 
 **Bridge (after eng review):** Record the engineering review, write the plan, and write
-the task graph to the typed core.
+the task graph to the typed core (single batch call).
 ```bash
-echo '{"verdict":"pass","summary":"Planning review passed"}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" engineering 2>/dev/null || true
-echo '{"title":"{plan-title}","specId":"{change}","phases":[...]}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-plan "$PROJECT_ROOT" "{change}" "{plan-id}" 2>/dev/null || true
-cat "$PROJECT_ROOT/.prism/task-graph.json" | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-task-graph "$PROJECT_ROOT" "{plan-id}" 2>/dev/null || true
+BATCH_RESULT=$(echo '[
+  {"command":"record-review","args":["'"$PROJECT_ROOT"'","{change}","engineering"],"stdin":{"verdict":"pass","summary":"Planning review passed"}},
+  {"command":"write-plan","args":["'"$PROJECT_ROOT"'","{change}","{plan-id}"],"stdin":{"title":"{plan-title}","specId":"{change}","phases":[...]}},
+  {"command":"write-task-graph","args":["'"$PROJECT_ROOT"'","{plan-id}"],"stdin":{task_graph_json}}
+]' | $BRIDGE batch 2>/dev/null) || true
 ```
 
 ### Stage 2.5: Design (UI products only)
@@ -380,16 +419,18 @@ cat "$PROJECT_ROOT/.prism/task-graph.json" | \
 Runs ONLY for UI products when no DESIGN.md exists.
 
 Tell user: "Before we build, let me set up a visual direction."
-Invoke: `Skill tool: skill="design-consultation"`
+Check skill availability: `[ -f "$HOME/.claude/skills/gstack/design-consultation/SKILL.md" ]`
+If available: `Skill tool: skill="design-consultation"`
+If missing: skip silently (no Skill tool invocation).
 
 - **Skip:** User can say "skip design".
-- **Graceful degradation:** If skill not installed, skip silently.
+- **Graceful degradation:** If skill not installed or errors, skip silently.
 - After completion → Stage 3.
 
 **Bridge (after design consultation):** Record design review artifact if produced.
 ```bash
 echo '{"verdict":"pass","summary":"Design consultation completed"}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
+  $BRIDGE record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
 ```
 
 ### Stage 3: Build (Operator Decomposes, Workers Build)
@@ -451,21 +492,23 @@ Extract the file list from the worker's response. Store in registry:
 2. **Syntax verify:** `bash "$SKILL_DIR/scripts/prism-verify.sh" "$PROJECT_ROOT" --files "{output_files}" --lint --compile`
 3. **Contract extraction** (for dependent workers): Agent subagent reads output files,
    extracts exported symbols/signatures, validates via grep, stores in `.prism/contracts/{worker-id}.json`
-4. **Pass:** Save + registry + supervisor + checkpoint + telemetry:
+4. **Pass:** Save + registry + supervisor(complete) + checkpoint + telemetry run in parallel,
+   then supervisor(next) after all complete:
    ```bash
-   bash "$SKILL_DIR/scripts/prism-save.sh" "$PROJECT_ROOT" "built {task} ({N}/{total})"
-   bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "completed"
-   bash "$SKILL_DIR/scripts/prism-supervisor.sh" complete "$PROJECT_ROOT" "{change}" "{id}"
-   echo '{"stage":3,"progress":"{N}/{total} workers done","next_steps":["remaining tasks"]}' | bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
-   bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" worker_complete '{"worker":"{id}","task":"{task}"}'
+   bash "$SKILL_DIR/scripts/prism-save.sh" "$PROJECT_ROOT" "built {task} ({N}/{total})" &
+   bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "completed" &
+   bash "$SKILL_DIR/scripts/prism-supervisor.sh" complete "$PROJECT_ROOT" "{change}" "{id}" &
+   echo '{"stage":3,"progress":"{N}/{total} workers done","next_steps":["remaining tasks"]}' | bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}" &
+   bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" worker_complete '{"worker":"{id}","task":"{task}"}' &
+   wait
    ```
-   Then check supervisor for next ready tasks:
+   Then check supervisor for next ready tasks (must run after `wait` — depends on supervisor complete):
    `bash "$SKILL_DIR/scripts/prism-supervisor.sh" next "$PROJECT_ROOT" "{change}"`
    Dispatch any newly unblocked tasks.
 5. **Bridge (per-worker checkpoint):** Write checkpoint to typed core after each worker.
    ```bash
    echo '{"phase":"execute","progress":"{N}/{total} workers done","activeSpecId":"{change}"}' | \
-     npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" checkpoint "$PROJECT_ROOT" 2>/dev/null || true
+     $BRIDGE checkpoint "$PROJECT_ROOT" 2>/dev/null || true
    ```
 6. **Status relay:** Plain-English progress: "Login page done. 2 of 4 left."
 
@@ -494,11 +537,12 @@ After all workers complete:
 Update PRODUCT.md ("built" status) via subagent. Checkpoint. → Stage 4.
 
 **Bridge (after all workers + drift detection):** Record build verification and check
-plan→execute gate.
+execute→verify gate (single batch call).
 ```bash
-echo '{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift"]}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-verification "$PROJECT_ROOT" "build-{change}" 2>/dev/null || true
-npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" gate-check "$PROJECT_ROOT" execute verify 2>/dev/null || true
+BATCH_RESULT=$(echo '[
+  {"command":"record-verification","args":["'"$PROJECT_ROOT"'","build-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift"]}},
+  {"command":"gate-check","args":["'"$PROJECT_ROOT"'","execute","verify"]}
+]' | $BRIDGE batch 2>/dev/null) || true
 ```
 
 ### Stage 4: Verify (Auto-invoked via gstack)
@@ -506,34 +550,38 @@ npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/
 Tell user: "Build looks complete — running QA to make sure everything works."
 
 Detect testable URL. If none: ask user for URL or description.
-Invoke: `Skill tool: skill="qa", args="Test at {URL}"`
+Check skill availability: `[ -f "$HOME/.claude/skills/gstack/qa/SKILL.md" ]`
+If available: `Skill tool: skill="qa", args="Test at {URL}"`
+If missing: skip directly to native QA fallback.
 
 - **Skip:** User can say "skip QA".
-- **Fallback:** If Skill tool errors, run Prism-native QA review via Agent tool using
-  the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
+- **Fallback:** If Skill tool errors OR skill is missing, run Prism-native QA review via
+  Agent tool using the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
 - **Passed:** UI product → Stage 4.5. Otherwise → Stage 5.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
 
 Auto-save after fixes: `"QA fixes for {change}"`
 
-**Bridge (after QA):** Record the QA review and verification result.
+**Bridge (after QA):** Record the QA review and verification result (single batch call).
 ```bash
-echo '{"verdict":"pass","summary":"QA passed"}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" qa 2>/dev/null || true
-echo '{"specId":"{change}","passed":true,"checksRun":["qa"]}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-verification "$PROJECT_ROOT" "qa-{change}" 2>/dev/null || true
+BATCH_RESULT=$(echo '[
+  {"command":"record-review","args":["'"$PROJECT_ROOT"'","{change}","qa"],"stdin":{"verdict":"pass","summary":"QA passed"}},
+  {"command":"record-verification","args":["'"$PROJECT_ROOT"'","qa-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["qa"]}}
+]' | $BRIDGE batch 2>/dev/null) || true
 ```
 
 **Bridge (QA regression → Stage 3):** When QA fails and regresses to Stage 3, check the
 regression gate.
 ```bash
-npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" gate-check "$PROJECT_ROOT" verify execute 2>/dev/null || true
+$BRIDGE gate-check "$PROJECT_ROOT" verify execute 2>/dev/null || true
 ```
 
 ### Stage 4.5: Design Review (UI products only)
 
 Tell user: "QA looks good — doing a quick visual check."
-Invoke: `Skill tool: skill="design-review"`
+Check skill availability: `[ -f "$HOME/.claude/skills/gstack/design-review/SKILL.md" ]`
+If available: `Skill tool: skill="design-review"`
+If missing: skip silently.
 
 - **Skip/graceful degradation:** Same as 2.5.
 - **Issues found (first time):** Fix → Build → QA. **Design review runs at most once
@@ -543,25 +591,30 @@ Invoke: `Skill tool: skill="design-review"`
 **Bridge (after design review):** Record design review verdict.
 ```bash
 echo '{"verdict":"pass","summary":"Design review passed"}' | \
-  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
+  $BRIDGE record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
 ```
 
 ### Stage 5: Ship
 
-**Bridge (before ship):** Check release evidence and review completeness. Advisory only.
+**Bridge (before ship):** Check release evidence and review completeness (single batch call). Advisory only.
 ```bash
-RELEASE_STATE=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" release-state "$PROJECT_ROOT" "{change}" "change" 2>/dev/null) || true
-REVIEW_STATE=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" check-reviews "$PROJECT_ROOT" "{change}" "change" 2>/dev/null) || true
+BATCH_RESULT=$(echo '[
+  {"command":"release-state","args":["'"$PROJECT_ROOT"'","{change}","change"]},
+  {"command":"check-reviews","args":["'"$PROJECT_ROOT"'","{change}","change"]}
+]' | $BRIDGE batch 2>/dev/null) || true
 ```
+Parse `BATCH_RESULT` to extract `RELEASE_STATE` and `REVIEW_STATE` from the results array.
 Log the result but don't block shipping. If `RELEASE_STATE` contains `"decision":"hold"`,
 note the missing evidence in the build log for post-mortem.
 
 Tell user: "Everything looks good — committing and creating a pull request."
 
-Invoke: `Skill tool: skill="ship", args="Squash [prism auto-save] commits into final."`
+Check skill availability: `[ -f "$HOME/.claude/skills/gstack/ship/SKILL.md" ]`
+If available: `Skill tool: skill="ship", args="Squash [prism auto-save] commits into final."`
+If missing: do inline shipping (git commit, create PR).
 
 - **Skip:** "No problem — code is ready when you are. Just say 'ship'."
-- **Fallback:** If Skill tool errors, do inline.
+- **Fallback:** If Skill tool errors OR skill is missing, do inline.
 
 On success:
 1. Archive: `openspec archive "{change}" -y` (via subagent)

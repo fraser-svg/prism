@@ -69,7 +69,7 @@ async function readStdinJson<T>(): Promise<T> {
 
 function requireArg(args: string[], index: number, name: string): string {
   const val = args[index];
-  if (!val) fail(`missing required argument: ${name}`);
+  if (!val) throw new Error(`missing required argument: ${name}`);
   return val;
 }
 
@@ -102,66 +102,70 @@ function isSpecType(s: string): s is SpecType {
 }
 
 // ---------------------------------------------------------------------------
-// Commands
+// Pure execution layer — returns data, never calls process.exit
 // ---------------------------------------------------------------------------
 
-async function cmdGateCheck(args: string[]): Promise<void> {
+async function execGateCheck(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const from = requireArg(args, 1, "fromPhase");
   const to = requireArg(args, 2, "toPhase");
 
-  if (!isWorkflowPhase(from)) fail(`invalid fromPhase: ${from}`);
-  if (!isWorkflowPhase(to)) fail(`invalid toPhase: ${to}`);
+  if (!isWorkflowPhase(from)) throw new Error(`invalid fromPhase: ${from}`);
+  if (!isWorkflowPhase(to)) throw new Error(`invalid toPhase: ${to}`);
 
   const specId = parseSpecId(args);
   const result = await evaluateTransition(from, to, projectRoot, specId);
 
   if (result.allowed) {
-    output({ allowed: true, evidence: result.evidence });
-  } else {
-    // Exit 0 — the command succeeded, the gate just blocked. Exit 1 is reserved for CLI errors.
-    output({ allowed: false, blockers: result.blockers, evidence: result.evidence });
+    return { allowed: true, evidence: result.evidence };
   }
+  return { allowed: false, blockers: result.blockers, evidence: result.evidence };
 }
 
-async function cmdWriteSpec(args: string[]): Promise<void> {
+async function execWriteSpec(args: string[], stdinData?: unknown): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
-  const input = enrichProjectId(await readStdinJson<SkillSpecInput>(), projectRoot);
+  const input = enrichProjectId(
+    stdinData as SkillSpecInput ?? await readStdinJson<SkillSpecInput>(),
+    projectRoot,
+  );
 
   const spec = skillSpecToCore(input, specId);
   const repo = createSpecRepository(projectRoot);
   await repo.writeMetadata(specId, spec);
 
-  output({ written: true, specId, path: `${projectPaths(projectRoot).specsDir}/${specId}` });
+  return { written: true, specId, path: `${projectPaths(projectRoot).specsDir}/${specId}` };
 }
 
-async function cmdWritePlan(args: string[]): Promise<void> {
+async function execWritePlan(args: string[], stdinData?: unknown): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
   const planId = requireArg(args, 2, "planId") as EntityId;
-  const input = enrichProjectId(await readStdinJson<SkillPlanInput>(), projectRoot);
+  const input = enrichProjectId(
+    stdinData as SkillPlanInput ?? await readStdinJson<SkillPlanInput>(),
+    projectRoot,
+  );
 
   input.specId = specId;
   const plan = skillPlanToCore(input, planId);
   const repo = createPlanRepository(projectRoot);
   await repo.writeMetadata(planId, plan);
 
-  output({ written: true, planId, specId, path: `${projectPaths(projectRoot).plansDir}/${planId}` });
+  return { written: true, planId, specId, path: `${projectPaths(projectRoot).plansDir}/${planId}` };
 }
 
-async function cmdWriteTaskGraph(args: string[]): Promise<void> {
+async function execWriteTaskGraph(args: string[], stdinData?: unknown): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const planId = requireArg(args, 1, "planId") as EntityId;
-  const raw = await readStdin();
+  const raw = stdinData != null ? JSON.stringify(stdinData) : await readStdin();
 
-  if (!raw.trim()) fail("empty stdin for task graph");
+  if (!raw.trim()) throw new Error("empty stdin for task graph");
 
   // Validate it's valid JSON
   try {
     JSON.parse(raw);
   } catch {
-    fail("invalid JSON for task graph");
+    throw new Error("invalid JSON for task graph");
   }
 
   const paths = planPaths(projectRoot, planId);
@@ -170,50 +174,59 @@ async function cmdWriteTaskGraph(args: string[]): Promise<void> {
   await mkdir(dirname(paths.taskGraphFile), { recursive: true });
   await writeFile(paths.taskGraphFile, raw, "utf-8");
 
-  output({ written: true, planId, path: paths.taskGraphFile });
+  return { written: true, planId, path: paths.taskGraphFile };
 }
 
-async function cmdRecordReview(args: string[]): Promise<void> {
+async function execRecordReview(args: string[], stdinData?: unknown): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
   const reviewTypeStr = requireArg(args, 2, "reviewType");
 
-  if (!isReviewType(reviewTypeStr)) fail(`invalid reviewType: ${reviewTypeStr}`);
+  if (!isReviewType(reviewTypeStr)) throw new Error(`invalid reviewType: ${reviewTypeStr}`);
 
-  const input = enrichProjectId(await readStdinJson<SkillReviewInput>(), projectRoot);
+  const input = enrichProjectId(
+    stdinData as SkillReviewInput ?? await readStdinJson<SkillReviewInput>(),
+    projectRoot,
+  );
   const review = skillReviewToCore(input, specId, reviewTypeStr);
   await recordReview(projectRoot, review);
 
-  output({ written: true, specId, reviewType: reviewTypeStr, verdict: review.verdict });
+  return { written: true, specId, reviewType: reviewTypeStr, verdict: review.verdict };
 }
 
-async function cmdRecordVerification(args: string[]): Promise<void> {
+async function execRecordVerification(args: string[], stdinData?: unknown): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const runId = requireArg(args, 1, "runId") as EntityId;
-  const input = enrichProjectId(await readStdinJson<SkillVerificationInput>(), projectRoot);
+  const input = enrichProjectId(
+    stdinData as SkillVerificationInput ?? await readStdinJson<SkillVerificationInput>(),
+    projectRoot,
+  );
 
   const verification = skillVerificationToCore(input, runId);
   await recordVerification(projectRoot, verification);
 
-  output({ written: true, runId, passed: verification.passed });
+  return { written: true, runId, passed: verification.passed };
 }
 
-async function cmdCheckReviews(args: string[]): Promise<void> {
+async function execCheckReviews(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
   const specTypeStr = requireArg(args, 2, "specType");
 
-  if (!isSpecType(specTypeStr)) fail(`invalid specType: ${specTypeStr}`);
+  if (!isSpecType(specTypeStr)) throw new Error(`invalid specType: ${specTypeStr}`);
 
   const result = await checkRequiredReviews(specId, specTypeStr, projectRoot);
   const complete = await isReviewComplete(specId, specTypeStr, projectRoot);
 
-  output({ complete, reviews: result });
+  return { complete, reviews: result };
 }
 
-async function cmdCheckpoint(args: string[]): Promise<void> {
+async function execCheckpoint(args: string[], stdinData?: unknown): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
-  const input = enrichProjectId(await readStdinJson<SkillCheckpointInput>(), projectRoot);
+  const input = enrichProjectId(
+    stdinData as SkillCheckpointInput ?? await readStdinJson<SkillCheckpointInput>(),
+    projectRoot,
+  );
   const checkpoint = skillCheckpointToCore(input);
 
   const repo = createCheckpointRepository(projectRoot);
@@ -227,39 +240,132 @@ async function cmdCheckpoint(args: string[]): Promise<void> {
   ].filter(Boolean).join("\n");
   await repo.write(checkpoint, markdown);
 
-  output({ written: true, phase: checkpoint.phase, id: checkpoint.id });
+  return { written: true, phase: checkpoint.phase, id: checkpoint.id };
 }
 
-async function cmdResume(args: string[]): Promise<void> {
+async function execResume(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const projectId = (args[1] ?? "default") as EntityId;
   const changeName = args[2] ?? undefined;
 
   const result = await resumeFromArtifacts(projectRoot, projectId, changeName);
 
-  output({
+  return {
     phase: result.workflow.phase,
     activeSpecId: result.workflow.activeSpecId,
     blockers: result.workflow.blockers,
     source: result.source,
     summary: result.summary,
-  });
+  };
 }
 
-async function cmdReleaseState(args: string[]): Promise<void> {
+async function execReleaseState(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
   const specTypeStr = requireArg(args, 2, "specType");
 
-  if (!isSpecType(specTypeStr)) fail(`invalid specType: ${specTypeStr}`);
+  if (!isSpecType(specTypeStr)) throw new Error(`invalid specType: ${specTypeStr}`);
 
   // Read runId from the checkpoint for this specific spec
   const checkpointRepo = createCheckpointRepository(projectRoot);
   const checkpoint = await checkpointRepo.readLatestForSpec(specId);
   const runId = checkpoint?.runId ?? undefined;
 
-  const result = await deriveReleaseState(specId, specTypeStr, projectRoot, { runId });
-  output(result);
+  return await deriveReleaseState(specId, specTypeStr, projectRoot, { runId });
+}
+
+// ---------------------------------------------------------------------------
+// CLI wrapper layer — reads stdin, calls pure layer, calls output()/fail()
+// ---------------------------------------------------------------------------
+
+async function cmdGateCheck(args: string[]): Promise<void> {
+  output(await execGateCheck(args));
+}
+
+async function cmdWriteSpec(args: string[]): Promise<void> {
+  output(await execWriteSpec(args));
+}
+
+async function cmdWritePlan(args: string[]): Promise<void> {
+  output(await execWritePlan(args));
+}
+
+async function cmdWriteTaskGraph(args: string[]): Promise<void> {
+  output(await execWriteTaskGraph(args));
+}
+
+async function cmdRecordReview(args: string[]): Promise<void> {
+  output(await execRecordReview(args));
+}
+
+async function cmdRecordVerification(args: string[]): Promise<void> {
+  output(await execRecordVerification(args));
+}
+
+async function cmdCheckReviews(args: string[]): Promise<void> {
+  output(await execCheckReviews(args));
+}
+
+async function cmdCheckpoint(args: string[]): Promise<void> {
+  output(await execCheckpoint(args));
+}
+
+async function cmdResume(args: string[]): Promise<void> {
+  output(await execResume(args));
+}
+
+async function cmdReleaseState(args: string[]): Promise<void> {
+  output(await execReleaseState(args));
+}
+
+// ---------------------------------------------------------------------------
+// Batch command — executes multiple commands in a single Node.js process
+// ---------------------------------------------------------------------------
+
+interface BatchCommand {
+  command: string;
+  args: string[];
+  stdin?: unknown;
+}
+
+/** Map command names to their pure execution functions */
+const EXEC_HANDLERS: Record<string, (args: string[], stdin?: unknown) => Promise<unknown>> = {
+  "gate-check": execGateCheck,
+  "write-spec": execWriteSpec,
+  "write-plan": execWritePlan,
+  "write-task-graph": execWriteTaskGraph,
+  "record-review": execRecordReview,
+  "record-verification": execRecordVerification,
+  "check-reviews": execCheckReviews,
+  checkpoint: execCheckpoint,
+  resume: execResume,
+  "release-state": execReleaseState,
+};
+
+async function cmdBatch(): Promise<void> {
+  const commands = await readStdinJson<BatchCommand[]>();
+  const results: Array<{ command: string; ok: boolean; data?: unknown; error?: string }> = [];
+
+  for (const cmd of commands) {
+    const start = Date.now();
+    const handler = EXEC_HANDLERS[cmd.command];
+    if (!handler) {
+      results.push({ command: cmd.command, ok: false, error: `unknown command: ${cmd.command}` });
+      console.error(`[prism] batch: ${cmd.command} ${Date.now() - start}ms error`);
+      continue;
+    }
+    try {
+      const data = await handler(cmd.args, cmd.stdin);
+      results.push({ command: cmd.command, ok: true, data });
+      console.error(`[prism] batch: ${cmd.command} ${Date.now() - start}ms ok`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      results.push({ command: cmd.command, ok: false, error: message });
+      console.error(`[prism] batch: ${cmd.command} ${Date.now() - start}ms error`);
+    }
+  }
+
+  output({ results });
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +383,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   checkpoint: cmdCheckpoint,
   resume: cmdResume,
   "release-state": cmdReleaseState,
+  batch: cmdBatch,
 };
 
 async function main(): Promise<void> {
