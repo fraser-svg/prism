@@ -36,12 +36,12 @@ If no argument was provided, ask the user: "What are you about to build?"
 
 Evaluate the proposed work against the 6 canonical YC dimensions:
 
-1. **ICP clarity** — Does this sharpen who Prism is for?
-2. **Wedge sharpness** — Does this make the 80% wall solution more concrete and demonstrable?
-3. **Magical workflow readiness** — Does this make the Socratic → spec → build → verify flow more polished or demoable?
-4. **User proof readiness** — Does this get a real person through Prism or capture evidence of usage?
-5. **Category story strength** — Does this sharpen the narrative or one-liner?
-6. **Spec-driven discipline** — Does this maintain Prism's spec-driven, review-heavy culture?
+1. **ICP clarity** — Does this sharpen who Prism is for? Prism serves semi-technical builders who hit the 80% wall. Does this work make their experience more concrete and demonstrable?
+2. **Wedge sharpness** — Does this make Prism's scope-locking + guardrails wedge more concrete? Does it make Prism look like a system of work (good) or an AI wrapper (bad)?
+3. **Magical workflow readiness** — Does this make the Socratic → spec → build → verify flow more polished or demoable? Does Prism own the full path or just one step? The workflow is where Prism proves it's an operating system, not a chatbot.
+4. **User proof readiness** — Does this get a real person through Prism or capture evidence of usage? A polished UI and smooth workflow ARE how you close this gap — Patrick's experience is the proof.
+5. **Category story strength** — Does this sharpen the narrative? Prism should sound like a product-building control plane, not "multiple agents in one app." Would a YC partner instantly understand what Prism does from this work?
+6. **Spec-driven discipline** — Does this maintain Prism's spec-driven, verification-heavy culture? Prism decides if outputs are acceptable — models generate, Prism judges. Does this strengthen that moat?
 
 ### Step 4: Return verdict
 
@@ -63,8 +63,10 @@ VERDICT: {BUILD | DEFER | STOP}
 
 ### Rules for gate mode
 
-- Bias toward DEFER over BUILD. With {N} days left, only work that directly closes the weakest dimensions should get BUILD.
-- User proof (currently 0/5) is the existential gap. Any work that closes this gap gets BUILD.
+- BUILD anything that helps a user produce more with Prism than without it, more easily than without it. UI, workflow, and user proof are equally critical.
+- BUILD anything that makes Patrick's first session more polished, complete, or impressive.
+- DEFER work that won't be visible or felt during a user session — but never defer specs, tests, or verification that the current priority stack depends on.
+- User proof (currently 0/5) is the existential gap, but a polished UI and smooth workflow are how you close it. Patrick's experience IS the proof.
 - Do not reward infrastructure for its own sake. Typed cores, bridge CLIs, and provider abstractions are impressive engineering but they don't get into YC.
 - If the proposed work is on the "stop building" list in SCORECARD.md, always return STOP.
 - Be direct. Do not be polite at the expense of truth.
@@ -144,6 +146,13 @@ Dimensions:
 
 ### What Is Hurting
 {2-3 bullets}
+
+### Anti-Pattern Check
+- Does Prism look like an AI wrapper? (bad)
+- Does it sound like "multiple agents in one app"? (bad)
+- Can it explain why its workflow beats general AI tools? (must be yes)
+- Does it help determine WHAT to build, not just generate code? (must be yes)
+- If the best frontier model gets 10x better, does Prism become more valuable or obsolete? (must be "more valuable")
 
 ### What To Stop Building
 {specific items}

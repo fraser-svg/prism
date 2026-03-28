@@ -23,7 +23,7 @@ Maintained by `/yc-brain`. Updated on every review and retro.
 
 ### Priority Stack
 
-1. Get Patrick through a full Prism session (user proof)
+1. Patrick-ready by March 30 (UI + workflow + user proof)
 2. Record a demo-ready walkthrough of the magical workflow
 3. Sharpen the one-liner and YC application narrative
 
@@ -36,7 +36,7 @@ Maintained by `/yc-brain`. Updated on every review and retro.
 
 ### What Would YC Not Believe Yet?
 
-That anyone besides the founder has used this. User proof is 0/5. Everything else is credible infrastructure and clear thinking — but without a single external user completing a build through Prism, it's "cool but not yet a company."
+That anyone besides the founder has used this. User proof is 0/5. But the deeper risk: does Prism look like an operating system for building software, or does it look like a clever AI wrapper? The answer needs to be obvious from 30 seconds of watching someone use it.
 
 ---
 
