@@ -468,6 +468,10 @@ describe("skillCheckpointToCore", () => {
       expect(skillCheckpointToCore({ stage: 4.5 }).phase).toBe("verify");
     });
 
+    it("maps stage=4.6 to 'verify'", () => {
+      expect(skillCheckpointToCore({ stage: 4.6 }).phase).toBe("verify");
+    });
+
     it("maps stage=5 to 'release'", () => {
       expect(skillCheckpointToCore({ stage: 5 }).phase).toBe("release");
     });

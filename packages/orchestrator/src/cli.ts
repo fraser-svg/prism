@@ -91,7 +91,7 @@ function isWorkflowPhase(s: string): s is WorkflowPhase {
   return (WORKFLOW_PHASES as readonly string[]).includes(s);
 }
 
-const REVIEW_TYPES = ["planning", "engineering", "qa", "design", "ship_readiness"] as const;
+const REVIEW_TYPES = ["planning", "engineering", "qa", "design", "ship_readiness", "codex"] as const;
 function isReviewType(s: string): s is ReviewType {
   return (REVIEW_TYPES as readonly string[]).includes(s);
 }
