@@ -2,6 +2,14 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.3.2] - 2026-03-28
+
+### Added
+- **Core Design Principles** — explicit first-class principles added to VISION.md and architecture README: verify before trust, minimize LLM dependence, route by capability, build AI-native. Umbrella principle: protect the user.
+
+### Changed
+- Aspirational principles (model routing, verify-before-trust) qualified with current implementation status to prevent false safety guarantees
+
 ## [4.0.3.1] - 2026-03-28
 
 ### Added — YC Build Brain

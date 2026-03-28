@@ -104,6 +104,22 @@ This is the core design principle — what the team handles silently vs. what ge
 - Never make cost decisions without consulting the creator
 - Never mistake the first request for the real problem without testing it
 
+## The Operating Principles
+
+One principle organizes everything Prism does internally:
+
+**Protect the user.** The quality of what the user ships is the only metric that matters. Every internal decision — which model to call, how to verify output, when to retry — serves this outcome.
+
+Four commitments make this concrete:
+
+**Assume unreliable until verified.** Prism treats every LLM output as suspect. The team should not present generated work as trustworthy until it has been checked — by deterministic verification, by a review pass, or by explicit test. The Guardian is not a final gate; suspicion should run through every stage. If the model is lying, Prism catches it before the creator sees it. (Today, verification gates enforce this at release; earlier stages have gaps that are being closed.)
+
+**Preserve the creator's resources.** Prism does not burn tokens on tasks that don't need intelligence. Deterministic scripts handle what deterministic scripts can handle. The cheapest correct answer wins. The creator's money and time are not Prism's to waste.
+
+**Choose the right tool for the task.** Not every task needs the most powerful model. Prism selects models by capability match — smaller models for formatting and simple generation, larger models for architecture and deep reasoning. This is not about cost alone; it's about using the right instrument, the way a good team assigns work by expertise.
+
+**Be expert at building with AI.** Prism is not just powered by AI — it understands how to use AI properly. How to structure prompts so they don't hallucinate. How to decompose work so models succeed. How to verify outputs so errors don't compound. Prism should be the best practice for AI-assisted building, not just an example of it.
+
 ## The Feeling
 
 **Power.** Not control — power. The feeling of sitting down with a rough idea and watching it become real. The feeling of being understood by a system that remembers what you meant. The feeling that nothing is being lost, nothing is being forgotten, and the team is working as hard as you are.

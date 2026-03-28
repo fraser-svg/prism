@@ -192,6 +192,18 @@ The order is fixed:
 
 Prism can loop backward, but it should not skip forward irresponsibly.
 
+## Core Design Principles
+
+These principles are non-negotiable commitments that govern how Prism is built.
+
+1. **Verify before trust.** LLM-generated output should pass through deterministic checks or review before it reaches the user or influences downstream work. The guardian layer is not a final gate — verification is a posture that should run through every stage. (Current coverage: verification gates enforce review/verification at release; earlier stages check artifact existence only. Closing this gap is an active priority.)
+
+2. **Minimize LLM dependence.** Use deterministic scripts and structured data wherever they produce correct results. LLM calls are reserved for tasks that require generation, reasoning, or judgment. This reduces cost, latency, and hallucination surface.
+
+3. **Route by capability.** Model selection should be per-task, not global. Simple tasks get simple models. Complex reasoning gets capable models. The orchestration layer should decide, not the user and not a default. (Not yet implemented — current architecture uses a single model. This principle guides future execution layer design.)
+
+4. **Build AI-native.** Prism is expert at structuring work for AI tools — prompt decomposition, output verification, context management, failure recovery. This expertise is embedded in the orchestration and guardian layers, not left to individual prompts.
+
 ## Current Architectural Biases
 
 Bias toward:
