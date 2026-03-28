@@ -52,6 +52,12 @@ export type ProductType =
   | "automation"
   | "other";
 export type PrimaryPlatform = "macos" | "web" | "desktop" | "hybrid";
+export type ScopeMode = "full_build" | "targeted" | "exact" | "minimum_viable";
+export type DeviationSeverity = "auto_fix" | "auto_fix_critical" | "auto_fix_blocking" | "ask_user";
+
+export type ModelProvider = "anthropic" | "openai" | "google";
+export type ServiceProvider = "vercel" | "stripe";
+export type RouteHint = "visual" | "backend" | "any";
 
 export interface AuditStamp {
   createdAt: ISODateString;

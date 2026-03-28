@@ -17,7 +17,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # --- Valid event types ---
-VALID_EVENTS="build_start build_complete build_fail worker_complete worker_fail guardian_retry qa_pass qa_fail ship user_intervention stage_skip discovery_complete"
+VALID_EVENTS="build_start build_complete build_fail worker_complete worker_fail guardian_retry qa_pass qa_fail ship user_intervention stage_skip discovery_complete gemini_fallback"
 
 # --- Helpers ---
 _sanitize_arg() {
@@ -168,7 +168,7 @@ cmd_failures() {
 
   # Read all failure events
   local fail_events
-  fail_events=$(jq -s 'map(select(.event_type | test("fail|error"; "i")))' "$telemetry_file" 2>/dev/null || echo "[]")
+  fail_events=$(jq -s 'map(select(.event_type | test("fail|error|fallback"; "i")))' "$telemetry_file" 2>/dev/null || echo "[]")
 
   if [ "$cluster" = "--cluster" ]; then
     # Group by error pattern (shared keywords/prefixes)

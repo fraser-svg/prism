@@ -10,23 +10,44 @@ The caller must provide:
 - **Spec summary:** 2–5 sentences describing what is being built, the requirements, and any explicit constraints
 - **Architecture context:** The Architecture section from PRODUCT.md (tech stack, key patterns, data model, architecture decisions). If PRODUCT.md does not exist, state "no product context available" and proceed without it.
 
-## Step 0: Scope Challenge (run before the review)
+## Step 0: Scope Mode Validation
 
-Before reviewing the plan itself, challenge its scope:
+Before reviewing the plan itself:
 
-1. What existing code already partially solves each sub-problem? List it.
-2. What is the minimum set of changes that achieves the stated goal?
-3. **Complexity smell:** If the plan touches 8+ files or introduces 2+ new classes/services, challenge whether all of them are necessary.
-4. Check TODOS.md (if it exists) — are there deferred items that block this plan?
+1. Read the plan's `scopeMode` (default: "exact")
+2. Count total tasks against scope mode limits: exact/minimum_viable max 8, targeted max 15, full_build flag if >20
+3. Check `alternatives` array has 2-3 entries (P2 if missing)
+4. If `exact` or `minimum_viable` scope and plan introduces new abstractions/services: P1
 5. Are structural changes (new abstractions, refactors) and behavioral changes (new features) mixed? They should be separate.
 
 If scope challenge finds issues, include them as P1 findings.
+
+## Step 1: Goal-Backward Verification
+
+For each phase in the plan:
+- Does `goal` → `observableTruths` → `requiredArtifacts` → `requiredWiring` form a coherent chain?
+- If chain breaks or fields missing: P1
+
+## Step 2: Must-Haves Audit
+
+- Every task must have `mustHaves` with at least 1 truth and 1 artifact
+- `keyLinks` patterns must be valid regex
+- `avoidAndWhy` must be non-empty (every task should know what NOT to do)
+- `failureScenario` should be present (P2 if missing)
+- Missing mustHaves = P1
+
+## Step 3: Context Budget Check
+
+- `totalContextBudgetPct` < 50: pass
+- Any single task > 25%: P2 "consider splitting this task"
+- Total > 50%: P2 "consider splitting into multiple execution units"
+- (Context budget is a warning, not a blocker — heuristic is uncalibrated)
 
 ## Your Job
 
 Work through each check below. For each one, identify findings or confirm it is clear.
 
-### 1. Feasibility
+### 4. Feasibility
 - Can this be built with the stated tech stack and architecture?
 - Are there any dependencies, APIs, or integrations that do not yet exist or are under-specified?
 - Is the scope achievable in a single build phase, or does it need to be split?

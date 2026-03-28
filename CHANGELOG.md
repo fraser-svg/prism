@@ -2,6 +2,51 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.8.0] - 2026-03-28
+
+### Added
+- **Ship Stage v2.0** — typed core ship command (`ship.ts`) with squash-to-merge-base, force-with-lease push, PR creation via `gh`, spec-derived commit messages, and git tagging
+- **Deploy detection** — `deploy-detect` command identifies Vercel, Netlify, Railway, Fly.io, and Render from config files with auto-deploy detection; `deploy-trigger` command with platform CLI invocation and health-check polling
+- **Ship receipt persistence** — `record-ship` command writes durable receipt entity at `.prism/ships/{specId}/receipt.json` capturing PR URL, commit SHA, deploy status, review verdicts, and timestamps
+- **Batch CLI command** — execute multiple bridge commands in a single invocation with per-command stdin data
+- **Deploy-trigger test suite** — 4 subprocess tests covering no-platform, CLI-not-installed, missing args, and health-check flag
+- **Untracked file security test** — regression test verifying `git add -u` does not stage untracked files (prevents credential leaks)
+- **Structured planning system** — machine-executable plan format with `files`, `action`, `verify`, `done`, `mustHaves`, `wave`, and `contextBudgetPct` fields on TaskNode
+- **8-dimension plan quality gate** — blocks `plan → execute` transition when plans lack requirement coverage, task completeness, dependency correctness, key links, scope sanity, verification derivation, context budget, or artifact completeness
+- **Goal-backward verification** — `MustHaves` (ObservableTruths + ArtifactRequirements + KeyLinks) on tasks with AC ID traceability to spec acceptance criteria
+- **Wave-based execution** — task-level `wave` field enables parallel execution within waves and dependency ordering
+- **Deviation rules** — 4-tier escalation system (auto_fix → auto_fix_critical → auto_fix_blocking → ask_user) with file-creation cap
+- **Scope mode selection** — `full_build`, `targeted`, `exact`, `minimum_viable` modes with per-mode task count limits
+- **Implementation alternatives** — structured comparison of approaches with effort/risk/pros/cons
+- **Task graph binding validation** — task-graph.json `planId`/`specId` verified against expected IDs
+- **Spec validation in quality gate** — missing spec blocks v2 plans instead of silently passing
+- **29 unit tests** — comprehensive coverage of all 8 quality dimensions, edge cases, and backward compatibility
+
+### Changed
+- **Push after squash** — uses `--force-with-lease` instead of plain push, with fetch-rebase-retry fallback on rejection
+- **Auto-save security** — `git add -u` replaces `git add -A` to prevent staging untracked secrets/credentials
+- **Review verdict parsing** — structured `verdict: PASS` line parser replaces fragile substring search, with first-line keyword fallback
+- **Ship receipt entity IDs** — `crypto.randomUUID()` replaces `Math.random()` for collision-resistant UUIDs
+- **Test timeout configuration** — global `testTimeout: 30_000` in vitest.config.ts replaces per-file `vi.setConfig()` calls (Vitest 4.x compatibility)
+- **Plan quality gate in gate-evaluator** — `plan → execute` now runs quality check on v2 plans; legacy plans (planVersion missing or 1) bypass with advisory note
+- **Bridge adapters** — `skillPlanToCore` extended with structured planning fields, defaults to `planVersion: 2` and `scopeMode: "exact"`
+- **Propose skill** — upgraded with structured task format template, traceability matrix, dual write (tasks.md + task-graph.json), execution preview
+- **Apply command** — upgraded with deviation rules, must-haves verification, wave-based execution
+- **Planning review** — added scope mode validation, goal-backward verification, must-haves audit, context budget check
+
+## [4.0.7.0] - 2026-03-28
+
+### Added
+- **Gemini provider adapter** — `scripts/prism-gemini-worker.sh` bridges Prism's worker contract with Google's Gemini API for visual/UI task routing
+- **Provider routing in SKILL.md** — `route_hint` system routes visual tasks to Gemini, everything else to Claude, with automatic fallback
+- **Core provider types** — `ModelProvider`, `ServiceProvider`, `RouteHint` types in `packages/core` with `TaskNode` extensions
+- **Google keychain support** — `google` provider added to all keychain probe loops, key management, and inject workflows
+- **Mock test suite** — 17 tests for the Gemini adapter covering happy path, envelope validation, path traversal, parallel safety, retry logic
+
+### Changed
+- **Supervisor route_hint pass-through** — `plan`, `next`, and `complete` commands now preserve and return `route_hint` (defaults to `"any"`)
+- **Telemetry** — added `gemini_fallback` event type; failures filter now includes `fallback` pattern
+
 ## [4.0.6.0] - 2026-03-28
 
 ### Added

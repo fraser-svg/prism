@@ -463,10 +463,12 @@ Validates the task graph (structure, no duplicate IDs, no missing deps, no cycle
 
 ```json
 [
-  { "id": "w1", "task": "build auth module", "depends_on": [] },
-  { "id": "w2", "task": "build db layer", "depends_on": ["w1"] }
+  { "id": "w1", "task": "build auth module", "depends_on": [], "route_hint": "any" },
+  { "id": "w2", "task": "build db layer", "depends_on": ["w1"], "route_hint": "any" }
 ]
 ```
+
+`route_hint` is optional in input; defaults to `"any"` if omitted.
 
 **Stdout:** `OK: plan stored (2 tasks) -> /tmp/prism-supervisor-{PID}.json`
 
@@ -482,6 +484,7 @@ Validates the task graph (structure, no duplicate IDs, no missing deps, no cycle
       "id": "w1",
       "task": "build auth module",
       "depends_on": [],
+      "route_hint": "any",
       "status": "pending",
       "retries": 0,
       "created": "2026-03-28T10:00:00Z",
@@ -510,8 +513,8 @@ Returns tasks whose dependencies are all completed and that are not blocked by a
 
 ```json
 [
-  { "id": "w1", "task": "build auth module", "depends_on": [] },
-  { "id": "w3", "task": "build UI", "depends_on": [] }
+  { "id": "w1", "task": "build auth module", "depends_on": [], "route_hint": "any" },
+  { "id": "w3", "task": "build UI", "depends_on": [], "route_hint": "visual" }
 ]
 ```
 
@@ -546,7 +549,7 @@ Returns tasks whose dependencies are all completed and that are not blocked by a
   "worker_id": "w1",
   "remaining": 3,
   "next_ready": [
-    { "id": "w2", "task": "build db layer", "depends_on": ["w1"] }
+    { "id": "w2", "task": "build db layer", "depends_on": ["w1"], "route_hint": "any" }
   ]
 }
 ```
@@ -600,10 +603,18 @@ When abandoned (retries >= 3):
 | `status` (complete)      | string   | `"completed"` or `"no-op"`                       |
 | `remaining`              | number   | Tasks not yet completed or abandoned             |
 | `next_ready`             | array    | Newly unblocked tasks after this completion      |
+| `next_ready[].route_hint`| string   | Provider routing hint for each ready task        |
 | `status` (fail)          | string   | `"failed"` or `"abandoned"`                      |
 | `retries`                | number   | Cumulative retry count                           |
 | `can_retry`              | boolean  | `true` if retries < 3                            |
 | `blocked_downstream`     | string[] | Task IDs transitively blocked by abandonment     |
+
+### `route_hint` values
+
+| Value      | Meaning                                              |
+|------------|------------------------------------------------------|
+| `"any"`    | No routing preference — use the default Claude agent |
+| `"visual"` | Visual/UI task — prefer Gemini; falls back to Claude |
 
 ### Task status transitions
 
@@ -773,7 +784,7 @@ bash scripts/prism-telemetry.sh failures <root> [--cluster]
 
 `build_start`, `build_complete`, `build_fail`, `worker_complete`, `worker_fail`,
 `guardian_retry`, `qa_pass`, `qa_fail`, `ship`, `user_intervention`, `stage_skip`,
-`discovery_complete`
+`discovery_complete`, `gemini_fallback`
 
 ### Subcommand: `record`
 
@@ -869,3 +880,226 @@ Appends a single JSONL line to `<root>/.prism/telemetry.jsonl`.
 - Storage format is JSONL (one JSON object per line) at `<root>/.prism/telemetry.jsonl`.
 - Append-only -- the log file is never rewritten.
 - Failure clustering normalizes error strings: lowercase, first 40 chars, alphanumeric only.
+- The `failures` subcommand matches `fail`, `error`, and `fallback` event types.
+
+---
+
+## prism-gemini-worker.sh
+
+Gemini API adapter: reads files into a prompt, calls Google's Gemini API with structured JSON mode, writes output files to a staging directory, verifies them, then promotes to the project root.
+
+Unlike other scripts, this adapter does **not** write to a shared `/tmp/prism-{name}-{PID}.json` temp file. It writes its result to `.prism/staging/{worker_id}/result.json` and prints a one-line summary to stdout.
+
+### Usage
+
+```
+echo '<json_payload>' | bash scripts/prism-gemini-worker.sh <root> <worker_id> [--dry-run]
+```
+
+| Arg          | Required | Description                                     |
+|--------------|----------|-------------------------------------------------|
+| `root`       | yes      | Project root directory                          |
+| `worker_id`  | yes      | Worker ID string (used for staging path)        |
+| `--dry-run`  | no       | Validates input and prints prompt; skips API call |
+| Stdin        | yes      | JSON task payload (see below)                   |
+
+### Stdin format
+
+```json
+{
+  "task": "Add type definitions for the auth module",
+  "files_to_read": ["src/types.ts", "src/auth.ts"],
+  "constraints": "TypeScript strict mode, no any",
+  "shared_context": "...",
+  "model": "gemini-2.5-pro"
+}
+```
+
+| Field            | Required | Description                                      |
+|------------------|----------|--------------------------------------------------|
+| `task`           | yes      | Natural-language task description                |
+| `files_to_read`  | no       | Files to include in the prompt (max 10, 100KB each) |
+| `constraints`    | no       | Additional constraints passed to the model       |
+| `shared_context` | no       | Shared context from the orchestrator             |
+| `model`          | no       | Gemini model name (default: `gemini-2.5-pro`)    |
+
+### Stdout
+
+```
+OK: {worker_id} — 2 files written -> .prism/staging/{worker_id}/result.json
+FAIL: {worker_id} — {reason} -> .prism/staging/{worker_id}/result.json
+```
+
+Exit code is always `0`. Check the result JSON for logical errors.
+
+### Result file: `.prism/staging/{worker_id}/result.json`
+
+**Success:**
+
+```json
+{
+  "status": "completed",
+  "worker_id": "w1",
+  "provider": "google",
+  "model": "gemini-2.5-pro",
+  "file_manifest": [
+    { "path": "src/types.ts", "bytes": 1234 }
+  ]
+}
+```
+
+**Failure:**
+
+```json
+{
+  "status": "failed",
+  "worker_id": "w1",
+  "provider": "google",
+  "model": "gemini-2.5-pro",
+  "reason": "safety_block",
+  "file_manifest": []
+}
+```
+
+### Key fields
+
+| Field           | Type    | Values / Notes                                                    |
+|-----------------|---------|-------------------------------------------------------------------|
+| `status`        | string  | `"completed"` or `"failed"`                                       |
+| `worker_id`     | string  | Echoes the `worker_id` CLI arg                                    |
+| `provider`      | string  | Always `"google"`                                                 |
+| `model`         | string  | Model used (from stdin or default)                                |
+| `file_manifest` | array   | Files promoted to project root on success; empty on failure       |
+| `reason`        | string  | Present on failure: `"safety_block"`, `"no_candidates"`, `"bad_finish_reason"`, `"invalid_json_response"`, `"api_error"`, `"missing_api_key"`, `"file_limit_exceeded"`, `"input_too_large"`, `"malformed_input"` |
+
+### Staging and promotion flow
+
+1. Model output is written to `.prism/staging/{worker_id}/` (never directly to project root).
+2. Each output file is verified (exists, non-empty, path traversal rejected).
+3. On success, all staged files are atomically promoted to the project root.
+4. On failure, staged files are cleaned up; `result.json` is preserved for diagnostics.
+
+### Notes
+- Requires `jq` and `curl`.
+- API key must be stored in the macOS Keychain as `prism-google` (see `references/key-management.md`).
+- `--dry-run` validates input and prints the assembled prompt without making an API call.
+- Retries 5xx errors up to 3 times with exponential backoff.
+- Parallel safety: each worker uses an isolated staging directory keyed by `worker_id`.
+
+---
+
+## Typed Bridge CLI Commands (Ship Stage)
+
+These commands are implemented in TypeScript (`packages/orchestrator/src/cli.ts`) and
+invoked via `npx tsx packages/orchestrator/src/cli.ts <command> <args>`. They output
+JSON to stdout and use exit code 0 for success, 1 for errors.
+
+---
+
+## ship
+
+Squashes branch commits, pushes, creates PR via `gh`, and tags with spec-derived slug.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts ship <projectRoot> <specId> [--base main] [--message "override"]
+```
+
+| Arg         | Required | Description                                 |
+|-------------|----------|---------------------------------------------|
+| `projectRoot` | yes    | Project root directory                      |
+| `specId`      | yes    | Spec entity ID for commit message/tag       |
+| `--base`      | no     | Base branch (default: `main`)               |
+| `--message`   | no     | Override commit message                     |
+
+### Output JSON
+
+```json
+{
+  "status": "shipped | partial | failed",
+  "squash": { "status": "squashed | skipped | failed", "commit": "abc1234", "message": "feat: ..." },
+  "push": { "status": "pushed | no_remote | failed", "branch": "feat/..." },
+  "pr": { "status": "created | already_exists | gh_not_installed | failed", "url": "https://..." },
+  "tag": { "status": "created | already_exists | failed", "name": "prism/..." },
+  "spec_summary": "...",
+  "review_verdicts": { "engineering": "pass", "qa": "pass", "design": null, "codex": null }
+}
+```
+
+---
+
+## deploy-detect
+
+Detects deployment platform from project config files.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts deploy-detect <projectRoot>
+```
+
+### Output JSON
+
+```json
+{
+  "platform": "vercel | netlify | railway | fly | render | none",
+  "auto_deploy": true,
+  "config_file": "vercel.json"
+}
+```
+
+---
+
+## deploy-trigger
+
+Triggers deployment via platform CLI with optional health-check polling.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts deploy-trigger <projectRoot> [--health-check]
+```
+
+### Output JSON
+
+```json
+{
+  "platform": "vercel | netlify | railway | fly | render | none",
+  "deploy_status": "triggered | not_triggered | cli_not_installed | failed",
+  "health_status": "healthy | unhealthy | skipped"
+}
+```
+
+---
+
+## record-ship
+
+Persists a durable ship receipt entity at `.prism/ships/{specId}/receipt.json`.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts record-ship <projectRoot> <specId> < receipt-input.json
+```
+
+### Stdin JSON
+
+```json
+{
+  "commitSha": "abc1234",
+  "commitMessage": "feat: ...",
+  "branch": "feat/...",
+  "baseBranch": "main",
+  "prUrl": "https://...",
+  "tagName": "prism/...",
+  "deployUrl": "https://...",
+  "deployPlatform": "vercel",
+  "specSummary": "...",
+  "reviewVerdicts": { "engineering": "pass" }
+}
+```
+
+### Output JSON
+
+Full `ShipReceipt` entity with `id`, `shippedAt`, and all input fields.

@@ -22,6 +22,7 @@ It answers four questions for each asset:
 | `scripts/prism-verify.sh` | Deterministic verification runner | `packages/guardian` | Canonical behavior, likely wrapped | Good base for deterministic checks |
 | `scripts/prism-save.sh` | Auto-save commit/push | `packages/execution` | Canonical behavior, likely wrapped | Approval and branch policy should be orchestrator-aware |
 | `scripts/prism-telemetry.sh` | Append-only telemetry | `packages/guardian` or shared infra | Canonical behavior, likely wrapped | Useful for eval and reliability loops |
+| `scripts/prism-gemini-worker.sh` | Gemini API adapter for visual task routing | `packages/execution` | Canonical behavior, likely wrapped | First provider adapter; bridges worker contract to Gemini's structured JSON API |
 | `scripts/prism-eval.sh` | Eval suite | `packages/guardian` | Canonical behavior, likely wrapped | Core for safe self-improvement |
 | `scripts/prism-improve.sh` | Improvement proposals and promotion | `packages/guardian` + `packages/orchestrator` | Transitional canonical | Good pattern, but should align with formal change/release state |
 

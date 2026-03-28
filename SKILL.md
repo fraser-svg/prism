@@ -176,16 +176,16 @@ _prism_timeout() {
 KEYCHAIN_CACHE="/tmp/prism-keychain-${UID:-0}-cache"
 if [ -f "$KEYCHAIN_CACHE" ] && [ "$(( $(date +%s) - $(stat -f%m "$KEYCHAIN_CACHE") ))" -lt 3600 ]; then
   # Cache hit — read via grep (NOT source, for security)
-  for p in anthropic openai vercel stripe; do
+  for p in anthropic openai google vercel stripe; do
     eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
   done
 else
   # Cache miss — probe each provider (2s timeout per probe)
-  for p in anthropic openai vercel stripe; do
+  for p in anthropic openai google vercel stripe; do
     _prism_timeout 2 security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null \
       && echo "PRISM_KEY_$p=connected" || echo "PRISM_KEY_$p=disconnected"
   done > "$KEYCHAIN_CACHE"
-  for p in anthropic openai vercel stripe; do
+  for p in anthropic openai google vercel stripe; do
     eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
   done
 fi
@@ -208,7 +208,7 @@ These commands use the `prism:` prefix to avoid false positives.
 | `prism: status` | Show which providers are connected |
 | `prism: inject` | Write connected keys to .env.local |
 
-Supported providers: `anthropic`, `openai`, `vercel`, `stripe`.
+Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`.
 
 **Security rules:**
 - Agent NEVER executes commands containing secrets. Prints the template, user runs it.
@@ -530,9 +530,13 @@ Map requirements to worker tasks. For each, prepare a TaskPrompt:
 **CONTEXT FIREWALL:** Workers get task + code + constraints ONLY. Never: user
 conversation, personality, vision, other workers' raw context, the spec itself.
 
-Output dependency graph and validate via supervisor:
+Assign `route_hint` per task based on content:
+- Tasks involving components, layouts, styles, CSS, visual, UI, design, animation, responsive → `"visual"`
+- Everything else → `"any"`
+
+Output dependency graph (with route_hint) and validate via supervisor:
 ```bash
-echo '[{"id":"w1","task":"...","depends_on":[]},{"id":"w2","task":"...","depends_on":["w1"]}]' | \
+echo '[{"id":"w1","task":"...","depends_on":[],"route_hint":"visual"},{"id":"w2","task":"...","depends_on":["w1"],"route_hint":"any"}]' | \
   bash "$SKILL_DIR/scripts/prism-supervisor.sh" plan "$PROJECT_ROOT" "{change}"
 ```
 The supervisor validates: no cycles (Kahn's algorithm), no missing deps, no duplicate IDs.
@@ -543,7 +547,39 @@ Dispatch all ready tasks simultaneously (multiple Agent calls in one message).
 
 Register each worker: `bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "running"`
 
-#### Worker dispatch
+#### Provider routing
+
+Each ready task from supervisor `next` includes a `route_hint`. Route based on hint + provider availability:
+
+| route_hint | Preferred provider | Fallback |
+|------------|-------------------|----------|
+| `"visual"` | google (Gemini) | claude (Agent tool) |
+| `"backend"` | claude (Agent tool) | claude (Agent tool) |
+| `"any"` | claude (Agent tool) | claude (Agent tool) |
+
+**Gemini dispatch (parallel):**
+For each visual task where `$PRISM_KEY_google` is `connected`, dispatch in background:
+```bash
+echo '{"task":"...","files_to_read":[...],"constraints":"...","shared_context":"...","model":"gemini-2.5-pro"}' | \
+  bash "$SKILL_DIR/scripts/prism-gemini-worker.sh" "$PROJECT_ROOT" "{worker_id}" &
+```
+After all parallel dispatches, `wait` for completion. Read each result from
+`.prism/staging/{worker_id}/result.json`.
+
+If `status=completed`: extract `file_manifest` from result.json — this is the list of files
+the worker produced. Use it as the `output_files` for verification (`prism-verify.sh --files`),
+contract extraction, and registry updates. Then proceed with per-worker flow (verify, contract
+extraction, supervisor complete). Include `provider` and `model` from the result in the
+`worker_complete` telemetry event metadata.
+
+If `status=failed`: fall back to Agent tool (Claude) dispatch for the same task. Log fallback:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" gemini_fallback '{"worker":"{id}","reason":"{reason}"}'
+```
+
+Forward `provider` and `model` from the adapter result into the existing `worker_complete` telemetry event.
+
+#### Worker dispatch (Claude — default)
 
 Each worker via Agent tool:
 > "WORKING DIRECTORY: {project_root}
@@ -711,7 +747,7 @@ Where `{actual_verdict}` is derived from the /codex skill output:
 
 ### Stage 5: Ship
 
-**Bridge (before ship):** Check release evidence and review completeness (single batch call). Advisory only.
+**5a. Pre-ship advisory check** (batch call, advisory only):
 ```bash
 BATCH_RESULT=$(echo '[
   {"command":"release-state","args":["'"$PROJECT_ROOT"'","{change}","change"]},
@@ -724,20 +760,72 @@ note the missing evidence in the build log for post-mortem.
 
 Tell user: "Everything looks good — committing and creating a pull request."
 
-Check skill availability: `[ -f "$HOME/.claude/skills/gstack/ship/SKILL.md" ]`
-If available: `Skill tool: skill="ship", args="Squash [prism auto-save] commits into final."`
-If missing: do inline shipping (git commit, create PR).
+**5b. Ship (bridge command):**
+```bash
+SHIP_RESULT=$($BRIDGE ship "$PROJECT_ROOT" "{change}" --base main 2>/dev/null) || true
+```
+Parse JSON result:
+- If `status` is `"shipped"` or `"partial"`, continue to 5c.
+- If `status` is `"failed"`, surface error in plain English.
+- If `pr.status` is `"gh_not_installed"`, give manual instructions: "gh CLI is not installed. Push your branch and create a PR manually."
+- If `pr.status` is `"already_exists"`, note the existing PR URL.
 
-- **Skip:** "No problem — code is ready when you are. Just say 'ship'."
-- **Fallback:** If Skill tool errors OR skill is missing, do inline.
+**5c. Deploy (optional, always ask first):**
+```bash
+DEPLOY_DETECT=$($BRIDGE deploy-detect "$PROJECT_ROOT" 2>/dev/null) || true
+```
+If `platform` is not `"none"`:
+- Ask user: "I found a {platform} deployment setup. Want me to deploy now?"
+- If yes → `$BRIDGE deploy-trigger "$PROJECT_ROOT" --health-check 2>/dev/null || true`
+- If no → "No worries — you can deploy whenever you're ready."
+- If `auto_deploy` is true → "{platform} will auto-deploy when the PR merges."
+If `platform` is `"none"` → say nothing about deploy.
 
-On success:
-1. Archive: `openspec archive "{change}" -y` (via subagent)
-2. Update PRODUCT.md: status → "shipped", suggest next phase
-3. Registry: `bash "$SKILL_DIR/scripts/prism-registry.sh" archive "$PROJECT_ROOT" "{change}"`
-4. Tell user: "All done! When you're ready, the next piece is **{next phase}**."
+**5d. Archive and update:**
+1. Archive registry: `bash "$SKILL_DIR/scripts/prism-registry.sh" archive "$PROJECT_ROOT" "{change}"`
+2. Archive openspec (best-effort): `openspec archive "{change}" -y 2>/dev/null || true`
+3. Update product memory:
+```bash
+echo "Last shipped: {change} on $(date +%Y-%m-%d). PR: {pr_url}" | \
+  bash "$SKILL_DIR/scripts/prism-state.sh" update "$PROJECT_ROOT" state.md "Last Shipped"
+```
+4. Record ship receipt:
+```bash
+echo '{
+  "commitSha":"{commit}","commitMessage":"{message}",
+  "branch":"{branch}","baseBranch":"main",
+  "prUrl":"{pr_url}","tagName":"{tag_name}",
+  "deployUrl":"{deploy_url}","deployPlatform":"{platform}",
+  "specSummary":"{spec_summary}",
+  "reviewVerdicts":{review_verdicts_json}
+}' | $BRIDGE record-ship "$PROJECT_ROOT" "{change}" 2>/dev/null || true
+```
 
-On failure: "Something went wrong with shipping. Want me to help sort it out?"
+**5e. Ship receipt + cleanup:**
+Present structured receipt to user:
+```
+What was built: {spec_summary}
+Requirements: {acceptanceCriteria count} verified
+Reviews: Engineering {verdict}, QA {verdict} ({score}), Design {verdict or N/A}
+PR: {pr_url}
+Branch: {branch} → main
+Commit: {commit_sha}
+Tag: {tag_name}
+Deploy: {deploy_url or "auto on merge" or "not configured"}
+What's next: {next_phase from roadmap}
+```
+
+Then offer branch cleanup: "Want me to clean up the local branch and switch back to main?"
+- If yes → run `git checkout main && git branch -D {branch}` in the project root.
+- If no → skip.
+
+If `gh` is available, also offer: "Want me to enable auto-merge on the PR?"
+- If yes → run `gh pr merge --auto --delete-branch {pr_url}` in the project root.
+- If no → skip.
+
+Tell user: "All done! When you're ready, the next piece is **{next phase}**."
+
+On failure at any step: "Something went wrong with shipping. Want me to help sort it out?"
 
 ### Spec Changes
 

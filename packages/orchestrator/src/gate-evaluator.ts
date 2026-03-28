@@ -1,4 +1,5 @@
-import type { AbsolutePath, EntityId, GateResult, WorkflowPhase } from "@prism/core";
+import type { AbsolutePath, DeviationRule, EntityId, GateResult, WorkflowPhase } from "@prism/core";
+import { evaluatePlanQuality } from "./plan-quality-checker";
 import {
   createSpecRepository,
   createPlanRepository,
@@ -11,6 +12,13 @@ import { isReviewComplete } from "@prism/guardian";
 import { access } from "node:fs/promises";
 
 import { DEFAULT_WORKFLOW_SEQUENCE } from "./workflow";
+
+export const DEFAULT_DEVIATION_RULES: DeviationRule[] = [
+  { severity: "auto_fix", description: "Bug discovered during implementation", action: "Fix inline, existing files only. Note in status output." },
+  { severity: "auto_fix_critical", description: "Missing security/validation", action: "Fix inline, existing files only. Add to must-haves. Note in status." },
+  { severity: "auto_fix_blocking", description: "Missing dependency/broken import", action: "Fix in existing files only. Note in status." },
+  { severity: "ask_user", description: "Architectural change, scope expansion, OR any fix needing new files", action: "STOP. Present options via AskUserQuestion." },
+];
 
 /** Valid forward transitions from each phase. */
 const VALID_TRANSITIONS: Record<WorkflowPhase, WorkflowPhase[]> = {
@@ -130,6 +138,20 @@ export async function evaluateTransition(
         const paths = planPaths(projectRoot, planId);
         if (await pathExists(paths.taskGraphFile)) {
           evidence.push("task graph file exists");
+          // Quality gate check
+          const qualityResult = await evaluatePlanQuality(projectRoot, planId, activeSpecId! as EntityId);
+          if (!qualityResult.passed && !qualityResult.legacy) {
+            blockers.push(qualityResult.summary);
+            for (const qDim of qualityResult.dimensions.filter((d) => !d.passed)) {
+              blockers.push(`  ${qDim.name}: ${qDim.details}`);
+            }
+          }
+          if (qualityResult.legacy) {
+            evidence.push("legacy plan format — quality check skipped");
+          }
+          if (qualityResult.passed) {
+            evidence.push(qualityResult.summary);
+          }
         } else {
           blockers.push("task graph file does not exist");
         }
