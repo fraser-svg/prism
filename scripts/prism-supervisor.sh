@@ -295,6 +295,7 @@ cmd_plan() {
         id: .id,
         task: .task,
         depends_on: .depends_on,
+        route_hint: (.route_hint // "any"),
         status: "pending",
         retries: 0,
         created: $ts,
@@ -333,7 +334,7 @@ cmd_next() {
       (.depends_on | all(. as $dep |
         ($tasks | map(select(.id == $dep)) | .[0].status) == "completed"
       ))
-    ) | {id:.id, task:.task, depends_on:.depends_on}]
+    ) | {id:.id, task:.task, depends_on:.depends_on, route_hint:(.route_hint // "any")}]
   ' "$graph" 2>/dev/null)
 
   if [ -z "$ready_json" ]; then
@@ -477,7 +478,7 @@ cmd_complete() {
       (.depends_on | all(. as $dep |
         ($tasks | map(select(.id == $dep)) | .[0].status) == "completed"
       ))
-    ) | {id:.id, task:.task, depends_on:.depends_on}]
+    ) | {id:.id, task:.task, depends_on:.depends_on, route_hint:(.route_hint // "any")}]
   ' "$graph" 2>/dev/null || echo "[]")
 
   local result

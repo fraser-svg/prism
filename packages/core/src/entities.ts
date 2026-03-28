@@ -4,6 +4,7 @@ import type {
   AuditStamp,
   EntityId,
   ISODateString,
+  ModelProvider,
   NamedEntity,
   PrimaryPlatform,
   ProductType,
@@ -12,6 +13,7 @@ import type {
   RelativePath,
   ReviewType,
   ReviewVerdict,
+  RouteHint,
   RunStatus,
   SpecStatus,
   SpecType,
@@ -128,6 +130,8 @@ export interface TaskNode {
   dependsOn: EntityId[];
   verificationRequirements: string[];
   artifactsTouched: RelativePath[];
+  routeHint?: RouteHint;
+  providerUsed?: ModelProvider;
 }
 
 export interface TaskGraph extends AuditStamp {
