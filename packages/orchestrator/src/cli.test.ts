@@ -602,3 +602,76 @@ describe("batch", () => {
     await access(metadataPath);
   });
 });
+
+// ---------------------------------------------------------------------------
+// write-problem
+// ---------------------------------------------------------------------------
+
+describe("write-problem", () => {
+  it("writes problem artifact and metadata.json exists on disk", async () => {
+    const problemId = "test-problem-1";
+    const input = JSON.stringify({
+      originalRequest: "Build me an X crawler that tracks mentions of my brand",
+      realProblem: "Monitor brand mentions on X in near-real-time",
+      targetUser: "Marketing team lead",
+      assumptions: ["X API access available", "Real-time not required"],
+      reframed: true,
+      reframeDetails: "Reframed from web crawler to API-based monitoring",
+    });
+
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["write-problem", tmpDir, problemId],
+      input,
+    );
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as { written: boolean; problemId: string };
+    expect(parsed.written).toBe(true);
+    expect(parsed.problemId).toBe(problemId);
+
+    // Verify file exists on disk
+    const metadataPath = join(tmpDir, ".prism", "problems", problemId, "metadata.json");
+    await access(metadataPath); // throws if missing
+  });
+
+  it("returns error when stdin is empty", async () => {
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["write-problem", tmpDir, "prob-empty"],
+      "",
+    );
+    expect(exitCode).toBe(1);
+    const parsed = parseJson(stdout) as { error: string };
+    expect(parsed.error).toBeTruthy();
+  });
+
+  it("returns error when problemId is missing", async () => {
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["write-problem", tmpDir],
+      JSON.stringify({ originalRequest: "test", realProblem: "test", targetUser: "user", reframed: false }),
+    );
+    expect(exitCode).toBe(1);
+    const parsed = parseJson(stdout) as { error: string };
+    expect(parsed.error).toMatch(/missing required argument/i);
+  });
+
+  it("writes problem with empty assumptions for quick-depth requests", async () => {
+    const problemId = "quick-problem";
+    const input = JSON.stringify({
+      originalRequest: "Add a logout button",
+      realProblem: "Users need to log out",
+      targetUser: "All authenticated users",
+      assumptions: [],
+      reframed: false,
+    });
+
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["write-problem", tmpDir, problemId],
+      input,
+    );
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as { written: boolean; problemId: string };
+    expect(parsed.written).toBe(true);
+    expect(parsed.problemId).toBe(problemId);
+  });
+});

@@ -772,7 +772,8 @@ bash scripts/prism-telemetry.sh failures <root> [--cluster]
 ### Valid event types
 
 `build_start`, `build_complete`, `build_fail`, `worker_complete`, `worker_fail`,
-`guardian_retry`, `qa_pass`, `qa_fail`, `ship`, `user_intervention`, `stage_skip`
+`guardian_retry`, `qa_pass`, `qa_fail`, `ship`, `user_intervention`, `stage_skip`,
+`discovery_complete`
 
 ### Subcommand: `record`
 

@@ -62,6 +62,18 @@ export interface ProductMemory extends AuditStamp {
   files: ProductMemoryFileSet;
 }
 
+export interface ProblemStatement extends AuditStamp {
+  id: EntityId;
+  projectId: EntityId;
+  specId: EntityId | null;
+  originalRequest: string;
+  realProblem: string;
+  targetUser: string;
+  assumptions: string[];
+  reframed: boolean;
+  reframeDetails: string | null;
+}
+
 export interface AcceptanceCriterion {
   id: EntityId;
   description: string;
