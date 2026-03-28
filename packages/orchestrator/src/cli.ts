@@ -23,6 +23,9 @@ import { checkRequiredReviews, isReviewComplete, deriveReleaseState } from "@pri
 import { evaluateTransition } from "./gate-evaluator";
 import { resumeFromArtifacts } from "./resume-engine";
 import { recordReview, recordVerification } from "./services";
+import { execShip } from "./ship";
+import { execDeployDetect, execDeployTrigger } from "./deploy";
+import { execRecordShip } from "./ship-receipt";
 import {
   skillSpecToCore,
   skillPlanToCore,
@@ -355,6 +358,10 @@ const EXEC_HANDLERS: Record<string, (args: string[], stdin?: unknown) => Promise
   checkpoint: execCheckpoint,
   resume: execResume,
   "release-state": execReleaseState,
+  ship: execShip,
+  "deploy-detect": execDeployDetect as (args: string[], stdin?: unknown) => Promise<unknown>,
+  "deploy-trigger": execDeployTrigger as (args: string[], stdin?: unknown) => Promise<unknown>,
+  "record-ship": execRecordShip,
 };
 
 async function cmdBatch(): Promise<void> {
@@ -399,6 +406,10 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   checkpoint: cmdCheckpoint,
   resume: cmdResume,
   "release-state": cmdReleaseState,
+  ship: async (args) => output(await execShip(args)),
+  "deploy-detect": async (args) => output(await execDeployDetect(args)),
+  "deploy-trigger": async (args) => output(await execDeployTrigger(args)),
+  "record-ship": async (args) => output(await execRecordShip(args)),
   batch: cmdBatch,
 };
 

@@ -10,6 +10,7 @@ import type {
   ReleaseStateArtifactPaths,
   ReviewArtifactPaths,
   RunArtifactPaths,
+  ShipReceiptArtifactPaths,
   SpecArtifactPaths,
   WorkspacePaths,
 } from "./contracts";
@@ -49,6 +50,7 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     proposalsDir: joinPath(prismDir, "proposals"),
     releaseStateDir: joinPath(prismDir, "release-state"),
     problemsDir: joinPath(prismDir, "problems"),
+    shipsDir: joinPath(prismDir, "ships"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),
@@ -145,6 +147,17 @@ export function problemPaths(
   return {
     problemDir,
     metadataFile: joinPath(problemDir, "metadata.json"),
+  };
+}
+
+export function shipReceiptPaths(
+  projectRoot: AbsolutePath,
+  specId: EntityId
+): ShipReceiptArtifactPaths {
+  const shipDir = joinPath(projectPaths(projectRoot).shipsDir, validateEntityId(specId));
+  return {
+    shipDir,
+    receiptFile: joinPath(shipDir, "receipt.json"),
   };
 }
 
