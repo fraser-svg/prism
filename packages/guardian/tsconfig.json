@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@prism/core": ["../core/src/index.ts"]
+      "@prism/core": ["../core/src/index.ts"],
+      "@prism/memory": ["../memory/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"]
