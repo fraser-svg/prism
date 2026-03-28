@@ -8,10 +8,13 @@
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
 import type {
+  DeviationSeverity,
   EntityId,
   ISODateString,
+  RelativePath,
   ReviewType,
   ReviewVerdict,
+  ScopeMode,
   SpecStatus,
   SpecType,
   WorkflowPhase,
@@ -26,7 +29,13 @@ import type {
   VerificationFailure,
   Checkpoint,
   AcceptanceCriterion,
+  DeviationRule,
+  ImplementationAlternative,
+  ObservableTruth,
+  ArtifactRequirement,
+  KeyLink,
 } from "@prism/core";
+import { DEFAULT_DEVIATION_RULES } from "./gate-evaluator";
 
 // ---------------------------------------------------------------------------
 // Input shapes from the skill (what arrives via stdin JSON)
@@ -46,10 +55,26 @@ export interface SkillSpecInput {
 export interface SkillPlanInput {
   title: string;
   specId: string;
-  phases?: Array<{ id?: string; title: string; description?: string; dependsOn?: string[] }>;
+  phases?: Array<{
+    id?: string;
+    title: string;
+    description?: string;
+    dependsOn?: string[];
+    goal?: string;
+    observableTruths?: Array<{ id?: string; statement: string; verifiedBy: string }>;
+    requiredArtifacts?: Array<{ path: string; provides: string }>;
+    requiredWiring?: Array<{ from: string; to: string; via: string; pattern: string }>;
+  }>;
   risks?: string[];
   sequencingRationale?: string;
   projectId?: string;
+  scopeMode?: ScopeMode;
+  alternatives?: ImplementationAlternative[];
+  selectedAlternative?: string;
+  deviationRules?: DeviationRule[];
+  planVersion?: 1 | 2;
+  totalContextBudgetPct?: number;
+  goalBackwardTrace?: string;
 }
 
 export interface SkillReviewInput {
@@ -166,10 +191,33 @@ export function skillPlanToCore(
       title: p.title,
       description: p.description ?? "",
       dependsOn: (p.dependsOn ?? []) as EntityId[],
+      goal: p.goal,
+      observableTruths: p.observableTruths?.map((ot) => ({
+        id: (ot.id ?? `ot-${i}`) as EntityId,
+        statement: ot.statement,
+        verifiedBy: ot.verifiedBy,
+      })),
+      requiredArtifacts: p.requiredArtifacts?.map((a) => ({
+        path: a.path as RelativePath,
+        provides: a.provides,
+      })),
+      requiredWiring: p.requiredWiring?.map((w) => ({
+        from: w.from as RelativePath,
+        to: w.to as RelativePath,
+        via: w.via,
+        pattern: w.pattern,
+      })),
     })),
     risks: input.risks ?? [],
     approvals: [],
     sequencingRationale: input.sequencingRationale ?? "",
+    scopeMode: input.scopeMode ?? "exact",
+    alternatives: input.alternatives,
+    selectedAlternative: input.selectedAlternative,
+    deviationRules: input.deviationRules ?? DEFAULT_DEVIATION_RULES,
+    planVersion: input.planVersion ?? 2,
+    totalContextBudgetPct: input.totalContextBudgetPct ?? 0,
+    goalBackwardTrace: input.goalBackwardTrace,
     createdAt: ts,
     updatedAt: ts,
   };
