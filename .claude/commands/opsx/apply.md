@@ -52,6 +52,26 @@ Implement tasks from an OpenSpec change.
    - **spec-driven**: proposal, specs, design, tasks
    - Other schemas: follow the contextFiles from CLI output
 
+4.5. **Load Deviation Rules**
+
+   Read the plan's `deviationRules` from metadata. Default rules if none specified:
+
+   | Rule | When | Action |
+   |------|------|--------|
+   | Auto-fix | Bug discovered during implementation | Fix inline, existing files only. Note in status output. |
+   | Auto-fix critical | Missing security, data loss prevention, or validation | Fix inline, existing files only. Add to must-haves. Note in status. |
+   | Auto-fix blocking | Missing dependency, broken import, build error | Fix in existing files only. Note in status. |
+   | Ask user | Architectural change, new service, scope expansion, OR any fix requiring new files | STOP. Present options via AskUserQuestion. |
+
+   **Cap rule:** Auto-fix rules (1-3) can only modify existing files. Creating new files or changing module exports always escalates to `ask_user`.
+
+4.6. **Load Must-Haves**
+
+   Before each task, read the task's `mustHaves`. After each task:
+   1. Check `mustHaves.artifacts` — do the files exist?
+   2. Check `mustHaves.keyLinks` — do the patterns match in the target files?
+   3. If checks fail, attempt auto-fix (deviation rule 1-3). If architectural, ask user (rule 4).
+
 5. **Show current progress**
 
    Display:
@@ -60,18 +80,31 @@ Implement tasks from an OpenSpec change.
    - Remaining tasks overview
    - Dynamic instruction from CLI
 
-6. **Implement tasks (loop until done or blocked)**
+6. **Implement tasks — wave-based execution**
 
-   For each pending task:
-   - Show which task is being worked on
-   - Make the code changes required
-   - Keep changes minimal and focused
+   Group tasks by their `wave` field (0, 1, 2, ...). Execute waves in order:
+
+   **For each wave:**
+   1. Before starting, verify all prior wave tasks' must-haves passed
+   2. If prior wave must-haves fail, stop and report — don't proceed
+   3. Execute tasks within the wave in dependency order
+
+   **For each task:**
+   - Show which task is being worked on (wave N, task M)
+   - Read the task's `mustHaves` before starting
+   - Make the code changes required per `action` field
+   - Keep changes minimal and scoped to `files` field
+   - After completing, verify:
+     - `mustHaves.artifacts` — do the files exist?
+     - `mustHaves.keyLinks` — do the patterns match in target files?
+   - Apply deviation rules if issues arise (auto-fix for existing files, ask_user for new files)
    - Mark task complete in the tasks file: `- [ ]` → `- [x]`
    - Continue to next task
 
    **Pause if:**
    - Task is unclear → ask for clarification
    - Implementation reveals a design issue → suggest updating artifacts
+   - Deviation rule triggers `ask_user` → present options via AskUserQuestion
    - Error or blocker encountered → report and wait for guidance
    - User interrupts
 

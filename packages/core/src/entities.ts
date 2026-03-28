@@ -2,6 +2,7 @@ import type {
   AbsolutePath,
   ApprovalMode,
   AuditStamp,
+  DeviationSeverity,
   EntityId,
   ISODateString,
   ModelProvider,
@@ -15,6 +16,7 @@ import type {
   ReviewVerdict,
   RouteHint,
   RunStatus,
+  ScopeMode,
   SpecStatus,
   SpecType,
   TaskStatus,
@@ -103,6 +105,10 @@ export interface PlanPhase {
   title: string;
   description: string;
   dependsOn: EntityId[];
+  goal?: string;
+  observableTruths?: ObservableTruth[];
+  requiredArtifacts?: ArtifactRequirement[];
+  requiredWiring?: KeyLink[];
 }
 
 export interface Plan extends AuditStamp, NamedEntity {
@@ -112,6 +118,76 @@ export interface Plan extends AuditStamp, NamedEntity {
   risks: string[];
   approvals: ApprovalRequirement[];
   sequencingRationale: string;
+  scopeMode?: ScopeMode;
+  alternatives?: ImplementationAlternative[];
+  selectedAlternative?: string;
+  deviationRules?: DeviationRule[];
+  planVersion?: 1 | 2;
+  totalContextBudgetPct?: number;
+  goalBackwardTrace?: string;
+}
+
+export interface ArtifactRequirement {
+  path: RelativePath;
+  provides: string;
+}
+
+export interface KeyLink {
+  from: RelativePath;
+  to: RelativePath;
+  via: string;
+  pattern: string;
+}
+
+export interface ObservableTruth {
+  id: EntityId;
+  statement: string;
+  verifiedBy: string;
+}
+
+export interface MustHaves {
+  truths: ObservableTruth[];
+  artifacts: ArtifactRequirement[];
+  keyLinks: KeyLink[];
+}
+
+export interface DeviationRule {
+  severity: DeviationSeverity;
+  description: string;
+  action: string;
+}
+
+export interface ImplementationAlternative {
+  name: string;
+  description: string;
+  effort: "low" | "medium" | "high";
+  risk: "low" | "medium" | "high";
+  pros: string[];
+  cons: string[];
+}
+
+export interface PlanQualityDimension {
+  name: string;
+  passed: boolean;
+  hasBlocker: boolean;
+  score: number;
+  details: string;
+}
+
+export interface PlanQualityResult {
+  passed: boolean;
+  legacy: boolean;
+  score: number;
+  dimensions: PlanQualityDimension[];
+  summary: string;
+  traceability: TraceabilityEntry[];
+}
+
+export interface TraceabilityEntry {
+  criterionId: EntityId;
+  criterionDescription: string;
+  matchingTaskIds: EntityId[];
+  coverage: "full" | "partial" | "missing";
 }
 
 export interface ApprovalRequirement {
@@ -130,6 +206,15 @@ export interface TaskNode {
   dependsOn: EntityId[];
   verificationRequirements: string[];
   artifactsTouched: RelativePath[];
+  files?: RelativePath[];
+  action?: string;
+  verify?: string;
+  done?: string;
+  avoidAndWhy?: string[];
+  failureScenario?: string;
+  mustHaves?: MustHaves;
+  wave?: number;
+  contextBudgetPct?: number;
   routeHint?: RouteHint;
   providerUsed?: ModelProvider;
 }
