@@ -1,5 +1,28 @@
 import type { AbsolutePath, EntityId } from "@prism/core";
 
+// --- Write-through indexing callback ---
+
+export type ArtifactWriteEvent = {
+  action: "write" | "delete";
+  entityType: string;
+  entityId: EntityId;
+  projectId: EntityId;
+  contentPreview?: string;
+};
+
+export type ArtifactWriteCallback = (event: ArtifactWriteEvent) => void;
+
+// --- Workspace paths ---
+
+export interface WorkspacePaths {
+  workspaceHome: AbsolutePath;
+  dbPath: AbsolutePath;
+  settingsPath: AbsolutePath;
+  templatesDir: AbsolutePath;
+}
+
+// --- Project paths ---
+
 export interface PrismProjectPaths {
   projectRoot: AbsolutePath;
   prismDir: AbsolutePath;

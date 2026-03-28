@@ -1,6 +1,7 @@
 import type { AbsolutePath, EntityId } from "@prism/core";
 import { validateEntityId } from "@prism/core";
 import { mkdir, readFile, writeFile, readdir, rm, access } from "node:fs/promises";
+import type { ArtifactWriteCallback } from "./contracts";
 
 export interface JsonPathResolver {
   (id: EntityId): { dir: AbsolutePath; file: AbsolutePath };
@@ -14,6 +15,8 @@ export class JsonArtifactRepository<T> {
   constructor(
     private pathResolver: JsonPathResolver,
     private listDir: ListPathResolver,
+    private onWrite?: ArtifactWriteCallback,
+    private entityType?: string,
   ) {}
 
   async exists(id: EntityId): Promise<boolean> {
@@ -38,9 +41,25 @@ export class JsonArtifactRepository<T> {
   }
 
   async write(id: EntityId, entity: T): Promise<void> {
-    const { dir, file } = this.pathResolver(validateEntityId(id));
+    const validId = validateEntityId(id);
+    const { dir, file } = this.pathResolver(validId);
     await mkdir(dir, { recursive: true });
-    await writeFile(file, JSON.stringify(entity, null, 2) + "\n", "utf-8");
+    const content = JSON.stringify(entity, null, 2) + "\n";
+    await writeFile(file, content, "utf-8");
+
+    if (this.onWrite) {
+      try {
+        this.onWrite({
+          action: "write",
+          entityType: this.entityType ?? "",
+          entityId: validId,
+          projectId: "" as EntityId,
+          contentPreview: content.slice(0, 500),
+        });
+      } catch {
+        // Callback failure is non-fatal — artifact is already saved
+      }
+    }
   }
 
   async list(): Promise<EntityId[]> {
@@ -55,12 +74,26 @@ export class JsonArtifactRepository<T> {
   }
 
   async delete(id: EntityId): Promise<void> {
-    const { dir } = this.pathResolver(validateEntityId(id));
+    const validId = validateEntityId(id);
+    const { dir } = this.pathResolver(validId);
     try {
       await rm(dir, { recursive: true });
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
       throw err;
+    }
+
+    if (this.onWrite) {
+      try {
+        this.onWrite({
+          action: "delete",
+          entityType: this.entityType ?? "",
+          entityId: validId,
+          projectId: "" as EntityId,
+        });
+      } catch {
+        // Callback failure is non-fatal
+      }
     }
   }
 }

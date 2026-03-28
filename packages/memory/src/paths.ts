@@ -1,5 +1,6 @@
 import type { AbsolutePath, EntityId } from "@prism/core";
 import { validateEntityId } from "@prism/core";
+import { homedir } from "node:os";
 import type {
   CheckpointArtifactPaths,
   PlanArtifactPaths,
@@ -10,6 +11,7 @@ import type {
   ReviewArtifactPaths,
   RunArtifactPaths,
   SpecArtifactPaths,
+  WorkspacePaths,
 } from "./contracts";
 
 function joinPath(base: string, ...parts: string[]): AbsolutePath {
@@ -143,6 +145,16 @@ export function problemPaths(
   return {
     problemDir,
     metadataFile: joinPath(problemDir, "metadata.json"),
+  };
+}
+
+export function workspacePaths(home?: AbsolutePath): WorkspacePaths {
+  const workspaceHome = home ?? (joinPath(homedir(), ".prism") as AbsolutePath);
+  return {
+    workspaceHome,
+    dbPath: joinPath(workspaceHome, "workspace.db"),
+    settingsPath: joinPath(workspaceHome, "settings.json"),
+    templatesDir: joinPath(workspaceHome, "templates"),
   };
 }
 
