@@ -208,7 +208,7 @@ These commands use the `prism:` prefix to avoid false positives.
 | `prism: status` | Show which providers are connected |
 | `prism: inject` | Write connected keys to .env.local |
 
-Supported providers: `anthropic`, `openai`, `vercel`, `stripe`.
+Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`.
 
 **Security rules:**
 - Agent NEVER executes commands containing secrets. Prints the template, user runs it.
