@@ -77,6 +77,30 @@ M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` throug
 
 **Depends on:** M3 complete with proven reliability.
 
+## Gemini Compile Target (P3)
+
+**What:** Add `cmd_gemini()` to `compiler/prism-compile.sh` for consistent Gemini prompt format.
+
+**Why:** Currently `prism-gemini-worker.sh` constructs prompts inline. A compiler target ensures consistency when there are multiple Gemini-dispatched skills.
+
+**When:** After a second Gemini-dispatched skill justifies it.
+
+**How:** Add a `gemini` case to the compiler's dispatch, generating a system prompt optimized for Gemini's JSON mode.
+
+**Depends on:** Gemini provider adapter PR + a second Gemini-dispatched skill.
+
+## Provider Quality Comparison (P3)
+
+**What:** Build a comparison view showing verification pass rates, token usage, and latency per provider per task type.
+
+**Why:** Data-driven model routing. Without comparison data, the `route_hint` rules are informed guesses. After collecting telemetry from 10+ builds with both providers, we can tune routing for quality, not just provider availability.
+
+**When:** After 10+ builds with both Gemini and Claude producing telemetry data.
+
+**How:** Aggregate from `.prism/telemetry.jsonl`, filter by `worker_complete` events with provider metadata, group by `route_hint` and provider, compute pass/fail rates and token usage.
+
+**Depends on:** Gemini provider adapter PR + sufficient telemetry data.
+
 ## Deprecate OpenSpec for Core Spec Storage (post-M3)
 
 **What:** Migrate from OpenSpec (`openspec/changes/{name}/specs/`) as primary spec format to `.prism/specs/{specId}/` as the single source of truth. Remove the dual-write once the core is the canonical system.

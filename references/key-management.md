@@ -11,9 +11,10 @@ every project gets the keys automatically. Zero copy-paste after initial setup.
 | `openai` | `prism-openai` | `OPENAI_API_KEY` |
 | `vercel` | `prism-vercel` | `VERCEL_TOKEN` |
 | `stripe` | `prism-stripe` | `STRIPE_SECRET_KEY` |
+| `google` | `prism-google` | `GOOGLE_API_KEY` |
 
 Only these provider names are accepted. Reject anything else with:
-"Unknown provider. Supported: anthropic, openai, vercel, stripe."
+"Unknown provider. Supported: anthropic, openai, google, vercel, stripe."
 
 ## Credential Precedence
 
@@ -79,7 +80,7 @@ If KEYCHAIN_LOCKED: "Your keychain is locked. Unlock it and try again."
 If KEYCHAIN_OK, check each provider (no -w flag, no secret exposed):
 
 ```bash
-for p in anthropic openai vercel stripe; do
+for p in anthropic openai google vercel stripe; do
   security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null && echo "$p: connected" || echo "$p: not connected"
 done
 ```
@@ -118,6 +119,7 @@ env_var_for() {
   case "$1" in
     anthropic) echo "ANTHROPIC_API_KEY" ;;
     openai)    echo "OPENAI_API_KEY" ;;
+    google)    echo "GOOGLE_API_KEY" ;;
     vercel)    echo "VERCEL_TOKEN" ;;
     stripe)    echo "STRIPE_SECRET_KEY" ;;
   esac
@@ -131,7 +133,7 @@ trap 'rm -f "$TMPFILE" "$MERGED"' EXIT
 # Build the prism-managed block
 INJECTED=0
 echo "# --- prism-managed:start ---" > "$TMPFILE"
-for provider in anthropic openai vercel stripe; do
+for provider in anthropic openai google vercel stripe; do
   KEY=$(security find-generic-password -s "prism-$provider" -a "prism" -w 2>/dev/null) && {
     printf '%s=%s\n' "$(env_var_for "$provider")" "$KEY" >> "$TMPFILE"
     INJECTED=$((INJECTED + 1))

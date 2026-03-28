@@ -53,6 +53,10 @@ export type ProductType =
   | "other";
 export type PrimaryPlatform = "macos" | "web" | "desktop" | "hybrid";
 
+export type ModelProvider = "anthropic" | "openai" | "google";
+export type ServiceProvider = "vercel" | "stripe";
+export type RouteHint = "visual" | "backend" | "any";
+
 export interface AuditStamp {
   createdAt: ISODateString;
   updatedAt: ISODateString;
