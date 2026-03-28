@@ -120,24 +120,20 @@ export async function evaluateTransition(
     } else {
       const planRepo = createPlanRepository(projectRoot);
       const planIds = await planRepo.list();
-      // Find a plan for this spec
-      let foundPlan = false;
-      for (const planId of planIds) {
-        const plan = await planRepo.readMetadata(planId);
-        if (plan && plan.specId === activeSpecId) {
-          foundPlan = true;
-          evidence.push(`plan ${planId} exists for spec ${activeSpecId}`);
-          // Check task graph file exists
-          const paths = planPaths(projectRoot, planId);
-          if (await pathExists(paths.taskGraphFile)) {
-            evidence.push("task graph file exists");
-          } else {
-            blockers.push("task graph file does not exist");
-          }
-          break;
+      // Parallel metadata reads instead of sequential loop
+      const plans = await Promise.all(planIds.map((id) => planRepo.readMetadata(id)));
+      const matchIdx = plans.findIndex((p) => p && p.specId === activeSpecId);
+      if (matchIdx !== -1) {
+        const planId = planIds[matchIdx]!;
+        evidence.push(`plan ${planId} exists for spec ${activeSpecId}`);
+        // Check task graph file exists
+        const paths = planPaths(projectRoot, planId);
+        if (await pathExists(paths.taskGraphFile)) {
+          evidence.push("task graph file exists");
+        } else {
+          blockers.push("task graph file does not exist");
         }
-      }
-      if (!foundPlan) {
+      } else {
         blockers.push("no plan found for spec");
       }
     }
@@ -163,27 +159,33 @@ export async function evaluateTransition(
     if (!activeSpecId) {
       blockers.push("no active spec ID provided");
     } else {
-      // Read the spec to determine its type for the review matrix
+      // Parallel round 1: read spec + checkpoint simultaneously
       const specRepo = createSpecRepository(projectRoot);
-      const spec = await specRepo.readMetadata(activeSpecId);
+      const checkpointRepo = createCheckpointRepository(projectRoot);
+      const [spec, checkpoint] = await Promise.all([
+        specRepo.readMetadata(activeSpecId),
+        checkpointRepo.readLatestForSpec(activeSpecId as EntityId),
+      ]);
+
       if (!spec) {
         blockers.push(`spec ${activeSpecId} not found`);
       } else {
-        // Check reviews
-        const reviewsPass = await isReviewComplete(activeSpecId, spec.type, projectRoot);
+        // Parallel round 2: reviews + verification (depend on spec.type and checkpoint.runId)
+        const runId = checkpoint?.runId;
+        const [reviewsPass, verification] = await Promise.all([
+          isReviewComplete(activeSpecId, spec.type, projectRoot),
+          runId
+            ? createVerificationRepository(projectRoot).read(runId)
+            : Promise.resolve(null),
+        ]);
+
         if (reviewsPass) {
           evidence.push("all required reviews passing");
         } else {
           blockers.push("required reviews incomplete or not passing");
         }
 
-        // Check verification result from the checkpoint for this specific spec
-        const checkpointRepo = createCheckpointRepository(projectRoot);
-        const checkpoint = await checkpointRepo.readLatestForSpec(activeSpecId as EntityId);
-        const runId = checkpoint?.runId;
         if (runId) {
-          const verifyRepo = createVerificationRepository(projectRoot);
-          const verification = await verifyRepo.read(runId);
           if (verification?.passed) {
             evidence.push("verification passed");
           } else {

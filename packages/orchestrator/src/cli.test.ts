@@ -519,3 +519,86 @@ describe("release-state", () => {
     expect(parsed.verificationComplete).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// batch
+// ---------------------------------------------------------------------------
+
+describe("batch", () => {
+  it("executes multiple commands and returns results array", async () => {
+    const commands = JSON.stringify([
+      { command: "gate-check", args: [tmpDir, "identify_problem", "spec"] },
+      { command: "resume", args: [tmpDir, "proj-test"] },
+    ]);
+
+    const { stdout, exitCode } = await runCliWithStdin(["batch"], commands);
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as {
+      results: Array<{ command: string; ok: boolean; data?: unknown; error?: string }>;
+    };
+    expect(parsed.results).toHaveLength(2);
+    expect(parsed.results[0]!.command).toBe("gate-check");
+    expect(parsed.results[0]!.ok).toBe(true);
+    expect(parsed.results[1]!.command).toBe("resume");
+    expect(parsed.results[1]!.ok).toBe(true);
+  });
+
+  it("returns per-command error for unknown command (best-effort)", async () => {
+    const commands = JSON.stringify([
+      { command: "resume", args: [tmpDir, "proj-test"] },
+      { command: "not-a-command", args: [] },
+      { command: "gate-check", args: [tmpDir, "identify_problem", "spec"] },
+    ]);
+
+    const { stdout, exitCode } = await runCliWithStdin(["batch"], commands);
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as {
+      results: Array<{ command: string; ok: boolean; error?: string }>;
+    };
+    expect(parsed.results).toHaveLength(3);
+    expect(parsed.results[0]!.ok).toBe(true);
+    expect(parsed.results[1]!.ok).toBe(false);
+    expect(parsed.results[1]!.error).toMatch(/unknown command/i);
+    // Third command still executes despite second failing (best-effort)
+    expect(parsed.results[2]!.ok).toBe(true);
+  });
+
+  it("returns empty results for empty array", async () => {
+    const { stdout, exitCode } = await runCliWithStdin(["batch"], "[]");
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as { results: unknown[] };
+    expect(parsed.results).toHaveLength(0);
+  });
+
+  it("handles commands with stdin data", async () => {
+    const commands = JSON.stringify([
+      {
+        command: "write-spec",
+        args: [tmpDir, "spec-batch-1"],
+        stdin: {
+          title: "Batch Spec",
+          type: "change",
+          status: "approved",
+          acceptanceCriteria: ["AC 1"],
+        },
+      },
+    ]);
+
+    const { stdout, exitCode } = await runCliWithStdin(["batch"], commands);
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as {
+      results: Array<{ command: string; ok: boolean; data?: { written: boolean } }>;
+    };
+    expect(parsed.results).toHaveLength(1);
+    expect(parsed.results[0]!.ok).toBe(true);
+    expect(parsed.results[0]!.data?.written).toBe(true);
+
+    // Verify file exists
+    const metadataPath = join(tmpDir, ".prism", "specs", "spec-batch-1", "metadata.json");
+    await access(metadataPath);
+  });
+});
