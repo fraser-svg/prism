@@ -118,6 +118,9 @@ export async function scanProjectState(
   return parseScriptJson<PrismScanResult>(stdout);
 }
 
+/**
+ * @deprecated M2 canonical artifacts are the authority. Registry is read-only fallback for resume.
+ */
 export async function readRegistryStatus(
   projectRoot: AbsolutePath,
   changeName: string
@@ -133,6 +136,9 @@ export async function readRegistryStatus(
   return parseScriptJson<RegistryStatusResult>(stdout);
 }
 
+/**
+ * @deprecated M2 canonical artifacts are the authority. Do not write to registry from TypeScript.
+ */
 export async function updateRegistryChange(
   projectRoot: AbsolutePath,
   changeName: string,
