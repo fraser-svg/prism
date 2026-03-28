@@ -424,6 +424,130 @@ describe("review orchestration", () => {
   });
 });
 
+describe("readLatestForSpec history fallback", () => {
+  it("returns checkpoint from history when latest belongs to a different spec", async () => {
+    const specA = "spec-history-a" as EntityId;
+    const specB = "spec-history-b" as EntityId;
+
+    const checkpointRepo = createCheckpointRepository(projectRoot);
+
+    // Write checkpoint for spec-A (becomes latest)
+    const cpA = skillCheckpointToCore({
+      phase: "execute",
+      activeSpecId: specA,
+      runId: "run-a" as string,
+      projectId: "proj-history",
+    });
+    await checkpointRepo.write(cpA, "# Checkpoint A");
+
+    // Write checkpoint for spec-B (overwrites latest, archives spec-A to history)
+    const cpB = skillCheckpointToCore({
+      phase: "verify",
+      activeSpecId: specB,
+      runId: "run-b" as string,
+      projectId: "proj-history",
+    });
+    await checkpointRepo.write(cpB, "# Checkpoint B");
+
+    // Latest should be spec-B
+    const latest = await checkpointRepo.readLatest();
+    expect(latest?.activeSpecId).toBe(specB);
+
+    // readLatestForSpec(specA) should find spec-A in history
+    const foundA = await checkpointRepo.readLatestForSpec(specA);
+    expect(foundA).not.toBeNull();
+    expect(foundA!.activeSpecId).toBe(specA);
+    expect(foundA!.phase).toBe("execute");
+
+    // readLatestForSpec(specB) should return latest directly
+    const foundB = await checkpointRepo.readLatestForSpec(specB);
+    expect(foundB).not.toBeNull();
+    expect(foundB!.activeSpecId).toBe(specB);
+
+    // readLatestForSpec for nonexistent spec should return null
+    const foundC = await checkpointRepo.readLatestForSpec("spec-nonexistent" as EntityId);
+    expect(foundC).toBeNull();
+  });
+});
+
+describe("release state via CLI path (runId from checkpoint)", () => {
+  it("derives release-ready state when runId is read from checkpoint, not injected", async () => {
+    // This test mirrors the real SKILL.md flow:
+    // 1. Checkpoint is written with runId (during execute/verify)
+    // 2. Verification is recorded with the same runId
+    // 3. release-state CLI reads runId from the checkpoint (NOT passed as argument)
+    //
+    // The original bug: cmdReleaseState didn't read runId from checkpoint,
+    // so deriveReleaseState always got runId=undefined → verificationComplete=false.
+
+    const specId = "spec-cli-release" as EntityId;
+    const runId = "run-cli-release" as EntityId;
+
+    // Write a checkpoint with runId (as the skill does during build)
+    const checkpoint = skillCheckpointToCore({
+      phase: "verify",
+      runId,
+      activeSpecId: specId,
+      projectId: "proj-cli",
+    });
+    const checkpointRepo = createCheckpointRepository(projectRoot);
+    await checkpointRepo.write(checkpoint, "# Checkpoint: verify");
+
+    // Write passing verification for this runId
+    await recordVerification(
+      projectRoot,
+      skillVerificationToCore({ specId, passed: true, checksRun: ["test"] }, runId),
+    );
+
+    // Write passing engineering review (task type only needs engineering)
+    await recordReview(
+      projectRoot,
+      skillReviewToCore({ verdict: "pass", summary: "OK" }, specId, "engineering"),
+    );
+
+    // Simulate the CLI path: read runId from checkpoint, then call deriveReleaseState
+    const latestCheckpoint = await checkpointRepo.readLatest();
+    expect(latestCheckpoint).not.toBeNull();
+    expect(latestCheckpoint!.runId).toBe(runId);
+
+    const resolvedRunId = latestCheckpoint!.runId ?? undefined;
+    const result = await deriveReleaseState(specId, "task", projectRoot, {
+      runId: resolvedRunId,
+    });
+
+    expect(result.verificationComplete).toBe(true);
+    expect(result.implementationComplete).toBe(true);
+    expect(result.reviewsComplete).toBe(true);
+    expect(result.decision).toBe("ready");
+    expect(result.missingEvidence).toHaveLength(0);
+  });
+
+  it("returns hold when checkpoint has no runId", async () => {
+    const specId = "spec-no-runid" as EntityId;
+
+    // Write a checkpoint WITHOUT runId
+    const checkpoint = skillCheckpointToCore({
+      phase: "verify",
+      activeSpecId: specId,
+      // runId intentionally omitted
+    });
+    const checkpointRepo = createCheckpointRepository(projectRoot);
+    await checkpointRepo.write(checkpoint, "# Checkpoint: verify");
+
+    // Simulate CLI path: read runId from checkpoint (will be null)
+    const latestCheckpoint = await checkpointRepo.readLatest();
+    const resolvedRunId = latestCheckpoint?.runId ?? undefined;
+
+    const result = await deriveReleaseState(specId, "task", projectRoot, {
+      runId: resolvedRunId,
+    });
+
+    expect(result.verificationComplete).toBe(false);
+    expect(result.decision).toBe("hold");
+    expect(result.missingEvidence).toContain("no verification run ID provided");
+  });
+});
+
 describe("release state derivation", () => {
   it("returns hold when no checkpoint, reviews, or verification exist", async () => {
     const specId = "spec-cold-release" as EntityId;

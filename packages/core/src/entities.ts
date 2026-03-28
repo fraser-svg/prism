@@ -144,8 +144,11 @@ export interface Checkpoint extends AuditStamp {
   runId: EntityId | null;
   activeSpecId: EntityId | null;
   phase: WorkflowPhase;
+  stageRoute: string | null;
+  stageTotal: number | null;
   progressSummary: string;
   keyDecisions: string[];
+  preferences: string[];
   blockers: string[];
   nextRecommendedActions: string[];
   lastVerificationSummary: string | null;

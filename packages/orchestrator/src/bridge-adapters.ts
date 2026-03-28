@@ -5,8 +5,9 @@
  * and review orchestration actually read. Not the full entity, not metadata-only.
  */
 
+import { basename } from "node:path";
+import { createHash } from "node:crypto";
 import type {
-  AbsolutePath,
   EntityId,
   ISODateString,
   ReviewType,
@@ -94,6 +95,18 @@ export interface SkillCheckpointInput {
 
 function generateEntityId(): EntityId {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as EntityId;
+}
+
+/**
+ * Derive a deterministic projectId from a project root path.
+ * Uses the basename of the path as a readable prefix plus a short hash for uniqueness.
+ */
+export function deriveProjectId(projectId: string | undefined, projectRoot?: string): EntityId {
+  if (projectId && projectId !== "unknown") return projectId as EntityId;
+  if (!projectRoot) return "unknown" as EntityId;
+  const name = basename(projectRoot);
+  const hash = createHash("sha256").update(projectRoot).digest("hex").slice(0, 8);
+  return `${name}-${hash}` as EntityId;
 }
 
 function now(): ISODateString {
@@ -212,8 +225,11 @@ export function skillCheckpointToCore(
     runId: (input.runId ?? null) as EntityId | null,
     activeSpecId: (input.activeSpecId ?? null) as EntityId | null,
     phase: input.phase ?? mapSkillStageToPhase(input.stage),
+    stageRoute: input.stageRoute ?? null,
+    stageTotal: input.stageTotal ?? null,
     progressSummary: input.progress ?? "",
     keyDecisions: input.decisions ?? [],
+    preferences: input.preferences ?? [],
     blockers: input.blockers ?? [],
     nextRecommendedActions: input.nextSteps ?? [],
     lastVerificationSummary: input.lastVerificationSummary ?? null,

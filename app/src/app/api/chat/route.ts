@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execFile } from "child_process";
-import { promisify } from "util";
-
-const exec = promisify(execFile);
+import { spawn } from "child_process";
 
 const SYSTEM_PROMPT = `You are Prism — a creative co-founder and expert team rolled into one.
 
@@ -55,39 +52,29 @@ export async function POST(req: NextRequest) {
 
     const prompt = `${SYSTEM_PROMPT}\n\nConversation so far:\n${conversationParts.join("\n")}\n\nRespond as Prism. Remember to include the vessels JSON block.`;
 
-    const { stdout } = await exec("claude", ["-p", "--output-format", "text"], {
-      env: { ...process.env, HOME: process.env.HOME },
-      timeout: 60000,
-      maxBuffer: 1024 * 1024,
-      encoding: "utf-8",
-      // @ts-expect-error input is valid for execFile with encoding
-      input: undefined,
-    }).catch(() => {
-      // Fallback: use spawn-based approach for stdin
-      return new Promise<{ stdout: string }>((resolve, reject) => {
-        const { spawn } = require("child_process");
-        const proc = spawn("claude", ["-p", "--output-format", "text"], {
-          env: { ...process.env },
-          stdio: ["pipe", "pipe", "pipe"],
-        });
-
-        let stdout = "";
-        let stderr = "";
-
-        proc.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
-        proc.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
-
-        proc.on("close", (code: number) => {
-          if (code === 0) resolve({ stdout });
-          else reject(new Error(`claude exited ${code}: ${stderr}`));
-        });
-
-        proc.on("error", reject);
-        proc.stdin.write(prompt);
-        proc.stdin.end();
-
-        setTimeout(() => { proc.kill(); reject(new Error("timeout")); }, 60000);
+    const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
+      const proc = spawn("claude", ["-p", "--output-format", "text"], {
+        env: { ...process.env },
+        stdio: ["pipe", "pipe", "pipe"],
       });
+
+      let stdout = "";
+      let stderr = "";
+
+      proc.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
+      proc.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
+
+      const timer = setTimeout(() => { proc.kill(); reject(new Error("timeout")); }, 60000);
+
+      proc.on("close", (code: number) => {
+        clearTimeout(timer);
+        if (code === 0) resolve({ stdout });
+        else reject(new Error(`claude exited ${code}: ${stderr}`));
+      });
+
+      proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+      proc.stdin.write(prompt);
+      proc.stdin.end();
     });
 
     const text = stdout.trim();

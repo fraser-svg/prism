@@ -1,4 +1,4 @@
-import type { AbsolutePath, GateResult, WorkflowPhase } from "@prism/core";
+import type { AbsolutePath, EntityId, GateResult, WorkflowPhase } from "@prism/core";
 import {
   createSpecRepository,
   createPlanRepository,
@@ -145,7 +145,14 @@ export async function evaluateTransition(
 
   if (from === "execute" && to === "verify") {
     const checkpointRepo = createCheckpointRepository(projectRoot);
-    if (await checkpointRepo.exists()) {
+    if (activeSpecId) {
+      const checkpoint = await checkpointRepo.readLatestForSpec(activeSpecId as EntityId);
+      if (checkpoint) {
+        evidence.push("checkpoint exists for spec");
+      } else {
+        blockers.push("no checkpoint found for spec");
+      }
+    } else if (await checkpointRepo.exists()) {
       evidence.push("checkpoint exists");
     } else {
       blockers.push("no checkpoint found");
@@ -170,9 +177,9 @@ export async function evaluateTransition(
           blockers.push("required reviews incomplete or not passing");
         }
 
-        // Check verification result exists and passed
+        // Check verification result from the checkpoint for this specific spec
         const checkpointRepo = createCheckpointRepository(projectRoot);
-        const checkpoint = await checkpointRepo.readLatest();
+        const checkpoint = await checkpointRepo.readLatestForSpec(activeSpecId as EntityId);
         const runId = checkpoint?.runId;
         if (runId) {
           const verifyRepo = createVerificationRepository(projectRoot);
