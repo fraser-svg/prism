@@ -34,14 +34,9 @@ All notable changes to Prism are documented here.
 - **Apply command** — upgraded with deviation rules, must-haves verification, wave-based execution
 - **Planning review** — added scope mode validation, goal-backward verification, must-haves audit, context budget check
 
-## [4.0.7.0] - 2026-03-28
+## [4.0.9.0] - 2026-03-28
 
 ### Added
-- **Gemini provider adapter** — `scripts/prism-gemini-worker.sh` bridges Prism's worker contract with Google's Gemini API for visual/UI task routing
-- **Provider routing in SKILL.md** — `route_hint` system routes visual tasks to Gemini, everything else to Claude, with automatic fallback
-- **Core provider types** — `ModelProvider`, `ServiceProvider`, `RouteHint` types in `packages/core` with `TaskNode` extensions
-- **Google keychain support** — `google` provider added to all keychain probe loops, key management, and inject workflows
-- **Mock test suite** — 17 tests for the Gemini adapter covering happy path, envelope validation, path traversal, parallel safety, retry logic
 - **Continuous Intelligence Layer** — Prism now researches the optimum solution at every stage, silently
 - **Skill Catalogue** — persistent registry of proven solutions at `.prism/skill-catalogue.json` with confidence labels (emerging/established/proven), atomic writes, corruption recovery, and eviction at 500 entries
 - **Research phase** — embedded in Stage 2, parallel subagent research across catalogue, package registries (npm/pip/cargo), GitHub, and curated skill allowlist with complexity-gated tiers (quick/standard/deep)
@@ -58,8 +53,6 @@ All notable changes to Prism are documented here.
 - **`references/reviews/approach-comparison.md`** — approach comparison subagent prompt
 
 ### Changed
-- **Supervisor route_hint pass-through** — `plan`, `next`, and `complete` commands now preserve and return `route_hint` (defaults to `"any"`)
-- **Telemetry** — added `gemini_fallback` event type; failures filter now includes `fallback` pattern
 - **SKILL.md Stage 2** — split into 2a (research), 2b (approach comparison), 2c (planning review)
 - **SKILL.md Stage 1** — added catalogue-informed discovery nudges
 - **SKILL.md Stage 3** — worker dispatch template includes RESEARCH CONTEXT; Guardian extended with learning loop
@@ -73,6 +66,19 @@ All notable changes to Prism are documented here.
 
 ### Superseded
 - **Prompt Learning TODO** — superseded by Skill Catalogue (broader scope: packages, patterns, skills)
+
+## [4.0.7.0] - 2026-03-28
+
+### Added
+- **Gemini provider adapter** — `scripts/prism-gemini-worker.sh` bridges Prism's worker contract with Google's Gemini API for visual/UI task routing
+- **Provider routing in SKILL.md** — `route_hint` system routes visual tasks to Gemini, everything else to Claude, with automatic fallback
+- **Core provider types** — `ModelProvider`, `ServiceProvider`, `RouteHint` types in `packages/core` with `TaskNode` extensions
+- **Google keychain support** — `google` provider added to all keychain probe loops, key management, and inject workflows
+- **Mock test suite** — 17 tests for the Gemini adapter covering happy path, envelope validation, path traversal, parallel safety, retry logic
+
+### Changed
+- **Supervisor route_hint pass-through** — `plan`, `next`, and `complete` commands now preserve and return `route_hint` (defaults to `"any"`)
+- **Telemetry** — added `gemini_fallback` event type; failures filter now includes `fallback` pattern
 
 ## [4.0.6.0] - 2026-03-28
 
