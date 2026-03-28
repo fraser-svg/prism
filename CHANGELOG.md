@@ -2,6 +2,19 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.7.0] - 2026-03-28
+
+### Added
+- **Gemini provider adapter** — `scripts/prism-gemini-worker.sh` bridges Prism's worker contract with Google's Gemini API for visual/UI task routing
+- **Provider routing in SKILL.md** — `route_hint` system routes visual tasks to Gemini, everything else to Claude, with automatic fallback
+- **Core provider types** — `ModelProvider`, `ServiceProvider`, `RouteHint` types in `packages/core` with `TaskNode` extensions
+- **Google keychain support** — `google` provider added to all keychain probe loops, key management, and inject workflows
+- **Mock test suite** — 17 tests for the Gemini adapter covering happy path, envelope validation, path traversal, parallel safety, retry logic
+
+### Changed
+- **Supervisor route_hint pass-through** — `plan`, `next`, and `complete` commands now preserve and return `route_hint` (defaults to `"any"`)
+- **Telemetry** — added `gemini_fallback` event type; failures filter now includes `fallback` pattern
+
 ## [4.0.6.0] - 2026-03-28
 
 ### Added
