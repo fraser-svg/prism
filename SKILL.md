@@ -557,7 +557,7 @@ If missing: skip directly to native QA fallback.
 - **Skip:** User can say "skip QA".
 - **Fallback:** If Skill tool errors OR skill is missing, run Prism-native QA review via
   Agent tool using the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
-- **Passed:** UI product → Stage 4.5. Otherwise → Stage 5.
+- **Passed:** UI product → Stage 4.5. Otherwise → Stage 4.6.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
 
 Auto-save after fixes: `"QA fixes for {change}"`
@@ -586,13 +586,59 @@ If missing: skip silently.
 - **Skip/graceful degradation:** Same as 2.5.
 - **Issues found (first time):** Fix → Build → QA. **Design review runs at most once
   per build cycle** to prevent infinite loops.
-- **Already ran this cycle:** Skip → Stage 5.
+- **Already ran this cycle:** Skip → Stage 4.6.
 
 **Bridge (after design review):** Record design review verdict.
 ```bash
 echo '{"verdict":"pass","summary":"Design review passed"}' | \
   $BRIDGE record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
 ```
+
+### Stage 4.6: Second Opinion (Codex)
+
+Tell user: "Reviews look good — getting an independent second opinion from a different AI."
+
+Check: `which codex 2>/dev/null`
+
+If codex CLI found:
+  Invoke: `Skill tool: skill="codex", args="review"`
+
+  This runs GStack's /codex skill which:
+  - Runs `codex review --base <base>` with xhigh reasoning
+  - Produces pass/fail gate with findings
+  - If /review was already run, produces cross-model comparison
+
+  If Codex finds P1 issues Claude missed → Stage 3 for fixes (first cycle only).
+  If Codex passes → Stage 5.
+  If Codex errors or times out → record verdict as "hold", tell user "Codex was
+  unavailable — proceeding with single-model review." → Stage 5.
+
+If codex CLI NOT found:
+  Tell user: "I'd normally get a second AI opinion on this code, but Codex CLI isn't
+  installed. You can install it with `npm install -g @openai/codex` for future builds.
+  Proceeding to ship."
+  → Stage 5.
+
+- **No skip option.** Mandatory when Codex CLI is available. Advisory when not installed
+  (graceful degradation — Prism works without Codex, but is better with it).
+- **Once-per-cycle guard:** Codex review runs at most once per build cycle to prevent
+  infinite loops. If already ran this cycle, skip → Stage 5.
+- **Fallback:** Graceful degradation only. No Prism-native fallback.
+
+Auto-save after Codex fixes: `"Codex-flagged fixes for {change}"`
+
+**Bridge (after Codex review):** Record the ACTUAL verdict from the /codex output.
+```bash
+echo '{"verdict":"{actual_verdict}","summary":"{actual_summary}"}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" \
+  "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review \
+  "$PROJECT_ROOT" "{change}" codex 2>/dev/null || true
+```
+
+Where `{actual_verdict}` is derived from the /codex skill output:
+- If GATE: PASS → verdict = "pass"
+- If GATE: FAIL → verdict = "fail"
+- If Codex errored/timed out → verdict = "hold"
 
 ### Stage 5: Ship
 

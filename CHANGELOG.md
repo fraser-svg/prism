@@ -4,6 +4,17 @@ All notable changes to Prism are documented here.
 
 ## [4.0.4.0] - 2026-03-28
 
+### Added
+- **Stage 4.6: Codex Second Opinion** — mandatory multi-model review step when Codex CLI is available. Graceful degradation when not installed. Once-per-cycle guard prevents infinite loops.
+- **Engineering review: cognitive patterns** — Review Mindset section with 5 engineering instincts (blast radius, boring by default, systems over heroes, essential vs accidental complexity, reversibility)
+- **Engineering review: failure modes** — new section requiring reviewers to identify production failure scenarios for each significant codepath
+- **Engineering review: scope drift** — new section comparing changed files against spec requirements
+- **Engineering review: test path diagrams** — ASCII diagrams with coverage markers for significant new codepaths
+- **Planning review: Step 0 scope challenge** — pre-review scope validation (existing code reuse, minimum changes, complexity smell, TODOS cross-ref, structural vs behavioral separation)
+- **Planning review: failure modes** — section requiring failure scenario analysis for each new codepath
+- **Ship readiness: Gate 9** — second opinion gate (GREEN/YELLOW/RED based on Codex availability and verdict)
+- **Ship readiness: review summary** — consolidated review verdict listing in output format
+
 ### Added — Performance Audit (10 fixes)
 - **Batch bridge CLI** — `batch` command executes multiple bridge operations in a single Node.js process, eliminating per-command cold start tax. Two-layer refactor: pure `exec*` functions (return data, throw on error) + `cmd*` wrappers (call `process.exit`). Batch calls the pure layer directly with per-command error isolation.
 - **Checkpoint filename indexing** — History files now use `{specId}--{timestamp}.json` format. `readLatestForSpec()` filters by prefix for O(1) lookup instead of scanning all files. Backward-compatible: falls back to full scan for pre-index files.
@@ -14,6 +25,11 @@ All notable changes to Prism are documented here.
 - **Timeout tests** — 4 new tests covering normal completion, SIGTERM, SIGKILL escalation, and error format.
 
 ### Changed
+- Stage 4 (QA) routing: non-UI products now flow to Stage 4.6 instead of Stage 5
+- Stage 4.5 (Design Review) routing: already-ran-this-cycle skip now routes to Stage 4.6
+- `ReviewType` union: added `"codex"` value
+- `REVIEW_TYPES` validation array: added `"codex"` for `record-review` CLI acceptance
+- `mapSkillStageToPhase()`: stage 4.6 now correctly maps to `"verify"` phase
 - **Parallel gate evaluation** — `gate-evaluator.ts` uses `Promise.all` for independent spec/checkpoint/review reads instead of sequential awaits
 - **Parallel resume reads** — `resume-engine.ts` parallelizes plan/spec/checkpoint reads with `Promise.all`
 - **Consolidated scan script** — `prism-scan.sh` replaces N×jq loop with bash string concatenation; consolidates 3 registry reads into single jq call

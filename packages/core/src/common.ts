@@ -39,7 +39,8 @@ export type ReviewType =
   | "engineering"
   | "qa"
   | "design"
-  | "ship_readiness";
+  | "ship_readiness"
+  | "codex";
 export type ReviewVerdict = "pass" | "hold" | "fail" | "not_applicable";
 export type ReleaseDecision = "pending" | "ready" | "hold" | "shipped";
 export type ApprovalMode = "automatic" | "approval_required";

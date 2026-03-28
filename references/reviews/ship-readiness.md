@@ -11,6 +11,7 @@ The caller must provide:
 - **Engineering review result:** The verdict from the engineering review (PASS/FAIL), or "not run"
 - **Planning review result:** The verdict from the planning review (PASS/FAIL), or "not run" or "not applicable"
 - **Design review result** (UI products only): The verdict from the design review (PASS/HOLD) and score, or "not run" or "not applicable"
+- **Codex review result:** The verdict from the Codex second opinion (PASS/FAIL), or "not run" or "not available"
 - **Branch/commit info:** Current branch name and whether it has uncommitted changes
 
 In addition, scan the codebase for the following before completing your checklist:
@@ -61,6 +62,12 @@ If any found: RED, must be moved to environment variables before shipping.
 - Design review (UI products only): PASS or not applicable
 - If any required review returned FAIL/HOLD: RED
 
+### Gate 9: Second Opinion
+- Was a Codex (or equivalent second-model) review run?
+- If run and passed: GREEN
+- If run and failed with unresolved P1s: RED
+- If NOT run because CLI not installed: YELLOW (warning) — note that single-model review was used
+
 ## Output Format
 
 Respond with exactly this structure:
@@ -79,6 +86,15 @@ GATE RESULTS
 [GREEN | YELLOW | RED] Gate 6: No Debug Code — [one-line summary]
 [GREEN | YELLOW | RED] Gate 7: QA Passed — [one-line summary]
 [GREEN | YELLOW | RED] Gate 8: Reviews Completed — [one-line summary]
+[GREEN | YELLOW | RED] Gate 9: Second Opinion — [one-line summary]
+
+REVIEW SUMMARY
+[List each review run, its verdict, and stage]
+- Planning: [verdict] (Stage 2)
+- Engineering: [verdict] (Stage 2)
+- QA: [verdict] (Stage 4)
+- Design: [verdict or N/A]
+- Codex: [verdict or "not run" or "not available"]
 
 BLOCKERS
 [If no blockers, write "None — ready to ship."]
@@ -114,6 +130,14 @@ GREEN Gate 5: No Secrets in Code — No hardcoded secrets found
 YELLOW Gate 6: No Debug Code — 2 TODO comments in ProjectList.tsx (non-blocking)
 GREEN Gate 7: QA Passed — QA verdict PASS, health score 85
 GREEN Gate 8: Reviews Completed — Engineering review FAIL (P1 unresolved); design N/A
+YELLOW Gate 9: Second Opinion — Codex CLI not installed; single-model review only
+
+REVIEW SUMMARY
+- Planning: PASS (Stage 2)
+- Engineering: FAIL (Stage 2)
+- QA: PASS (Stage 4)
+- Design: N/A
+- Codex: not available
 
 BLOCKERS
 - Gate 3: Engineering review flagged SQL injection in src/api/projects.ts:47.

@@ -249,5 +249,6 @@ function mapSkillStageToPhase(stage?: number | string): WorkflowPhase {
   if (n <= 3) return "execute";
   if (n <= 4) return "verify";
   if (n <= 4.5) return "verify"; // design review maps to verify phase
+  if (n <= 4.6) return "verify"; // codex second opinion maps to verify phase
   return "release";
 }
