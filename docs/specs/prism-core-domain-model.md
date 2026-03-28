@@ -150,16 +150,24 @@ Status values:
 The execution shape Prism intends to follow for a spec.
 
 Captures:
-- ordered milestones or phases
+- ordered milestones or phases (with `goal`, `observableTruths`, `requiredArtifacts`, `requiredWiring`)
 - task decomposition
 - dependencies
 - sequencing rationale
 - identified risks
 - required approvals
+- `scopeMode` — controls task count limits (`full_build`, `targeted`, `exact`, `minimum_viable`)
+- `alternatives` — structured implementation alternatives with effort/risk/pros/cons
+- `selectedAlternative` — the chosen approach
+- `deviationRules` — 4-tier escalation rules governing agent behaviour during execution
+- `planVersion` — `1` for legacy format, `2` for structured format with quality gate enforcement
+- `totalContextBudgetPct` — aggregate context budget across all tasks
+- `goalBackwardTrace` — narrative linking spec goal to plan shape
 
 Purpose:
 - bridge from intent to execution
 - make major changes legible before code exists
+- enforce quality constraints before a single line of code is written
 
 ### 7. Task Graph
 
@@ -182,6 +190,17 @@ Each task should capture:
 - `depends_on`
 - `verification_requirements`
 - `artifacts_touched`
+- `files` — specific files the task will modify (required in v2 format)
+- `action` — concrete implementation instruction (required in v2 format)
+- `verify` — executable command or concrete check (required in v2 format)
+- `done` — measurable acceptance criteria (required in v2 format)
+- `mustHaves` — `ObservableTruths`, `ArtifactRequirements`, and `KeyLinks` with AC ID traceability
+- `wave` — execution wave for parallel scheduling
+- `contextBudgetPct` — estimated context window consumption
+- `avoidAndWhy` — explicit anti-patterns for this task
+- `failureScenario` — likely failure mode and why it fails
+- `routeHint` — provider routing hint (`visual`, `backend`, `any`)
+- `providerUsed` — records which model provider executed the task
 
 Task status values:
 - `pending`
@@ -238,6 +257,7 @@ Review types:
 - `qa`
 - `design`
 - `ship_readiness`
+- `codex`
 
 Required fields:
 - `review_id`
