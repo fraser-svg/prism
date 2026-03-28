@@ -2,6 +2,22 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.5.0] - 2026-03-28
+
+### Added
+- **Three-layer discovery protocol** — replaces 4-question checklist with adaptive Problem → Shape → Mirror layers. Depth calibrates to request complexity (Quick/Standard/Deep) and returning context.
+- **Skip-discovery override** — respects users who say "just build it" when they know what they want
+- **Assumption surfacing and reframe** — names embedded assumptions, reframes when request doesn't match the real problem
+- **ProblemStatement entity** — typed core entity capturing original request, real problem, target user, assumptions, and reframe details
+- **Problem repository** — file-based artifact storage following CompositeArtifactRepository pattern
+- **write-problem CLI command** — bridge CLI entry point for SKILL.md to persist discovery artifacts
+- **discovery_complete telemetry event** — records depth tier and reframe status after discovery
+- **Discovery eval scenarios** — 5 manual eval scenarios for dogfood testing (Quick through Deep + returning context)
+
+### Changed
+- **SKILL.md Stage 1 Part A** — full protocol replaces shallow checklist; transition test now requires problem + shape + boundary answers (not just "enough for requirements")
+- **spec-format.md** — updated discovery section to match three-layer protocol
+
 ## [4.0.4.0] - 2026-03-28
 
 ### Added
