@@ -5,9 +5,9 @@
 Phase 4: Local-First Workspace Substrate (complete)
 
 Purpose:
-- wire the typed core into the existing skill lifecycle via dual-write bridge
-- prove that core artifacts and skill artifacts can coexist and stay consistent
-- earn trust in gate checking before graduating to blocking enforcement
+- multi-project workspace management with SQLite, FTS5 search, health badges, and resume
+- write-through indexing from artifact repos into workspace-level SQLite
+- cross-project search and project templates
 
 ## Repo Truth
 
@@ -20,13 +20,15 @@ What exists now:
 - explicit 8-phase lifecycle with gate evaluator, checkpoint history, and release-state derivation (M2 complete)
 - artifact gating that blocks execution without required spec/plan
 - release readiness derived from review, verification, memory, and approval evidence
+- M3 bridge CLI wiring review, gate-check, and release-state through SKILL.md (M3 complete)
+- M4 local-first workspace substrate with SQLite, FTS5, health badges, and resume (M4 complete)
+- Continuous Intelligence Layer: skill catalogue, research phase, approach comparison, Guardian learning, discovery nudges, targeted QA (v4.0.9.0)
 
 What is still missing:
-- bridge wiring between typed core and existing skill lifecycle
-- dual-write producing typed artifacts alongside existing OpenSpec/script artifacts
-- gate checking at stage transitions (advisory mode first)
-- review evidence capture from gstack skills into typed artifacts
-- resume from typed checkpoints in real dogfood sessions
+- graduating bridge gates from advisory to blocking (post-M3 TODO)
+- deprecating OpenSpec for core spec storage (post-M3 TODO)
+- user proof from real dogfood sessions (critical YC gap)
+- Patrick-ready demo walkthrough
 
 ## Architecture Direction
 
@@ -155,15 +157,15 @@ Exit criteria:
 
 ### Now
 
-- build bridge CLI in orchestrator package (10 commands)
-- wire SKILL.md to call bridge at all 9 integration points
-- implement typed artifact dual-write (.prism/specs/, reviews/, plans/, runs/)
+- Patrick-ready by March 30 — UI polished, workflow smooth, full session completable end-to-end
+- Record a demo-ready walkthrough of the magical workflow
+- Sharpen the one-liner and YC application narrative
 
 ### Next
 
-- add advisory gate checks at stage transitions
-- capture review evidence from gstack skills into typed artifacts
-- prove resume from typed checkpoints in dogfood session
+- Graduate bridge gates from advisory to blocking (post-M3)
+- Deprecate OpenSpec for core spec storage
+- User proof from real dogfood sessions
 
 ### Later
 
@@ -195,10 +197,10 @@ Exit criteria:
 
 ## Immediate Next Moves
 
-1. Build the bridge CLI in the orchestrator package with 10 commands for lifecycle integration.
-2. Update SKILL.md to call the bridge at all 9 integration points (dual-write mode).
-3. Implement typed artifact dual-write so .prism/ artifacts are produced alongside existing OpenSpec/script artifacts.
-4. Add advisory gate checks at stage transitions that log warnings but do not block.
+1. Polish end-to-end workflow for Patrick demo (March 30 deadline).
+2. Record demo walkthrough: Socratic discovery → spec → research → build → verification → ship.
+3. Sharpen YC one-liner and application narrative.
+4. Collect user proof from real dogfood sessions.
 
 ## Working Rules
 

@@ -23,6 +23,8 @@ It answers four questions for each asset:
 | `scripts/prism-save.sh` | Auto-save commit/push | `packages/execution` | Canonical behavior, likely wrapped | Approval and branch policy should be orchestrator-aware |
 | `scripts/prism-telemetry.sh` | Append-only telemetry | `packages/guardian` or shared infra | Canonical behavior, likely wrapped | Useful for eval and reliability loops |
 | `scripts/prism-gemini-worker.sh` | Gemini API adapter for visual task routing | `packages/execution` | Canonical behavior, likely wrapped | First provider adapter; bridges worker contract to Gemini's structured JSON API |
+| `scripts/prism-catalogue.sh` | Skill catalogue CRUD (query, record, promote, demote, list, evict) | `packages/guardian` or shared infra | Canonical behavior, likely wrapped | Continuous Intelligence Layer; atomic writes, corruption recovery, eviction at 500 entries |
+| `scripts/prism-research.sh` | Research orchestration with catalogue queries and history persistence | `packages/orchestrator` or `packages/guardian` | Canonical behavior, likely wrapped | Continuous Intelligence Layer; research-gate.sh compatible, complexity-gated tiers |
 | `scripts/prism-eval.sh` | Eval suite | `packages/guardian` | Canonical behavior, likely wrapped | Core for safe self-improvement |
 | `scripts/prism-improve.sh` | Improvement proposals and promotion | `packages/guardian` + `packages/orchestrator` | Transitional canonical | Good pattern, but should align with formal change/release state |
 
