@@ -1,5 +1,5 @@
-import type { AbsolutePath, Checkpoint } from "@prism/core";
-import { mkdir, readFile, writeFile, copyFile, access } from "node:fs/promises";
+import type { AbsolutePath, Checkpoint, EntityId } from "@prism/core";
+import { mkdir, readFile, readdir, writeFile, copyFile, access } from "node:fs/promises";
 import { checkpointPaths } from "./paths";
 
 export class CheckpointRepository {
@@ -39,6 +39,34 @@ export class CheckpointRepository {
         `Failed to read checkpoint markdown at ${this.paths.latestMarkdown}: ${err instanceof Error ? err.message : String(err)}`
       );
     }
+  }
+
+  async readLatestForSpec(specId: EntityId): Promise<Checkpoint | null> {
+    // Check if the current latest checkpoint matches the specId
+    const latest = await this.readLatest();
+    if (latest?.activeSpecId === specId) return latest;
+
+    // Scan history for the most recent checkpoint matching this specId
+    try {
+      const files = await readdir(this.paths.historyDir);
+      const jsonFiles = files.filter((f) => f.endsWith(".json")).sort().reverse();
+      for (const file of jsonFiles) {
+        try {
+          const content = await readFile(
+            `${this.paths.historyDir}/${file}`,
+            "utf-8",
+          );
+          const checkpoint = JSON.parse(content) as Checkpoint;
+          if (checkpoint.activeSpecId === specId) return checkpoint;
+        } catch {
+          continue;
+        }
+      }
+    } catch {
+      // History dir may not exist
+    }
+
+    return null;
   }
 
   async write(checkpoint: Checkpoint, markdown: string): Promise<void> {

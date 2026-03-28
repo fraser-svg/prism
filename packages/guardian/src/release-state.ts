@@ -23,9 +23,9 @@ export async function deriveReleaseState(
 ): Promise<ReleaseEvidence> {
   const missingEvidence: string[] = [];
 
-  // 1. Check implementation (checkpoint exists)
+  // 1. Check implementation (checkpoint exists for this spec)
   const checkpointRepo = new CheckpointRepository(projectRoot);
-  const checkpoint = await checkpointRepo.readLatest();
+  const checkpoint = await checkpointRepo.readLatestForSpec(specId);
   const implementationComplete = checkpoint !== null;
   if (!implementationComplete) missingEvidence.push("no checkpoint found");
 

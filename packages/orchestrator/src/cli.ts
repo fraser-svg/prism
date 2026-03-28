@@ -28,6 +28,7 @@ import {
   skillReviewToCore,
   skillVerificationToCore,
   skillCheckpointToCore,
+  deriveProjectId,
   type SkillSpecInput,
   type SkillPlanInput,
   type SkillReviewInput,
@@ -70,6 +71,14 @@ function requireArg(args: string[], index: number, name: string): string {
   const val = args[index];
   if (!val) fail(`missing required argument: ${name}`);
   return val;
+}
+
+/** Enrich stdin input with a deterministic projectId when the skill doesn't provide one. */
+function enrichProjectId<T extends { projectId?: string }>(input: T, projectRoot: string): T {
+  if (!input.projectId || input.projectId === "unknown") {
+    return { ...input, projectId: deriveProjectId(undefined, projectRoot) as string };
+  }
+  return input;
 }
 
 function parseSpecId(args: string[]): EntityId | undefined {
@@ -118,7 +127,7 @@ async function cmdGateCheck(args: string[]): Promise<void> {
 async function cmdWriteSpec(args: string[]): Promise<void> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
-  const input = await readStdinJson<SkillSpecInput>();
+  const input = enrichProjectId(await readStdinJson<SkillSpecInput>(), projectRoot);
 
   const spec = skillSpecToCore(input, specId);
   const repo = createSpecRepository(projectRoot);
@@ -131,7 +140,7 @@ async function cmdWritePlan(args: string[]): Promise<void> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const specId = requireArg(args, 1, "specId") as EntityId;
   const planId = requireArg(args, 2, "planId") as EntityId;
-  const input = await readStdinJson<SkillPlanInput>();
+  const input = enrichProjectId(await readStdinJson<SkillPlanInput>(), projectRoot);
 
   input.specId = specId;
   const plan = skillPlanToCore(input, planId);
@@ -171,7 +180,7 @@ async function cmdRecordReview(args: string[]): Promise<void> {
 
   if (!isReviewType(reviewTypeStr)) fail(`invalid reviewType: ${reviewTypeStr}`);
 
-  const input = await readStdinJson<SkillReviewInput>();
+  const input = enrichProjectId(await readStdinJson<SkillReviewInput>(), projectRoot);
   const review = skillReviewToCore(input, specId, reviewTypeStr);
   await recordReview(projectRoot, review);
 
@@ -181,7 +190,7 @@ async function cmdRecordReview(args: string[]): Promise<void> {
 async function cmdRecordVerification(args: string[]): Promise<void> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const runId = requireArg(args, 1, "runId") as EntityId;
-  const input = await readStdinJson<SkillVerificationInput>();
+  const input = enrichProjectId(await readStdinJson<SkillVerificationInput>(), projectRoot);
 
   const verification = skillVerificationToCore(input, runId);
   await recordVerification(projectRoot, verification);
@@ -204,7 +213,7 @@ async function cmdCheckReviews(args: string[]): Promise<void> {
 
 async function cmdCheckpoint(args: string[]): Promise<void> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
-  const input = await readStdinJson<SkillCheckpointInput>();
+  const input = enrichProjectId(await readStdinJson<SkillCheckpointInput>(), projectRoot);
   const checkpoint = skillCheckpointToCore(input);
 
   const repo = createCheckpointRepository(projectRoot);
@@ -244,7 +253,12 @@ async function cmdReleaseState(args: string[]): Promise<void> {
 
   if (!isSpecType(specTypeStr)) fail(`invalid specType: ${specTypeStr}`);
 
-  const result = await deriveReleaseState(specId, specTypeStr, projectRoot);
+  // Read runId from the checkpoint for this specific spec
+  const checkpointRepo = createCheckpointRepository(projectRoot);
+  const checkpoint = await checkpointRepo.readLatestForSpec(specId);
+  const runId = checkpoint?.runId ?? undefined;
+
+  const result = await deriveReleaseState(specId, specTypeStr, projectRoot, { runId });
   output(result);
 }
 
