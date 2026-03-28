@@ -235,25 +235,32 @@ export async function approvePlan(
 
 export async function recordVerification(
   projectRoot: AbsolutePath,
-  result: Omit<VerificationResult, "id" | "createdAt" | "updatedAt">,
+  result: Omit<VerificationResult, "id" | "createdAt" | "updatedAt"> | VerificationResult,
 ): Promise<VerificationResult> {
   const repo = createVerificationRepository(projectRoot);
   const now = new Date().toISOString() as ISODateString;
-  const full: VerificationResult = { ...result, id: generateEntityId(), createdAt: now, updatedAt: now };
+  const full: VerificationResult = "id" in result && result.id
+    ? { ...result, updatedAt: now } as VerificationResult
+    : { ...result, id: generateEntityId(), createdAt: now, updatedAt: now } as VerificationResult;
   await repo.write(full.runId, full);
   return full;
 }
 
 export async function recordReview(
   projectRoot: AbsolutePath,
-  review: Omit<Review, "id" | "createdAt" | "updatedAt">,
+  review: Omit<Review, "id" | "createdAt" | "updatedAt"> | Review,
 ): Promise<Review> {
   const repo = createReviewRepository(projectRoot);
   const now = new Date().toISOString() as ISODateString;
-  const full: Review = { ...review, id: generateEntityId(), createdAt: now, updatedAt: now };
-  // Write as <reviewType>.json so isReviewComplete() can find it
+  const full: Review = "id" in review && review.id
+    ? { ...review, updatedAt: now } as Review
+    : { ...review, id: generateEntityId(), createdAt: now, updatedAt: now } as Review;
+  // Write as <reviewType>.json (latest) + archive with timestamp to preserve history
   const slot = `${full.reviewType}.json`;
-  await repo.writeFile(full.specId, slot, JSON.stringify(full, null, 2) + "\n");
+  const archiveSlot = `${full.reviewType}-${now.replace(/[:.]/g, "-")}.json`;
+  const content = JSON.stringify(full, null, 2) + "\n";
+  await repo.writeFile(full.specId, slot, content);
+  await repo.writeFile(full.specId, archiveSlot, content);
   return full;
 }
 
