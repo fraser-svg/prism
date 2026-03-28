@@ -2,6 +2,38 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.7.0] - 2026-03-28
+
+### Added
+- **Gemini provider adapter** — `scripts/prism-gemini-worker.sh` bridges Prism's worker contract with Google's Gemini API for visual/UI task routing
+- **Provider routing in SKILL.md** — `route_hint` system routes visual tasks to Gemini, everything else to Claude, with automatic fallback
+- **Core provider types** — `ModelProvider`, `ServiceProvider`, `RouteHint` types in `packages/core` with `TaskNode` extensions
+- **Google keychain support** — `google` provider added to all keychain probe loops, key management, and inject workflows
+- **Mock test suite** — 17 tests for the Gemini adapter covering happy path, envelope validation, path traversal, parallel safety, retry logic
+
+### Changed
+- **Supervisor route_hint pass-through** — `plan`, `next`, and `complete` commands now preserve and return `route_hint` (defaults to `"any"`)
+- **Telemetry** — added `gemini_fallback` event type; failures filter now includes `fallback` pattern
+
+## [4.0.6.0] - 2026-03-28
+
+### Added
+- **M4 Local-First Workspace Substrate** — new `packages/workspace` package providing multi-project workspace management with SQLite (better-sqlite3, WAL mode)
+- **Project registry** — CRUD with auto-detect + one-time confirm registration, slug generation, resurrection of dismissed/archived projects
+- **Cross-project FTS5 search** — full-text search across all registered projects via SQLite FTS5 with sync triggers
+- **Project health badges** — derived badge system (healthy / stale / blocked / needs-review / unreachable / new) with priority ordering
+- **"Where was I?" resume** — context builder deriving recommended next action from artifact state
+- **Workspace changelog** — append-only event log across all projects with typed events
+- **Integration cabinet** — workspace-level provider/integration metadata with health check adapter pattern
+- **Project templates** — save/restore `.prism/` structures with path rewriting for new projects
+- **Write-through indexing** — `onWrite` callback injected at repo construction time; repos fire callbacks after writes, workspace layer subscribes to index into SQLite
+- **Workspace facade** — unified public API combining registry, search, health, resume, event log, templates, and cross-project artifact queries
+
+### Changed
+- **Memory package callback threading** — `JsonArtifactRepository`, `CompositeArtifactRepository`, `CheckpointRepository`, and all factory functions now accept optional `onWrite` callback with `entityType` for write-through indexing
+- **contracts.ts** — added `ArtifactWriteEvent`, `ArtifactWriteCallback` types, and `WorkspacePaths` interface
+- **paths.ts** — added `workspacePaths()` function for `~/.prism/` workspace home resolution
+
 ## [4.0.5.0] - 2026-03-28
 
 ### Added

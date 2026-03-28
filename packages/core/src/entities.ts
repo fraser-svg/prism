@@ -5,6 +5,7 @@ import type {
   DeviationSeverity,
   EntityId,
   ISODateString,
+  ModelProvider,
   NamedEntity,
   PrimaryPlatform,
   ProductType,
@@ -13,6 +14,7 @@ import type {
   RelativePath,
   ReviewType,
   ReviewVerdict,
+  RouteHint,
   RunStatus,
   ScopeMode,
   SpecStatus,
@@ -213,6 +215,8 @@ export interface TaskNode {
   mustHaves?: MustHaves;
   wave?: number;
   contextBudgetPct?: number;
+  routeHint?: RouteHint;
+  providerUsed?: ModelProvider;
 }
 
 export interface TaskGraph extends AuditStamp {

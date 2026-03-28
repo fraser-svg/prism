@@ -2,6 +2,7 @@ import type { AbsolutePath, EntityId } from "@prism/core";
 import { validateEntityId } from "@prism/core";
 import { mkdir, readFile, writeFile, readdir, rm, access } from "node:fs/promises";
 import { join } from "node:path";
+import type { ArtifactWriteCallback } from "./contracts";
 
 export interface CompositePathResolver {
   (id: EntityId): { dir: AbsolutePath; metadataFile: AbsolutePath };
@@ -15,6 +16,8 @@ export class CompositeArtifactRepository<T> {
   constructor(
     private pathResolver: CompositePathResolver,
     private listDir: CompositeListPathResolver,
+    private onWrite?: ArtifactWriteCallback,
+    private entityType?: string,
   ) {}
 
   async exists(id: EntityId): Promise<boolean> {
@@ -50,16 +53,45 @@ export class CompositeArtifactRepository<T> {
   }
 
   async writeMetadata(id: EntityId, entity: T): Promise<void> {
-    const { dir, metadataFile } = this.pathResolver(validateEntityId(id));
+    const validId = validateEntityId(id);
+    const { dir, metadataFile } = this.pathResolver(validId);
     await mkdir(dir, { recursive: true });
     await writeFile(metadataFile, JSON.stringify(entity, null, 2) + "\n", "utf-8");
+
+    if (this.onWrite) {
+      try {
+        this.onWrite({
+          action: "write",
+          entityType: this.entityType ?? "",
+          entityId: validId,
+          projectId: "" as EntityId,
+        });
+      } catch {
+        // Callback failure is non-fatal
+      }
+    }
   }
 
   async writeFile(id: EntityId, slot: string, content: string): Promise<void> {
-    const { dir } = this.pathResolver(validateEntityId(id));
+    const validId = validateEntityId(id);
+    const { dir } = this.pathResolver(validId);
     await mkdir(dir, { recursive: true });
     const filePath = join(dir, slot) as AbsolutePath;
     await writeFile(filePath, content, "utf-8");
+
+    if (this.onWrite) {
+      try {
+        this.onWrite({
+          action: "write",
+          entityType: this.entityType ?? "",
+          entityId: validId,
+          projectId: "" as EntityId,
+          contentPreview: content.slice(0, 500),
+        });
+      } catch {
+        // Callback failure is non-fatal
+      }
+    }
   }
 
   async list(): Promise<EntityId[]> {
@@ -74,12 +106,26 @@ export class CompositeArtifactRepository<T> {
   }
 
   async delete(id: EntityId): Promise<void> {
-    const { dir } = this.pathResolver(validateEntityId(id));
+    const validId = validateEntityId(id);
+    const { dir } = this.pathResolver(validId);
     try {
       await rm(dir, { recursive: true });
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
       throw err;
+    }
+
+    if (this.onWrite) {
+      try {
+        this.onWrite({
+          action: "delete",
+          entityType: this.entityType ?? "",
+          entityId: validId,
+          projectId: "" as EntityId,
+        });
+      } catch {
+        // Callback failure is non-fatal
+      }
     }
   }
 }

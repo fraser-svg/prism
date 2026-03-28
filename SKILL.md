@@ -176,16 +176,16 @@ _prism_timeout() {
 KEYCHAIN_CACHE="/tmp/prism-keychain-${UID:-0}-cache"
 if [ -f "$KEYCHAIN_CACHE" ] && [ "$(( $(date +%s) - $(stat -f%m "$KEYCHAIN_CACHE") ))" -lt 3600 ]; then
   # Cache hit — read via grep (NOT source, for security)
-  for p in anthropic openai vercel stripe; do
+  for p in anthropic openai google vercel stripe; do
     eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
   done
 else
   # Cache miss — probe each provider (2s timeout per probe)
-  for p in anthropic openai vercel stripe; do
+  for p in anthropic openai google vercel stripe; do
     _prism_timeout 2 security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null \
       && echo "PRISM_KEY_$p=connected" || echo "PRISM_KEY_$p=disconnected"
   done > "$KEYCHAIN_CACHE"
-  for p in anthropic openai vercel stripe; do
+  for p in anthropic openai google vercel stripe; do
     eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
   done
 fi
@@ -208,7 +208,7 @@ These commands use the `prism:` prefix to avoid false positives.
 | `prism: status` | Show which providers are connected |
 | `prism: inject` | Write connected keys to .env.local |
 
-Supported providers: `anthropic`, `openai`, `vercel`, `stripe`.
+Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`.
 
 **Security rules:**
 - Agent NEVER executes commands containing secrets. Prints the template, user runs it.
@@ -530,9 +530,13 @@ Map requirements to worker tasks. For each, prepare a TaskPrompt:
 **CONTEXT FIREWALL:** Workers get task + code + constraints ONLY. Never: user
 conversation, personality, vision, other workers' raw context, the spec itself.
 
-Output dependency graph and validate via supervisor:
+Assign `route_hint` per task based on content:
+- Tasks involving components, layouts, styles, CSS, visual, UI, design, animation, responsive → `"visual"`
+- Everything else → `"any"`
+
+Output dependency graph (with route_hint) and validate via supervisor:
 ```bash
-echo '[{"id":"w1","task":"...","depends_on":[]},{"id":"w2","task":"...","depends_on":["w1"]}]' | \
+echo '[{"id":"w1","task":"...","depends_on":[],"route_hint":"visual"},{"id":"w2","task":"...","depends_on":["w1"],"route_hint":"any"}]' | \
   bash "$SKILL_DIR/scripts/prism-supervisor.sh" plan "$PROJECT_ROOT" "{change}"
 ```
 The supervisor validates: no cycles (Kahn's algorithm), no missing deps, no duplicate IDs.
@@ -543,7 +547,39 @@ Dispatch all ready tasks simultaneously (multiple Agent calls in one message).
 
 Register each worker: `bash "$SKILL_DIR/scripts/prism-registry.sh" worker "$PROJECT_ROOT" "{change}" "{id}" "running"`
 
-#### Worker dispatch
+#### Provider routing
+
+Each ready task from supervisor `next` includes a `route_hint`. Route based on hint + provider availability:
+
+| route_hint | Preferred provider | Fallback |
+|------------|-------------------|----------|
+| `"visual"` | google (Gemini) | claude (Agent tool) |
+| `"backend"` | claude (Agent tool) | claude (Agent tool) |
+| `"any"` | claude (Agent tool) | claude (Agent tool) |
+
+**Gemini dispatch (parallel):**
+For each visual task where `$PRISM_KEY_google` is `connected`, dispatch in background:
+```bash
+echo '{"task":"...","files_to_read":[...],"constraints":"...","shared_context":"...","model":"gemini-2.5-pro"}' | \
+  bash "$SKILL_DIR/scripts/prism-gemini-worker.sh" "$PROJECT_ROOT" "{worker_id}" &
+```
+After all parallel dispatches, `wait` for completion. Read each result from
+`.prism/staging/{worker_id}/result.json`.
+
+If `status=completed`: extract `file_manifest` from result.json — this is the list of files
+the worker produced. Use it as the `output_files` for verification (`prism-verify.sh --files`),
+contract extraction, and registry updates. Then proceed with per-worker flow (verify, contract
+extraction, supervisor complete). Include `provider` and `model` from the result in the
+`worker_complete` telemetry event metadata.
+
+If `status=failed`: fall back to Agent tool (Claude) dispatch for the same task. Log fallback:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" gemini_fallback '{"worker":"{id}","reason":"{reason}"}'
+```
+
+Forward `provider` and `model` from the adapter result into the existing `worker_complete` telemetry event.
+
+#### Worker dispatch (Claude — default)
 
 Each worker via Agent tool:
 > "WORKING DIRECTORY: {project_root}

@@ -1,11 +1,12 @@
 import type { AbsolutePath, Checkpoint, EntityId } from "@prism/core";
 import { mkdir, readFile, readdir, writeFile, copyFile, access } from "node:fs/promises";
+import type { ArtifactWriteCallback } from "./contracts";
 import { checkpointPaths } from "./paths";
 
 export class CheckpointRepository {
   private paths: ReturnType<typeof checkpointPaths>;
 
-  constructor(projectRoot: AbsolutePath) {
+  constructor(projectRoot: AbsolutePath, private onWrite?: ArtifactWriteCallback) {
     this.paths = checkpointPaths(projectRoot);
   }
 
@@ -42,7 +43,6 @@ export class CheckpointRepository {
   }
 
   async readLatestForSpec(specId: EntityId): Promise<Checkpoint | null> {
-    // Check if the current latest checkpoint matches the specId
     const latest = await this.readLatest();
     if (latest?.activeSpecId === specId) return latest;
 
@@ -93,7 +93,6 @@ export class CheckpointRepository {
   async write(checkpoint: Checkpoint, markdown: string): Promise<void> {
     await mkdir(this.paths.checkpointsDir, { recursive: true });
 
-    // Archive current latest to history if it exists
     const hasExisting = await this.exists();
     if (hasExisting) {
       await mkdir(this.paths.historyDir, { recursive: true });
@@ -111,7 +110,6 @@ export class CheckpointRepository {
         this.paths.latestJson,
         `${this.paths.historyDir}/${existingSpecId}--${timestamp}.json` as AbsolutePath
       );
-      // Markdown archive is best-effort (may not exist)
       try {
         await copyFile(
           this.paths.latestMarkdown,
@@ -122,15 +120,26 @@ export class CheckpointRepository {
       }
     }
 
-    await writeFile(
-      this.paths.latestJson,
-      JSON.stringify(checkpoint, null, 2) + "\n",
-      "utf-8"
-    );
+    const content = JSON.stringify(checkpoint, null, 2) + "\n";
+    await writeFile(this.paths.latestJson, content, "utf-8");
     await writeFile(this.paths.latestMarkdown, markdown, "utf-8");
+
+    if (this.onWrite) {
+      try {
+        this.onWrite({
+          action: "write",
+          entityType: "checkpoint",
+          entityId: checkpoint.id,
+          projectId: checkpoint.projectId,
+          contentPreview: markdown.slice(0, 500),
+        });
+      } catch {
+        // Callback failure is non-fatal
+      }
+    }
   }
 }
 
-export function createCheckpointRepository(projectRoot: AbsolutePath) {
-  return new CheckpointRepository(projectRoot);
+export function createCheckpointRepository(projectRoot: AbsolutePath, onWrite?: ArtifactWriteCallback) {
+  return new CheckpointRepository(projectRoot, onWrite);
 }

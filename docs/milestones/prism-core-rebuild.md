@@ -56,7 +56,7 @@ Exit criteria:
 - execution cannot start without required artifacts ✓ (evaluateTransition blocks on missing spec/plan)
 - release decisions are derived from review, verification, memory, and approval evidence ✓ (deriveReleaseState aggregates 4 dimensions)
 
-## M3. Skill-Bridge (Dual-Write) ← CURRENT
+## M3. Skill-Bridge (Dual-Write) ✓ LOCKED (v4.0.3.0, 2026-03-28)
 
 Objective:
 - wire typed core into the existing skill lifecycle via dual-write bridge
@@ -74,24 +74,27 @@ Exit criteria:
 - gate checks fire at stage transitions (advisory)
 - at least one dogfood session produces full typed artifact trail
 
-## M4. Local-First Workspace Substrate
+## M4. Local-First Workspace Substrate ✓ LOCKED (v4.0.6.0, 2026-03-28)
 
 Objective:
 - support multiple projects with durable memory and operational state
 
 Scope:
-- local project registry
-- local DB strategy
-- artifact location strategy
-- integrations cabinet model
+- local project registry with auto-detect + confirm
+- SQLite workspace database (better-sqlite3, WAL mode)
+- artifact location strategy with write-through indexing
+- integrations cabinet model with health check adapters
+- cross-project FTS5 search
+- project health badges and "where was I?" resume
+- workspace changelog and project templates
 
 Exit criteria:
-- multi-project local-first use is structurally supported
+- multi-project local-first use is structurally supported ✓ (packages/workspace, 281 tests)
 
-## M5. Desktop Enablement
+## M5. Desktop Enablement ← NEXT
 
 Objective:
-- prepare Prism Core for a Tauri desktop shell
+- prepare Prism Core for an Electron desktop shell
 
 Scope:
 - app-facing APIs
