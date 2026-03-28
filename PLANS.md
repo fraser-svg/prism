@@ -15,7 +15,6 @@ What exists now:
 - a strong product thesis and vision
 - substantial deterministic shell infrastructure
 - compiler, hooks, review references, and planning notes
-- an exploratory app shell with early Forge-style UI ideas
 - typed core packages for domain, memory, orchestration, guardian, and execution
 - passing shell-script regression coverage for the current runtime substrate
 - explicit 8-phase lifecycle with gate evaluator, checkpoint history, and release-state derivation (M2 complete)
@@ -188,11 +187,9 @@ Exit criteria:
 
 ## Risks
 
-1. Repo drift between exploratory UI and core architecture
-2. Over-indexing on visual metaphor before orchestration reliability
-3. Hidden prompt logic outgrowing durable artifacts
-4. Too much dependence on legacy patterns from external systems
-5. Architecture sprawl without explicit module boundaries
+1. Hidden prompt logic outgrowing durable artifacts
+2. Too much dependence on legacy patterns from external systems
+3. Architecture sprawl without explicit module boundaries
 
 ## Immediate Next Moves
 

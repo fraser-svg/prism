@@ -34,14 +34,6 @@ It answers four questions for each asset:
 | `references/reviews/*.md` | Native review prompts | `packages/guardian` | Canonical content, likely wrapped | Good review policy substrate |
 | `hooks/*.sh` | Enforcement hooks | `packages/execution` / policy tooling | Transitional | Keep available as enforcement backup, not product identity |
 
-## UI Prototype Mapping
-
-| Asset | Current Role | Target Subsystem | Target Status | Notes |
-|-------|--------------|------------------|---------------|-------|
-| `app/` | Exploratory prototype shell | `packages/ui` consumer later | Transitional prototype | Keep separate from Prism Core authority |
-| `app/src/app/api/chat/route.ts` | Local prototype chat route | Prototype execution surface | Transitional / likely replaced | Not suitable as final orchestrator boundary |
-| `app/src/lib/store.ts` | Prototype UI state | Prototype UI state only | Transitional / likely replaced | Not canonical project memory |
-
 ## Canonical Versus Transitional Summary
 
 ### Likely Canonical Behaviors To Preserve
@@ -56,8 +48,6 @@ It answers four questions for each asset:
 ### Transitional Behaviors To Wrap Or Refactor
 
 - registry-as-primary-state
-- app-route-level orchestration
-- direct prototype coupling to CLI flows
 - prompt assets standing in for domain models
 
 ### Legacy Compatibility To Keep Reading
