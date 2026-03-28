@@ -93,6 +93,20 @@ The user is NOT an engineer. Use Agent tool for ALL technical operations. The ma
 conversation is ONLY for plain-English communication. If a subagent fails: retry once.
 If still fails, do inline (visible but functional > broken).
 
+## Bridge — Typed Core Integration
+
+Prism dual-writes to the typed core at every stage transition. Bridge calls are
+**advisory only** — failures are silent and never block the workflow.
+
+**Bridge calling pattern:**
+```bash
+BRIDGE_RESULT=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" <command> <args> 2>/dev/null) || true
+```
+
+Bridge failures produce empty `BRIDGE_RESULT`. Always check before parsing.
+The bridge writes typed artifacts to `.prism/specs/`, `.prism/plans/`, `.prism/reviews/`,
+`.prism/runs/`, `.prism/checkpoints/` alongside the existing shell script bookkeeping.
+
 ## Scripts — The Body
 
 Prism v4 uses bash scripts for all deterministic bookkeeping. LLM is for judgment only.
@@ -229,6 +243,12 @@ show the regressed display number with an explanatory message:
 
 Run: `bash "$SKILL_DIR/scripts/prism-scan.sh" "$PROJECT_ROOT"`
 
+**Bridge (after scan):** Call bridge resume for richer context. If bridge disagrees with
+scan, log the discrepancy but trust the scan.
+```bash
+BRIDGE_RESUME=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" resume "$PROJECT_ROOT" 2>/dev/null) || true
+```
+
 Read the temp file for structured JSON. The scan now includes `product_memory.model`
 (split/legacy/none). If `split`, read product context from `.prism/memory/` files.
 If `legacy`, read from `PRODUCT.md` directly. Route based on `status`:
@@ -319,6 +339,13 @@ Store the change name for all subsequent stages.
 
 **After approval:** Save, checkpoint, update registry stage to "planned".
 
+**Bridge (after spec approval):** Dual-write spec to typed core and check spec→plan gate.
+```bash
+echo '{"title":"{feature}","type":"change","status":"approved","acceptanceCriteria":["{req1}","{req2}"]}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-spec "$PROJECT_ROOT" "{change}" 2>/dev/null || true
+GATE_RESULT=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" gate-check "$PROJECT_ROOT" spec plan --spec-id "{change}" 2>/dev/null) || true
+```
+
 ### Stage 2: Plan (Auto-invoked via gstack)
 
 Read [references/skill-catalog.md](references/skill-catalog.md).
@@ -337,6 +364,17 @@ Invoke: `Skill tool: skill="plan-eng-review", args="Review {feature}: {summary}"
 
 Auto-save: `"planning complete for {change}"`
 
+**Bridge (after eng review):** Record the engineering review, write the plan, and write
+the task graph to the typed core.
+```bash
+echo '{"verdict":"pass","summary":"Planning review passed"}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" engineering 2>/dev/null || true
+echo '{"title":"{plan-title}","specId":"{change}","phases":[...]}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-plan "$PROJECT_ROOT" "{change}" "{plan-id}" 2>/dev/null || true
+cat "$PROJECT_ROOT/.prism/task-graph.json" | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-task-graph "$PROJECT_ROOT" "{plan-id}" 2>/dev/null || true
+```
+
 ### Stage 2.5: Design (UI products only)
 
 Runs ONLY for UI products when no DESIGN.md exists.
@@ -347,6 +385,12 @@ Invoke: `Skill tool: skill="design-consultation"`
 - **Skip:** User can say "skip design".
 - **Graceful degradation:** If skill not installed, skip silently.
 - After completion → Stage 3.
+
+**Bridge (after design consultation):** Record design review artifact if produced.
+```bash
+echo '{"verdict":"pass","summary":"Design consultation completed"}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
+```
 
 ### Stage 3: Build (Operator Decomposes, Workers Build)
 
@@ -418,7 +462,12 @@ Extract the file list from the worker's response. Store in registry:
    Then check supervisor for next ready tasks:
    `bash "$SKILL_DIR/scripts/prism-supervisor.sh" next "$PROJECT_ROOT" "{change}"`
    Dispatch any newly unblocked tasks.
-5. **Status relay:** Plain-English progress: "Login page done. 2 of 4 left."
+5. **Bridge (per-worker checkpoint):** Write checkpoint to typed core after each worker.
+   ```bash
+   echo '{"phase":"execute","progress":"{N}/{total} workers done","activeSpecId":"{change}"}' | \
+     npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" checkpoint "$PROJECT_ROOT" 2>/dev/null || true
+   ```
+6. **Status relay:** Plain-English progress: "Login page done. 2 of 4 left."
 
 #### Guardian (on worker failure)
 
@@ -444,6 +493,14 @@ After all workers complete:
 
 Update PRODUCT.md ("built" status) via subagent. Checkpoint. → Stage 4.
 
+**Bridge (after all workers + drift detection):** Record build verification and check
+plan→execute gate.
+```bash
+echo '{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift"]}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-verification "$PROJECT_ROOT" "build-{change}" 2>/dev/null || true
+npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" gate-check "$PROJECT_ROOT" execute verify 2>/dev/null || true
+```
+
 ### Stage 4: Verify (Auto-invoked via gstack)
 
 Tell user: "Build looks complete — running QA to make sure everything works."
@@ -459,6 +516,20 @@ Invoke: `Skill tool: skill="qa", args="Test at {URL}"`
 
 Auto-save after fixes: `"QA fixes for {change}"`
 
+**Bridge (after QA):** Record the QA review and verification result.
+```bash
+echo '{"verdict":"pass","summary":"QA passed"}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" qa 2>/dev/null || true
+echo '{"specId":"{change}","passed":true,"checksRun":["qa"]}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-verification "$PROJECT_ROOT" "qa-{change}" 2>/dev/null || true
+```
+
+**Bridge (QA regression → Stage 3):** When QA fails and regresses to Stage 3, check the
+regression gate.
+```bash
+npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" gate-check "$PROJECT_ROOT" verify execute 2>/dev/null || true
+```
+
 ### Stage 4.5: Design Review (UI products only)
 
 Tell user: "QA looks good — doing a quick visual check."
@@ -469,7 +540,21 @@ Invoke: `Skill tool: skill="design-review"`
   per build cycle** to prevent infinite loops.
 - **Already ran this cycle:** Skip → Stage 5.
 
+**Bridge (after design review):** Record design review verdict.
+```bash
+echo '{"verdict":"pass","summary":"Design review passed"}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
+```
+
 ### Stage 5: Ship
+
+**Bridge (before ship):** Check release evidence and review completeness. Advisory only.
+```bash
+RELEASE_STATE=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" release-state "$PROJECT_ROOT" "{change}" "change" 2>/dev/null) || true
+REVIEW_STATE=$(npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" check-reviews "$PROJECT_ROOT" "{change}" "change" 2>/dev/null) || true
+```
+Log the result but don't block shipping. If `RELEASE_STATE` contains `"decision":"hold"`,
+note the missing evidence in the build log for post-mortem.
 
 Tell user: "Everything looks good — committing and creating a pull request."
 
