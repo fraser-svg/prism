@@ -216,7 +216,7 @@ export function skillPlanToCore(
     selectedAlternative: input.selectedAlternative,
     deviationRules: input.deviationRules ?? DEFAULT_DEVIATION_RULES,
     planVersion: input.planVersion ?? 2,
-    totalContextBudgetPct: input.totalContextBudgetPct ?? 0,
+    totalContextBudgetPct: input.totalContextBudgetPct,
     goalBackwardTrace: input.goalBackwardTrace,
     createdAt: ts,
     updatedAt: ts,

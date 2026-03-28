@@ -214,6 +214,26 @@ describe("evaluatePlanQuality", () => {
     expect(dim?.score).toBe(0);
   });
 
+  it("blocks when task has verify/done but missing files/action/mustHaves", async () => {
+    const spec = makeSpec({ acceptanceCriteria: [] });
+    const task = makeTask({
+      files: undefined,
+      action: undefined,
+      mustHaves: undefined,
+      // verify and done are still set
+    });
+    const plan = makePlan();
+    const taskGraph = makeTaskGraph([task]);
+    await setupProject(tmpDir, spec, plan, taskGraph);
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, spec.id);
+    const dim = result.dimensions.find((d) => d.name === "Task Completeness");
+    expect(dim?.hasBlocker).toBe(true);
+    expect(dim?.details).toContain("files");
+    expect(dim?.details).toContain("action");
+    expect(dim?.details).toContain("mustHaves");
+  });
+
   it("passes when all tasks have complete structured fields", async () => {
     const spec = makeSpec({ acceptanceCriteria: [] });
     const task = makeTask();
@@ -495,7 +515,126 @@ describe("evaluatePlanQuality", () => {
     expect(result.summary).toContain("invalid JSON");
   });
 
-  // --- Test 19: Bridge adapter defaults ---
+  // --- Test 20: Plan not found ---
+
+  it("returns legacy result when plan metadata is missing", async () => {
+    const result = await evaluatePlanQuality(projectRoot, "nonexistent" as EntityId, "spec-1" as EntityId);
+    expect(result.legacy).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(result.summary).toBe("Plan not found");
+  });
+
+  // --- Test 21: Cross-wave dependency correctly blocked ---
+
+  it("blocks when task depends on higher-wave task", async () => {
+    const spec = makeSpec({ acceptanceCriteria: [] });
+    const tasks = [
+      makeTask({ id: "t-1" as EntityId, wave: 1, dependsOn: ["t-2" as EntityId] }),
+      makeTask({ id: "t-2" as EntityId, title: "Task 2", wave: 2, dependsOn: [] }),
+    ];
+    const plan = makePlan();
+    const taskGraph = makeTaskGraph(tasks);
+    await setupProject(tmpDir, spec, plan, taskGraph);
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, spec.id);
+    const dim = result.dimensions.find((d) => d.name === "Dependency Correctness");
+    expect(dim?.hasBlocker).toBe(true);
+    expect(dim?.details).toContain("wave");
+  });
+
+  // --- Test 22: Spec not found blocks v2 plan ---
+
+  it("blocks when spec metadata is missing for v2 plan", async () => {
+    const plan = makePlan();
+    const task = makeTask();
+    const taskGraph = makeTaskGraph([task]);
+    // Write plan and task graph but NOT the spec
+    const planDir = join(tmpDir, ".prism", "plans", plan.id);
+    await mkdir(planDir, { recursive: true });
+    await writeFile(join(planDir, "metadata.json"), JSON.stringify(plan, null, 2) + "\n");
+    await writeFile(join(planDir, "task-graph.json"), JSON.stringify(taskGraph, null, 2) + "\n");
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, "spec-1" as EntityId);
+    expect(result.passed).toBe(false);
+    expect(result.legacy).toBe(false);
+    expect(result.summary).toContain("Spec");
+  });
+
+  // --- Test 23: Task graph binding validation ---
+
+  it("blocks when task graph belongs to different plan", async () => {
+    const spec = makeSpec();
+    const plan = makePlan();
+    const taskGraph = makeTaskGraph([makeTask()]);
+    taskGraph.planId = "wrong-plan" as EntityId;
+    await setupProject(tmpDir, spec, plan, taskGraph);
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, spec.id);
+    expect(result.passed).toBe(false);
+    expect(result.summary).toContain("different plan");
+  });
+
+  it("blocks when task graph belongs to different spec", async () => {
+    const spec = makeSpec();
+    const plan = makePlan();
+    const taskGraph = makeTaskGraph([makeTask()]);
+    taskGraph.specId = "wrong-spec" as EntityId;
+    await setupProject(tmpDir, spec, plan, taskGraph);
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, spec.id);
+    expect(result.passed).toBe(false);
+    expect(result.summary).toContain("different spec");
+  });
+
+  // --- Test 24: Key links match via field ---
+
+  it("blocks when key link has matching from/to but wrong via", async () => {
+    const spec = makeSpec({ acceptanceCriteria: [] });
+    const plan = makePlan({
+      phases: [{
+        id: "p-1" as EntityId,
+        title: "Phase 1",
+        description: "",
+        dependsOn: [],
+        requiredWiring: [{ from: "a.ts", to: "b.ts", via: "import", pattern: "import.*from" }],
+      }],
+    });
+    const task = makeTask({
+      mustHaves: {
+        truths: [],
+        artifacts: [],
+        keyLinks: [{ from: "a.ts", to: "b.ts", via: "event", pattern: "emit" }],
+      },
+    });
+    const taskGraph = makeTaskGraph([task]);
+    await setupProject(tmpDir, spec, plan, taskGraph);
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, spec.id);
+    const dim = result.dimensions.find((d) => d.name === "Key Links Planned");
+    expect(dim?.hasBlocker).toBe(true);
+    expect(dim?.details).toContain("Uncovered wiring");
+  });
+
+  // --- Test 25: Context budget computed from tasks when total is 0 ---
+
+  it("computes context budget from tasks when totalContextBudgetPct is 0", async () => {
+    const spec = makeSpec({ acceptanceCriteria: [] });
+    const tasks = [
+      makeTask({ id: "t-1" as EntityId, contextBudgetPct: 30 }),
+      makeTask({ id: "t-2" as EntityId, title: "Task 2", contextBudgetPct: 25 }),
+    ];
+    const plan = makePlan({ totalContextBudgetPct: 0 });
+    const taskGraph = makeTaskGraph(tasks);
+    await setupProject(tmpDir, spec, plan, taskGraph);
+
+    const result = await evaluatePlanQuality(projectRoot, plan.id, spec.id);
+    const dim = result.dimensions.find((d) => d.name === "Context Budget");
+    // 30 + 25 = 55% > 50%, should warn
+    expect(dim?.score).toBe(6.25);
+    expect(dim?.details).toContain("55%");
+  });
+
+  // --- Test 26: Bridge adapter defaults ---
 
   it("skillPlanToCore defaults: scopeMode=exact, planVersion=2, deviationRules=DEFAULT", async () => {
     const result = skillPlanToCore(
@@ -509,6 +648,6 @@ describe("evaluatePlanQuality", () => {
     expect(result.deviationRules).toHaveLength(4);
     expect(result.deviationRules![0].severity).toBe("auto_fix");
     expect(result.deviationRules![3].severity).toBe("ask_user");
-    expect(result.totalContextBudgetPct).toBe(0);
+    expect(result.totalContextBudgetPct).toBeUndefined();
   });
 });

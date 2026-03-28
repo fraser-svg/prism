@@ -62,10 +62,42 @@ export async function evaluatePlanQuality(
 
   const tasks = taskGraph.tasks;
 
-  // Read spec for acceptance criteria
+  // Validate task graph belongs to this plan/spec
+  if (taskGraph.planId && taskGraph.planId !== planId) {
+    return {
+      passed: false,
+      legacy: false,
+      score: 0,
+      dimensions: [dim("Task Graph", false, true, 0, `task-graph.json belongs to plan ${taskGraph.planId}, expected ${planId}`)],
+      summary: `task-graph.json belongs to a different plan. Fix before building.`,
+      traceability: [],
+    };
+  }
+  if (taskGraph.specId && taskGraph.specId !== specId) {
+    return {
+      passed: false,
+      legacy: false,
+      score: 0,
+      dimensions: [dim("Task Graph", false, true, 0, `task-graph.json belongs to spec ${taskGraph.specId}, expected ${specId}`)],
+      summary: `task-graph.json belongs to a different spec. Fix before building.`,
+      traceability: [],
+    };
+  }
+
+  // Read spec for acceptance criteria — missing spec is a blocker for v2 plans
   const specRepo = createSpecRepository(projectRoot);
   const spec = await specRepo.readMetadata(specId);
-  const acceptanceCriteria = spec?.acceptanceCriteria ?? [];
+  if (!spec) {
+    return {
+      passed: false,
+      legacy: false,
+      score: 0,
+      dimensions: [dim("Spec Validation", false, true, 0, `Spec ${specId} not found — cannot verify requirement coverage`)],
+      summary: `Spec ${specId} not found. Fix before building.`,
+      traceability: [],
+    };
+  }
+  const acceptanceCriteria = spec.acceptanceCriteria ?? [];
 
   // Build traceability matrix
   const traceability = buildTraceabilityMatrix(acceptanceCriteria, tasks);
@@ -180,13 +212,16 @@ function evalTaskCompleteness(tasks: TaskNode[]): PlanQualityDimension {
       !hasDone && "done",
     ].filter(Boolean);
 
-    if (missing.length === 4) {
+    // Core v2 fields: files, action, and mustHaves are required for executable tasks
+    if (!hasFiles || !hasAction || !hasMustHaves) {
       blockers++;
-      details.push(`Task "${task.title}" has no structured fields`);
+      const missingCore = [
+        !hasFiles && "files",
+        !hasAction && "action",
+        !hasMustHaves && "mustHaves",
+      ].filter(Boolean);
+      details.push(`Task "${task.title}" missing required fields: ${missingCore.join(", ")}`);
     } else if (missing.length > 0) {
-      warnings++;
-    }
-    if (!hasMustHaves) {
       warnings++;
     }
   }
@@ -276,7 +311,7 @@ function evalKeyLinksPlanned(
   for (const wire of requiredWiring) {
     const covered = tasks.some((t) =>
       t.mustHaves?.keyLinks?.some(
-        (kl) => kl.from === wire.from && kl.to === wire.to,
+        (kl) => kl.from === wire.from && kl.to === wire.to && kl.via === wire.via,
       ),
     );
     if (!covered) {
@@ -339,7 +374,9 @@ function evalContextBudget(
   totalBudget?: number,
 ): PlanQualityDimension {
   const warnings: string[] = [];
-  const total = totalBudget ?? tasks.reduce((sum, t) => sum + (t.contextBudgetPct ?? 0), 0);
+  // Use provided total if positive, otherwise compute from task budgets
+  const computed = tasks.reduce((sum, t) => sum + (t.contextBudgetPct ?? 0), 0);
+  const total = totalBudget && totalBudget > 0 ? totalBudget : computed;
 
   for (const task of tasks) {
     if (task.contextBudgetPct != null && task.contextBudgetPct > 25) {
