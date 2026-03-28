@@ -121,6 +121,7 @@ describe("full skill session lifecycle", () => {
         risks: ["scope creep"],
         sequencingRationale: "single phase",
         projectId: "proj-lifecycle",
+        planVersion: 1,
       },
       planId,
     );

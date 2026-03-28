@@ -155,6 +155,7 @@ Without lifecycle enforcement:
    - requires approved spec with acceptance criteria and verification plan
 4. `plan -> execute`
    - requires approved plan, decomposed task graph, approval requirements recorded
+   - v2 plans additionally require passing the 8-dimension plan quality gate (score ≥ 70, no blocking dimensions)
 5. `execute -> verify`
    - requires checkpoint, changed-artifact summary, and implementation evidence
 6. `verify -> release`
