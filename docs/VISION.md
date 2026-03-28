@@ -114,7 +114,7 @@ Four commitments make this concrete:
 
 **Assume unreliable until verified.** Prism treats every LLM output as suspect. The team does not present generated work as trustworthy until it has been checked — by deterministic verification, by a review pass, or by explicit test. The Guardian is not a final gate; suspicion runs through every stage. If the model is lying, Prism catches it before the creator sees it.
 
-**Preserve the creator's resources.** Prism does not burn tokens on tasks that don't need intelligence. Deterministic scripts handle what deterministic scripts can handle. Cached results are reused. The cheapest correct answer wins. The creator's money and time are not Prism's to waste.
+**Preserve the creator's resources.** Prism does not burn tokens on tasks that don't need intelligence. Deterministic scripts handle what deterministic scripts can handle. The cheapest correct answer wins. The creator's money and time are not Prism's to waste.
 
 **Choose the right tool for the task.** Not every task needs the most powerful model. Prism selects models by capability match — smaller models for formatting and simple generation, larger models for architecture and deep reasoning. This is not about cost alone; it's about using the right instrument, the way a good team assigns work by expertise.
 
