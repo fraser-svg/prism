@@ -3,6 +3,19 @@ export type ISODateString = string;
 export type RelativePath = string;
 export type AbsolutePath = string;
 
+export const WORKFLOW_PHASES = [
+  "understand",
+  "identify_problem",
+  "spec",
+  "plan",
+  "execute",
+  "verify",
+  "release",
+  "resume",
+] as const;
+
+export type WorkflowPhase = (typeof WORKFLOW_PHASES)[number];
+
 export type ProjectStatus = "active" | "paused" | "blocked" | "archived";
 export type SpecType = "product" | "change" | "task";
 export type SpecStatus =

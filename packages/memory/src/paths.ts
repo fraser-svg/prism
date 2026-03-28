@@ -5,6 +5,7 @@ import type {
   PlanArtifactPaths,
   PrismProjectPaths,
   ProjectArtifactLocator,
+  ReleaseStateArtifactPaths,
   ReviewArtifactPaths,
   RunArtifactPaths,
   SpecArtifactPaths,
@@ -43,6 +44,7 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     checkpointsDir: joinPath(prismDir, "checkpoints"),
     evalsDir: joinPath(prismDir, "evals"),
     proposalsDir: joinPath(prismDir, "proposals"),
+    releaseStateDir: joinPath(prismDir, "release-state"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),
@@ -114,6 +116,20 @@ export function runPaths(
   };
 }
 
+export function releaseStatePaths(
+  projectRoot: AbsolutePath,
+  specId: EntityId
+): ReleaseStateArtifactPaths {
+  const releaseStateDir = joinPath(
+    projectPaths(projectRoot).releaseStateDir,
+    validateEntityId(specId)
+  );
+  return {
+    releaseStateDir,
+    stateFile: joinPath(releaseStateDir, "state.json"),
+  };
+}
+
 export const prismArtifactLocator: ProjectArtifactLocator = {
   projectPaths,
   specPaths,
@@ -121,4 +137,5 @@ export const prismArtifactLocator: ProjectArtifactLocator = {
   reviewPaths,
   checkpointPaths,
   runPaths,
+  releaseStatePaths,
 };

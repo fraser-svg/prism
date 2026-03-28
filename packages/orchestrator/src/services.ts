@@ -1,21 +1,41 @@
-import type { AbsolutePath, EntityId } from "@prism/core";
-import { checkpointPaths, projectPaths, readProductMemory, saveCheckpoint } from "@prism/memory";
+import type {
+  AbsolutePath,
+  Checkpoint,
+  EntityId,
+  ISODateString,
+  Plan,
+  ReleaseState,
+  Review,
+  Spec,
+  VerificationResult,
+} from "@prism/core";
+import {
+  checkpointPaths,
+  createCheckpointRepository,
+  createPlanRepository,
+  createReleaseStateRepository,
+  createReviewRepository,
+  createSpecRepository,
+  createVerificationRepository,
+  projectPaths,
+  readProductMemory,
+  saveCheckpoint,
+} from "@prism/memory";
 import { runVerification, type VerifyOptions, type VerifyResult } from "@prism/guardian";
 import { saveMilestone, type SaveResult } from "@prism/execution";
 
 import {
-  createInitialWorkflowState,
   getNextWorkflowPhase,
   type WorkflowCheckpointSummary,
   type WorkflowState,
 } from "./workflow";
+import { resumeFromArtifacts } from "./resume-engine";
 import {
   planTaskGraph,
   readNextReadyTasks,
   readRegistryStatus,
   readTaskGraphStatus,
   scanProjectState,
-  updateRegistryChange,
   type PrismScanResult,
   type RegistryStatusResult,
   type SupervisorPlanResult,
@@ -73,37 +93,23 @@ export async function resumeProject(
   changeName?: string
 ): Promise<ResumeProjectResult> {
   const context = await loadProjectContext(projectRoot);
-  const registry = changeName
-    ? (await readRegistryStatus(projectRoot, changeName)).data
-    : null;
+  const resumeResult = await resumeFromArtifacts(projectRoot, projectId, changeName);
 
-  const workflow = createInitialWorkflowState(projectId, null);
-  const blockers = registry?.checkpoint?.open_questions ?? [];
-  if (registry?.change?.stage) {
-    const phase = mapRegistryStageToWorkflowPhase(registry.change.stage);
-    workflow.phase = phase;
-    workflow.blockers = blockers;
-    workflow.transitionHistory = [
-      {
-        from: "resume",
-        to: phase,
-        reason: "resume",
-      },
-    ];
+  // Legacy field: attempt registry read for backward compat
+  let registry: RegistryStatusResult | null = null;
+  if (changeName) {
+    try {
+      registry = (await readRegistryStatus(projectRoot, changeName)).data;
+    } catch {
+      // Registry unavailable — that's fine in M2+
+    }
   }
-
-  const summary: WorkflowCheckpointSummary = {
-    phase: workflow.phase,
-    activeSpecId: workflow.activeSpecId,
-    blockers,
-    nextActions: registry?.checkpoint?.next_steps ?? [],
-  };
 
   return {
     context,
     registry,
-    workflow,
-    summary,
+    workflow: resumeResult.workflow,
+    summary: resumeResult.summary,
   };
 }
 
@@ -126,24 +132,6 @@ export async function updateWorkflowCheckpoint(
     next_steps: summary.nextSteps,
   });
 
-  return result.data;
-}
-
-export type RegistryStage =
-  | "understand"
-  | "plan"
-  | "build"
-  | "verify"
-  | "ship"
-  | "design"
-  | "design_review";
-
-export async function setWorkflowStage(
-  projectRoot: AbsolutePath,
-  changeName: string,
-  stage: RegistryStage
-): Promise<RegistryStatusResult> {
-  const result = await updateRegistryChange(projectRoot, changeName, { stage });
   return result.data;
 }
 
@@ -192,24 +180,90 @@ export function getRecommendedNextPhase(state: WorkflowState): WorkflowState["ph
   return getNextWorkflowPhase(state.phase);
 }
 
-function mapRegistryStageToWorkflowPhase(
-  stage: string
-): WorkflowState["phase"] {
-  switch (stage) {
-    case "understand":
-      return "understand";
-    case "plan":
-      return "plan";
-    case "build":
-      return "execute";
-    case "verify":
-    case "design":
-    case "design_review":
-      return "verify";
-    case "ship":
-      return "release";
-    default:
-      console.warn(`Unknown registry stage "${stage}", falling back to "understand"`);
-      return "understand";
-  }
+// ---------------------------------------------------------------------------
+// Canonical entity writers
+// ---------------------------------------------------------------------------
+
+function generateEntityId(): EntityId {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as EntityId;
+}
+
+export async function createSpec(
+  projectRoot: AbsolutePath,
+  spec: Omit<Spec, "id" | "createdAt" | "updatedAt">,
+): Promise<Spec> {
+  const repo = createSpecRepository(projectRoot);
+  const now = new Date().toISOString() as ISODateString;
+  const full: Spec = { ...spec, id: generateEntityId(), createdAt: now, updatedAt: now };
+  await repo.writeMetadata(full.id, full);
+  return full;
+}
+
+export async function approveSpec(
+  projectRoot: AbsolutePath,
+  specId: EntityId,
+): Promise<Spec> {
+  const repo = createSpecRepository(projectRoot);
+  const spec = await repo.readMetadata(specId);
+  if (!spec) throw new Error(`Spec ${specId} not found`);
+  const now = new Date().toISOString() as ISODateString;
+  const approved: Spec = { ...spec, status: "approved", updatedAt: now };
+  await repo.writeMetadata(specId, approved);
+  return approved;
+}
+
+export async function createPlan(
+  projectRoot: AbsolutePath,
+  plan: Omit<Plan, "id" | "createdAt" | "updatedAt">,
+): Promise<Plan> {
+  const repo = createPlanRepository(projectRoot);
+  const now = new Date().toISOString() as ISODateString;
+  const full: Plan = { ...plan, id: generateEntityId(), createdAt: now, updatedAt: now };
+  await repo.writeMetadata(full.id, full);
+  return full;
+}
+
+export async function approvePlan(
+  projectRoot: AbsolutePath,
+  planId: EntityId,
+): Promise<Plan> {
+  const repo = createPlanRepository(projectRoot);
+  const plan = await repo.readMetadata(planId);
+  if (!plan) throw new Error(`Plan ${planId} not found`);
+  return plan;
+}
+
+export async function recordVerification(
+  projectRoot: AbsolutePath,
+  result: Omit<VerificationResult, "id" | "createdAt" | "updatedAt">,
+): Promise<VerificationResult> {
+  const repo = createVerificationRepository(projectRoot);
+  const now = new Date().toISOString() as ISODateString;
+  const full: VerificationResult = { ...result, id: generateEntityId(), createdAt: now, updatedAt: now };
+  await repo.write(full.runId, full);
+  return full;
+}
+
+export async function recordReview(
+  projectRoot: AbsolutePath,
+  review: Omit<Review, "id" | "createdAt" | "updatedAt">,
+): Promise<Review> {
+  const repo = createReviewRepository(projectRoot);
+  const now = new Date().toISOString() as ISODateString;
+  const full: Review = { ...review, id: generateEntityId(), createdAt: now, updatedAt: now };
+  // Write as <reviewType>.json so isReviewComplete() can find it
+  const slot = `${full.reviewType}.json`;
+  await repo.writeFile(full.specId, slot, JSON.stringify(full, null, 2) + "\n");
+  return full;
+}
+
+export async function recordReleaseState(
+  projectRoot: AbsolutePath,
+  releaseState: Omit<ReleaseState, "id" | "createdAt" | "updatedAt">,
+): Promise<ReleaseState> {
+  const repo = createReleaseStateRepository(projectRoot);
+  const now = new Date().toISOString() as ISODateString;
+  const full: ReleaseState = { ...releaseState, id: generateEntityId(), createdAt: now, updatedAt: now };
+  await repo.write(full.specId, full);
+  return full;
 }

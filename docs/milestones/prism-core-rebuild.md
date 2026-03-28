@@ -36,20 +36,25 @@ Exit criteria:
 - schemas/contracts are defined
 - artifact ownership is explicit
 
-## M2. Workflow Engine
+## M2. Spec-Driven Workflow Engine ✓ LOCKED (v4.0.2.0, 2026-03-28)
 
 Objective:
-- formalize the build lifecycle and resume logic
+- formalize the build lifecycle and make it enforceable at runtime
 
 Scope:
 - lifecycle states
 - transitions
+- artifact gates
 - regressions and retries
 - approval pauses
 - checkpoint semantics
+- release-state semantics
+- resume from canonical artifacts
 
 Exit criteria:
-- lifecycle is explicit and durable
+- lifecycle is explicit and durable ✓ (8-phase WorkflowPhase, gate evaluator, checkpoint history)
+- execution cannot start without required artifacts ✓ (evaluateTransition blocks on missing spec/plan)
+- release decisions are derived from review, verification, memory, and approval evidence ✓ (deriveReleaseState aggregates 4 dimensions)
 
 ## M3. Guardian And Verification
 

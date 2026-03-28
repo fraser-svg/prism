@@ -11,6 +11,7 @@ export interface PrismProjectPaths {
   checkpointsDir: AbsolutePath;
   evalsDir: AbsolutePath;
   proposalsDir: AbsolutePath;
+  releaseStateDir: AbsolutePath;
   telemetryFile: AbsolutePath;
   registryFile: AbsolutePath;
   taskGraphFile: AbsolutePath;
@@ -58,6 +59,11 @@ export interface RunArtifactPaths {
   reviewIndexFile: AbsolutePath;
 }
 
+export interface ReleaseStateArtifactPaths {
+  releaseStateDir: AbsolutePath;
+  stateFile: AbsolutePath;
+}
+
 export interface ProjectArtifactLocator {
   projectPaths(projectRoot: AbsolutePath): PrismProjectPaths;
   specPaths(projectRoot: AbsolutePath, specId: EntityId): SpecArtifactPaths;
@@ -65,4 +71,5 @@ export interface ProjectArtifactLocator {
   reviewPaths(projectRoot: AbsolutePath, specId: EntityId): ReviewArtifactPaths;
   checkpointPaths(projectRoot: AbsolutePath): CheckpointArtifactPaths;
   runPaths(projectRoot: AbsolutePath, runId: EntityId): RunArtifactPaths;
+  releaseStatePaths(projectRoot: AbsolutePath, specId: EntityId): ReleaseStateArtifactPaths;
 }

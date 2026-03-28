@@ -3,6 +3,21 @@
 ## ~~Reduce verbose logs to milestone-only~~ — DONE in v3
 Replaced by `prism-registry.sh` JSON events. Only significant actions are logged.
 
+## Active Review Orchestration (deferred to M3)
+
+**What:** Add active review trigger/execution to Prism Core so Guardian can invoke review runs through adapters (not just read existing evidence).
+
+**Why:** M2 added the review matrix, `checkRequiredReviews()`, `isReviewComplete()`, and verdict aggregation. Guardian now defines required reviews per spec type and gates release on their presence. But review artifacts still require an external process to produce them. M3 should close that loop by wiring Guardian to execution adapters that can trigger review runs.
+
+**When:** After M2 is stable in dogfooding.
+
+**How:** Keep the ownership split explicit:
+- `packages/guardian` owns review policy, required review matrix, and verdict aggregation (DONE in M2)
+- `packages/orchestrator` owns sequencing, pause/regress behavior, and lifecycle advancement (DONE in M2)
+- `packages/execution` owns invoking review runs through adapters (M3 scope)
+
+**Depends on:** M2 complete (repositories + gate evaluator + release-state derivation). **M2 prerequisites now met.**
+
 ## Git Worktree Workers (deferred from v3)
 
 **What:** `prism-worktree.sh` — true parallel file isolation via git worktrees for large builds (6+ requirements).
