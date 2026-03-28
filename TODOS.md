@@ -112,3 +112,51 @@ M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` throug
 **How:** Update SKILL.md to write specs to `.prism/specs/` only. Update the spec-generator subagent. Migrate existing OpenSpec specs during a one-time migration pass. Keep OpenSpec archived as historical records.
 
 **Depends on:** Graduate Bridge Gates to Blocking.
+
+## Deploy Rollback Support (P3)
+
+**What:** After a deploy fails or breaks, offer to rollback via the platform CLI (e.g., `vercel rollback`, `netlify rollback`).
+
+**Why:** Deploy-trigger only handles the forward path. If a deploy breaks production, Prism should help the user recover quickly rather than requiring manual intervention.
+
+**When:** After deploy-trigger is proven reliable across 2+ dogfood sessions.
+
+**How:** Add `execDeployRollback` to deploy.ts. Detect current deploy ID from platform CLI, offer rollback to previous deployment. Requires platform-specific rollback commands.
+
+**Depends on:** Ship Stage v2.0 (deploy-detect + deploy-trigger).
+
+## Ship Telemetry Dashboard (P2)
+
+**What:** Aggregate ship receipts from `.prism/ships/*/receipt.json` into a velocity dashboard showing ship frequency, review pass rates, and deploy success rates.
+
+**Why:** Ship receipts are durable artifacts. Aggregating them gives users and teams visibility into build velocity and quality trends over time.
+
+**When:** After 5+ ship receipts exist from real dogfood sessions.
+
+**How:** Add a `ship-stats` bridge command that reads all receipt files, computes aggregates (ships/week, avg review score, deploy success rate), and returns structured JSON. Surface in SKILL.md resume flow.
+
+**Depends on:** Ship Stage v2.0 (ship receipts).
+
+## Changelog Auto-Generation (P3)
+
+**What:** Append a CHANGELOG.md entry at ship time with the spec summary, requirements, and PR link.
+
+**Why:** Users requested it during CEO review. Deferred because the format needs design (Keep a Changelog vs custom) and there's no demo value for Patrick's session.
+
+**When:** After ship receipts are proven and a changelog format is chosen.
+
+**How:** Add `--changelog` flag to `$BRIDGE ship`. Read spec entity, format entry, prepend to CHANGELOG.md. Needs format design first.
+
+**Depends on:** Ship Stage v2.0 (spec entity reading).
+
+## PR Template Detection (P3)
+
+**What:** Detect `.github/PULL_REQUEST_TEMPLATE.md` and merge Prism's rich PR body content into the template structure.
+
+**Why:** Teams with PR templates expect them to be respected. Currently Prism generates its own PR body format which may conflict with existing templates.
+
+**When:** When a user reports their PR template is being overwritten.
+
+**How:** In ship.ts, before generating PR body, check for template file. If found, parse template sections and inject Prism content into matching sections (or append if no match). Fallback to current behavior if no template exists.
+
+**Depends on:** Ship Stage v2.0 (rich PR body generation).

@@ -985,3 +985,121 @@ Exit code is always `0`. Check the result JSON for logical errors.
 - `--dry-run` validates input and prints the assembled prompt without making an API call.
 - Retries 5xx errors up to 3 times with exponential backoff.
 - Parallel safety: each worker uses an isolated staging directory keyed by `worker_id`.
+
+---
+
+## Typed Bridge CLI Commands (Ship Stage)
+
+These commands are implemented in TypeScript (`packages/orchestrator/src/cli.ts`) and
+invoked via `npx tsx packages/orchestrator/src/cli.ts <command> <args>`. They output
+JSON to stdout and use exit code 0 for success, 1 for errors.
+
+---
+
+## ship
+
+Squashes branch commits, pushes, creates PR via `gh`, and tags with spec-derived slug.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts ship <projectRoot> <specId> [--base main] [--message "override"]
+```
+
+| Arg         | Required | Description                                 |
+|-------------|----------|---------------------------------------------|
+| `projectRoot` | yes    | Project root directory                      |
+| `specId`      | yes    | Spec entity ID for commit message/tag       |
+| `--base`      | no     | Base branch (default: `main`)               |
+| `--message`   | no     | Override commit message                     |
+
+### Output JSON
+
+```json
+{
+  "status": "shipped | partial | failed",
+  "squash": { "status": "squashed | skipped | failed", "commit": "abc1234", "message": "feat: ..." },
+  "push": { "status": "pushed | no_remote | failed", "branch": "feat/..." },
+  "pr": { "status": "created | already_exists | gh_not_installed | failed", "url": "https://..." },
+  "tag": { "status": "created | already_exists | failed", "name": "prism/..." },
+  "spec_summary": "...",
+  "review_verdicts": { "engineering": "pass", "qa": "pass", "design": null, "codex": null }
+}
+```
+
+---
+
+## deploy-detect
+
+Detects deployment platform from project config files.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts deploy-detect <projectRoot>
+```
+
+### Output JSON
+
+```json
+{
+  "platform": "vercel | netlify | railway | fly | render | none",
+  "auto_deploy": true,
+  "config_file": "vercel.json"
+}
+```
+
+---
+
+## deploy-trigger
+
+Triggers deployment via platform CLI with optional health-check polling.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts deploy-trigger <projectRoot> [--health-check]
+```
+
+### Output JSON
+
+```json
+{
+  "platform": "vercel | netlify | railway | fly | render | none",
+  "deploy_status": "triggered | not_triggered | cli_not_installed | failed",
+  "health_status": "healthy | unhealthy | skipped"
+}
+```
+
+---
+
+## record-ship
+
+Persists a durable ship receipt entity at `.prism/ships/{specId}/receipt.json`.
+
+### Usage
+
+```
+npx tsx packages/orchestrator/src/cli.ts record-ship <projectRoot> <specId> < receipt-input.json
+```
+
+### Stdin JSON
+
+```json
+{
+  "commitSha": "abc1234",
+  "commitMessage": "feat: ...",
+  "branch": "feat/...",
+  "baseBranch": "main",
+  "prUrl": "https://...",
+  "tagName": "prism/...",
+  "deployUrl": "https://...",
+  "deployPlatform": "vercel",
+  "specSummary": "...",
+  "reviewVerdicts": { "engineering": "pass" }
+}
+```
+
+### Output JSON
+
+Full `ShipReceipt` entity with `id`, `shippedAt`, and all input fields.

@@ -36,6 +36,7 @@ export interface PrismProjectPaths {
   proposalsDir: AbsolutePath;
   releaseStateDir: AbsolutePath;
   problemsDir: AbsolutePath;
+  shipsDir: AbsolutePath;
   telemetryFile: AbsolutePath;
   registryFile: AbsolutePath;
   taskGraphFile: AbsolutePath;
@@ -91,6 +92,11 @@ export interface RunArtifactPaths {
 export interface ReleaseStateArtifactPaths {
   releaseStateDir: AbsolutePath;
   stateFile: AbsolutePath;
+}
+
+export interface ShipReceiptArtifactPaths {
+  shipDir: AbsolutePath;
+  receiptFile: AbsolutePath;
 }
 
 export interface ProjectArtifactLocator {

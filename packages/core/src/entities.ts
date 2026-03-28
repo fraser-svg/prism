@@ -342,3 +342,22 @@ export interface WorkflowState {
   blockers: string[];
   transitionHistory: WorkflowTransition[];
 }
+
+export interface ShipReceipt extends AuditStamp {
+  id: EntityId;
+  projectId: EntityId;
+  specId: EntityId;
+  prUrl: string | null;
+  commitSha: string;
+  commitMessage: string;
+  branch: string;
+  baseBranch: string;
+  tagName: string | null;
+  deployUrl: string | null;
+  deployPlatform: string | null;
+  deployHealthStatus: string | null;
+  specSummary: string;
+  reviewVerdicts: Record<string, string | null>;
+  changelogUpdated: boolean;
+  shippedAt: ISODateString;
+}

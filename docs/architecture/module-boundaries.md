@@ -45,6 +45,9 @@ Owns:
 - plan-to-task-graph coordination
 - plan quality gate evaluation (8-dimension check on `plan → execute`)
 - resume logic
+- ship command (squash, push, PR creation, tagging)
+- deploy detection and triggering
+- ship receipt persistence
 
 Does not own:
 - low-level shell execution
