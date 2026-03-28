@@ -101,9 +101,12 @@ async function readReviewVerdicts(
   for (const [key, filename] of reviewFiles) {
     try {
       const content = await readFile(join(reviewDir, filename), "utf-8");
-      if (content.includes("PASS") || content.includes("pass")) verdicts[key] = "pass";
-      else if (content.includes("HOLD") || content.includes("hold")) verdicts[key] = "hold";
-      else if (content.includes("FAIL") || content.includes("fail")) verdicts[key] = "fail";
+      // Parse structured verdict line first (e.g., "verdict: PASS"), fall back to first-line keyword
+      const verdictLine = content.match(/^verdict:\s*(pass|hold|fail)/im)
+        ?? content.split("\n")[0]?.match(/\b(PASS|HOLD|FAIL|pass|hold|fail)\b/);
+      if (verdictLine) {
+        verdicts[key] = verdictLine[1]!.toLowerCase() as "pass" | "hold" | "fail";
+      }
     } catch {
       // File doesn't exist — verdict stays null
     }
@@ -246,10 +249,10 @@ export async function execShip(args: string[]): Promise<ShipResult> {
   }
   result.push.branch = currentBranch;
 
-  // Check for dirty state — if dirty, auto-save
+  // Check for dirty state — if dirty, auto-save (tracked files only to avoid staging secrets)
   const status = await git(projectRoot, "status", "--porcelain");
   if (status) {
-    await gitSafe(projectRoot, "add", "-A");
+    await gitSafe(projectRoot, "add", "-u");
     await gitSafe(projectRoot, "commit", "-m", "wip: pre-ship auto-save [prism]");
   }
 
@@ -273,26 +276,30 @@ export async function execShip(args: string[]): Promise<ShipResult> {
     return result;
   }
 
-  // 5. Push
+  // 5. Push (force-with-lease because squash rewrites history)
   try {
-    try {
-      await git(projectRoot, "push", "-u", "origin", currentBranch);
-      result.push = { status: "pushed", branch: currentBranch };
-    } catch {
-      // Rejected — try rebase and push again
-      await git(projectRoot, "fetch", "origin", baseBranch);
+    const hasRemote = await gitSafe(projectRoot, "remote", "get-url", "origin");
+    if (!hasRemote) {
+      result.push = { status: "no_remote", branch: currentBranch };
+    } else {
       try {
-        await git(projectRoot, "rebase", `origin/${baseBranch}`);
-        await git(projectRoot, "push", "-u", "origin", currentBranch);
-        result.push = { status: "pushed_after_rebase", branch: currentBranch };
+        await git(projectRoot, "push", "--force-with-lease", "-u", "origin", currentBranch);
+        result.push = { status: "pushed", branch: currentBranch };
       } catch {
-        await gitSafe(projectRoot, "rebase", "--abort");
-        result.push = { status: "failed", branch: currentBranch };
+        // Rejected even with force-with-lease — fetch base and rebase, then retry
+        await git(projectRoot, "fetch", "origin", baseBranch);
+        try {
+          await git(projectRoot, "rebase", `origin/${baseBranch}`);
+          await git(projectRoot, "push", "--force-with-lease", "-u", "origin", currentBranch);
+          result.push = { status: "pushed_after_rebase", branch: currentBranch };
+        } catch {
+          await gitSafe(projectRoot, "rebase", "--abort");
+          result.push = { status: "failed", branch: currentBranch };
+        }
       }
     }
   } catch {
-    // No remote
-    result.push = { status: "no_remote", branch: currentBranch };
+    result.push = { status: "failed", branch: currentBranch };
   }
 
   // 6. Create PR

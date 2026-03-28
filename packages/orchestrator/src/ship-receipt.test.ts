@@ -2,9 +2,7 @@
  * Ship receipt subprocess tests.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-
-vi.setConfig({ testTimeout: 30_000 });
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFile as execFileCb, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, rm, readFile, access } from "node:fs/promises";

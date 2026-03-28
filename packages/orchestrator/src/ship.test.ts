@@ -5,9 +5,7 @@
  * end-to-end ship behavior including squash, push, PR creation, and tagging.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-
-vi.setConfig({ testTimeout: 30_000 });
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFile as execFileCb, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
@@ -270,21 +268,39 @@ describe("ship", () => {
     expect(parsed.squash.message).toBe("custom: my override message");
   });
 
-  it("auto-saves dirty working tree before shipping", async () => {
+  it("auto-saves dirty tracked files before shipping", async () => {
     await initGitRepo(tmpDir);
     await createFeatureBranch(tmpDir, "feat/dirty");
     await addWipCommit(tmpDir, "committed.ts", "// committed");
 
-    // Leave a dirty file unstaged
-    await writeFile(join(tmpDir, "dirty.ts"), "// not staged", "utf-8");
+    // Modify a tracked file without staging
+    await writeFile(join(tmpDir, "committed.ts"), "// modified after commit", "utf-8");
 
     const { stdout, exitCode } = await runCli([
       "ship", tmpDir, "spec-dirty", "--base", "main",
     ]);
     expect(exitCode).toBe(0);
 
-    // The dirty file should have been included in the squash
+    // The modified tracked file should have been included in the squash
     const files = await git(tmpDir, "diff", "--name-only", "main..HEAD");
-    expect(files).toContain("dirty.ts");
+    expect(files).toContain("committed.ts");
+  });
+
+  it("does not stage untracked files during auto-save (security)", async () => {
+    await initGitRepo(tmpDir);
+    await createFeatureBranch(tmpDir, "feat/untracked");
+    await addWipCommit(tmpDir, "code.ts", "// code");
+
+    // Create an untracked file (simulating .env or credentials)
+    await writeFile(join(tmpDir, "secret.env"), "API_KEY=leaked", "utf-8");
+
+    const { stdout, exitCode } = await runCli([
+      "ship", tmpDir, "spec-untracked", "--base", "main",
+    ]);
+    expect(exitCode).toBe(0);
+
+    // The untracked file should NOT be in the squash commit
+    const files = await git(tmpDir, "diff", "--name-only", "main..HEAD");
+    expect(files).not.toContain("secret.env");
   });
 });

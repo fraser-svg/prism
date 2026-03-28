@@ -8,6 +8,7 @@
  */
 
 import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import type { AbsolutePath, EntityId } from "@prism/core";
 import type { ShipReceipt } from "@prism/core";
@@ -39,7 +40,7 @@ interface ShipReceiptInput {
 // ---------------------------------------------------------------------------
 
 function generateEntityId(): EntityId {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as EntityId;
+  return randomUUID() as EntityId;
 }
 
 function now(): string {

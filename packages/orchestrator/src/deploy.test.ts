@@ -2,9 +2,7 @@
  * Deploy detection subprocess tests.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-
-vi.setConfig({ testTimeout: 30_000 });
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
@@ -161,5 +159,48 @@ describe("deploy-detect", () => {
     expect(exitCode).toBe(1);
     const parsed = parseJson(stdout) as { error: string };
     expect(parsed.error).toMatch(/missing required argument/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deploy-trigger
+// ---------------------------------------------------------------------------
+
+describe("deploy-trigger", () => {
+  it("returns not_triggered for empty directory (no platform)", async () => {
+    const { stdout, exitCode } = await runCli(["deploy-trigger", tmpDir]);
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as { platform: string; deploy_status: string };
+    expect(parsed.platform).toBe("none");
+    expect(parsed.deploy_status).toBe("not_triggered");
+  });
+
+  it("returns cli_not_installed when platform detected but CLI missing", async () => {
+    await writeFile(join(tmpDir, "railway.toml"), "", "utf-8");
+
+    // Railway CLI is almost certainly not installed in test environments
+    const { stdout, exitCode } = await runCli(["deploy-trigger", tmpDir]);
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as { platform: string; deploy_status: string };
+    expect(parsed.platform).toBe("railway");
+    // Either cli_not_installed (no railway CLI) or failed (CLI exists but no project)
+    expect(["cli_not_installed", "failed"]).toContain(parsed.deploy_status);
+  });
+
+  it("returns error when projectRoot is missing", async () => {
+    const { stdout, exitCode } = await runCli(["deploy-trigger"]);
+    expect(exitCode).toBe(1);
+    const parsed = parseJson(stdout) as { error: string };
+    expect(parsed.error).toMatch(/missing required argument/i);
+  });
+
+  it("accepts --health-check flag without crashing", async () => {
+    const { stdout, exitCode } = await runCli(["deploy-trigger", tmpDir, "--health-check"]);
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as { deploy_status: string };
+    expect(parsed.deploy_status).toBe("not_triggered");
   });
 });
