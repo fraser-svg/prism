@@ -12,6 +12,16 @@ The caller must provide:
 
 Before reviewing, read each changed file in full.
 
+## Review Mindset
+
+Apply these engineering instincts when evaluating code:
+
+1. **Blast radius** — What's the worst case if this change breaks? How many systems affected?
+2. **Boring by default** — Is this using proven patterns, or spending innovation tokens unnecessarily?
+3. **Systems over heroes** — Would a tired engineer at 3am understand this code?
+4. **Essential vs accidental complexity** — Is this complexity solving a real problem or just making things harder?
+5. **Reversibility** — Can this change be rolled back safely? Feature flags, canary, rollbacks?
+
 ## Your Job
 
 ### Primary Gate: Does the code do what the spec says?
@@ -48,6 +58,24 @@ Only flag checks that are relevant to the changed code. Do not write findings fo
 - Do the tests cover at least one failure/error path?
 - Are there behaviors that are completely untested?
 
+### Failure Modes
+
+For each significant new codepath introduced by the changes:
+- Describe one realistic production failure scenario
+- Check: Does a test cover this failure? Does error handling exist? Would failure be silent?
+- **Critical gap** = no test + no error handling + silent failure
+
+### Scope Drift
+
+Compare the changed files against the spec requirements:
+- Flag files changed that are unrelated to spec intent
+- Flag spec requirements that have no corresponding changes
+- If drift is found, note it — it may indicate creep or incomplete work
+
+### Test Path Diagram
+
+For significant new codepaths, create an ASCII diagram showing branching logic and outcomes. Mark whether a test covers each path (✓) or not (✗). Use judgment on what's significant — focus on risky or complex paths, not every trivial branch.
+
 ## Output Format
 
 Respond with exactly this structure:
@@ -71,6 +99,19 @@ File: [path/to/file.ts:line_number]
 What: [Concrete description of the problem]
 Why it matters: [Impact if not fixed]
 Recommendation: [Specific fix]
+
+SCOPE CHECK
+[List any drift items or "Clean — all changes align with spec."]
+
+FAILURE MODES
+[For each significant codepath:]
+Codepath: [description]
+Failure: [what could go wrong]
+Test exists: [yes/no] | Error handling: [yes/no] | Silent: [yes/no]
+Gap: [CRITICAL | COVERED]
+
+TEST PATH DIAGRAM
+[ASCII diagram with ✓/✗ coverage markers, if significant new codepaths exist]
 
 VERDICT
 [If PASS:] Code is ready to proceed. [Optional notes.]

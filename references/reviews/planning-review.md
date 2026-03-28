@@ -10,6 +10,18 @@ The caller must provide:
 - **Spec summary:** 2–5 sentences describing what is being built, the requirements, and any explicit constraints
 - **Architecture context:** The Architecture section from PRODUCT.md (tech stack, key patterns, data model, architecture decisions). If PRODUCT.md does not exist, state "no product context available" and proceed without it.
 
+## Step 0: Scope Challenge (run before the review)
+
+Before reviewing the plan itself, challenge its scope:
+
+1. What existing code already partially solves each sub-problem? List it.
+2. What is the minimum set of changes that achieves the stated goal?
+3. **Complexity smell:** If the plan touches 8+ files or introduces 2+ new classes/services, challenge whether all of them are necessary.
+4. Check TODOS.md (if it exists) — are there deferred items that block this plan?
+5. Are structural changes (new abstractions, refactors) and behavioral changes (new features) mixed? They should be separate.
+
+If scope challenge finds issues, include them as P1 findings.
+
 ## Your Job
 
 Work through each check below. For each one, identify findings or confirm it is clear.
@@ -39,6 +51,14 @@ Work through each check below. For each one, identify findings or confirm it is 
 - Is there a stated approach to testing this feature?
 - Can the key behaviors be verified with unit tests, integration tests, or manual steps?
 - Are there untestable parts of the plan that could become quality blind spots?
+
+### 6. Failure Modes
+
+For each new codepath the plan will introduce:
+- List one realistic production failure scenario
+- Does the plan include test coverage for this failure?
+- Does the plan include error handling for this failure?
+- If a failure mode has no planned test AND no planned error handling AND would be silent → flag as P1
 
 ## Output Format
 
