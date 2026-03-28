@@ -17,20 +17,12 @@ Its job is to help users discover the real problem and engineer the real solutio
 - The product thesis is unusually clear.
 - The repo already contains meaningful deterministic infrastructure.
 - Product memory, review prompts, hooks, compiler assets, and supervisor logic already exist.
-- The app prototype shows a differentiated interaction direction.
 
 ### Weak
 
 - The repo does not yet have a formal top-level architecture.
-- Core responsibilities are spread across prompts, scripts, docs, and exploratory UI.
+- Core responsibilities are spread across prompts, scripts, and docs.
 - There is no locked domain model for projects, specs, plans, checkpoints, reviews, or releases.
-- The current app implementation is still prototype-grade, not Prism Core.
-
-### Conflicting
-
-- The visual Forge direction is ahead of the build brain.
-- Some docs still center the skill/app surface, while the new direction centers owned Prism Core.
-- Readiness and provider handling are inconsistent between state, UI, and routes.
 
 ### Missing
 
@@ -40,7 +32,6 @@ Its job is to help users discover the real problem and engineer the real solutio
 - ADR history
 - canonical module boundaries
 - local-first storage and artifact contracts
-- clear separation of prototype UI from core logic
 
 ### Highest-Leverage Move
 
@@ -146,9 +137,6 @@ Initial target boundaries:
   - verification policy
   - review orchestration
   - release gates
-
-- `packages/ui`
-  - shared UI contracts for future desktop shell
 
 ## Storage Principles
 
