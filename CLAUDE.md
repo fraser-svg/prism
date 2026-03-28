@@ -4,11 +4,11 @@
 
 Before implementing any change in this repo, run `/yc-brain` with a description of what you're about to build. Do not begin coding until the YC Brain gives a **BUILD** verdict.
 
-The filter question for every session: **Does this advance the wedge, the demo, or user proof? If the answer is weak, say so before building.**
+The filter question for every session: **Does this help a user produce more with Prism than without it, more easily than without it? If the answer is weak, say so before building.**
 
 ## Priority Stack (current)
 
-1. **Get Patrick through a full Prism session** — user proof = 0/5, critical gap
+1. **Patrick-ready by March 30** — UI polished, workflow smooth, full session completable end-to-end
 2. **Record a demo-ready walkthrough** of the magical workflow (Socratic discovery → spec → build → verification)
 3. **Sharpen the one-liner and YC application narrative**
 

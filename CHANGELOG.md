@@ -17,6 +17,10 @@ All notable changes to Prism are documented here.
 ### Changed
 - **SKILL.md Stage 1 Part A** — full protocol replaces shallow checklist; transition test now requires problem + shape + boundary answers (not just "enough for requirements")
 - **spec-format.md** — updated discovery section to match three-layer protocol
+- **YC Brain strategic upgrade** — Evaluation criteria now embed deeper strategic framework (Prism = product-building OS, not AI wrapper). Gate mode rules rebalanced: BUILD anything that helps users produce more with Prism, UI and workflow polish equally critical alongside user proof. Added anti-pattern checklist to review mode (AI wrapper test, foundation model improvement test).
+- **CLAUDE.md filter question** — Changed from wedge/demo/proof framing to user-outcome framing: "Does this help a user produce more with Prism than without it?"
+- **OVERSIGHT.md** — Renamed "What ChatGPT Is Overseeing" to "What The YC Brain Oversees". Added anti-patterns: AI wrapper, "multiple agents in one app", generates-but-doesn't-verify.
+- **SCORECARD.md** — Updated priority stack and "What Would YC Not Believe Yet?" with OS-vs-wrapper framing.
 
 ## [4.0.4.0] - 2026-03-28
 

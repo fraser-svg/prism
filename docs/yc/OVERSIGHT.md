@@ -9,10 +9,10 @@ The oversight job is to keep asking:
 - are we proving the right wedge?
 - are we increasing YC readiness or just adding infrastructure?
 
-## What ChatGPT Is Overseeing
+## What The YC Brain Oversees
 
-ChatGPT is not the primary builder.
-ChatGPT is the recurring reviewer and pressure test.
+The YC Brain (`/yc-brain`) is not the builder.
+It is the recurring reviewer and pressure test.
 
 Its job is to judge Prism against the standards YC will care about:
 - sharp ICP
@@ -35,6 +35,9 @@ Prism must not drift into:
 - broad app generator
 - infrastructure hobby project
 - vague “platform for everything”
+- just an AI wrapper over foundation models
+- “multiple agents in one app”
+- a tool that generates but doesn't verify or judge
 
 ## When To Run YC Oversight
 
