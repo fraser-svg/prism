@@ -17,7 +17,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # --- Valid event types ---
-VALID_EVENTS="build_start build_complete build_fail worker_complete worker_fail guardian_retry qa_pass qa_fail ship user_intervention stage_skip"
+VALID_EVENTS="build_start build_complete build_fail worker_complete worker_fail guardian_retry qa_pass qa_fail ship user_intervention stage_skip discovery_complete"
 
 # --- Helpers ---
 _sanitize_arg() {

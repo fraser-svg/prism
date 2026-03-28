@@ -12,9 +12,15 @@ export interface PrismProjectPaths {
   evalsDir: AbsolutePath;
   proposalsDir: AbsolutePath;
   releaseStateDir: AbsolutePath;
+  problemsDir: AbsolutePath;
   telemetryFile: AbsolutePath;
   registryFile: AbsolutePath;
   taskGraphFile: AbsolutePath;
+}
+
+export interface ProblemArtifactPaths {
+  problemDir: AbsolutePath;
+  metadataFile: AbsolutePath;
 }
 
 export interface MemoryFileContract {

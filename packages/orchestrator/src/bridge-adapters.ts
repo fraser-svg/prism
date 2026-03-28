@@ -19,6 +19,7 @@ import type {
 import type {
   Spec,
   Plan,
+  ProblemStatement,
   Review,
   ReviewFinding,
   VerificationResult,
@@ -71,6 +72,17 @@ export interface SkillVerificationInput {
   checksRun?: string[];
   failures?: Array<{ check: string; details?: string }>;
   projectId?: string;
+}
+
+export interface SkillProblemInput {
+  projectId?: string;
+  specId?: string | null;
+  originalRequest: string;
+  realProblem: string;
+  targetUser: string;
+  assumptions?: string[];
+  reframed: boolean;
+  reframeDetails?: string | null;
 }
 
 export interface SkillCheckpointInput {
@@ -210,6 +222,26 @@ export function skillVerificationToCore(
     passed: input.passed,
     failures,
     timestamp: ts,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+}
+
+export function skillProblemToCore(
+  input: SkillProblemInput,
+  problemId: EntityId,
+): ProblemStatement {
+  const ts = now();
+  return {
+    id: problemId,
+    projectId: (input.projectId ?? "unknown") as EntityId,
+    specId: (input.specId ?? null) as EntityId | null,
+    originalRequest: input.originalRequest,
+    realProblem: input.realProblem,
+    targetUser: input.targetUser,
+    assumptions: input.assumptions ?? [],
+    reframed: input.reframed,
+    reframeDetails: input.reframeDetails ?? null,
     createdAt: ts,
     updatedAt: ts,
   };

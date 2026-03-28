@@ -9,3 +9,4 @@ export * from "./review-repository";
 export * from "./checkpoint-repository";
 export * from "./verification-repository";
 export * from "./release-state-repository";
+export * from "./problem-repository";
