@@ -3,6 +3,7 @@ import type { EntityId } from "@prism/core";
 import {
   skillSpecToCore,
   skillPlanToCore,
+  skillProblemToCore,
   skillReviewToCore,
   skillVerificationToCore,
   skillCheckpointToCore,
@@ -468,6 +469,10 @@ describe("skillCheckpointToCore", () => {
       expect(skillCheckpointToCore({ stage: 4.5 }).phase).toBe("verify");
     });
 
+    it("maps stage=4.6 to 'verify'", () => {
+      expect(skillCheckpointToCore({ stage: 4.6 }).phase).toBe("verify");
+    });
+
     it("maps stage=5 to 'release'", () => {
       expect(skillCheckpointToCore({ stage: 5 }).phase).toBe("release");
     });
@@ -492,5 +497,73 @@ describe("skillCheckpointToCore", () => {
       // When phase is provided directly, it takes precedence over stage
       expect(skillCheckpointToCore({ phase: "release", stage: 1 }).phase).toBe("release");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// skillProblemToCore
+// ---------------------------------------------------------------------------
+
+describe("skillProblemToCore", () => {
+  const problemId = "problem-test-1" as EntityId;
+
+  it("maps all fields from valid full input", () => {
+    const result = skillProblemToCore(
+      {
+        projectId: "proj-1",
+        specId: "spec-1",
+        originalRequest: "Build me an X crawler",
+        realProblem: "Monitor brand mentions on X",
+        targetUser: "Marketing team",
+        assumptions: ["X API access", "Real-time not required"],
+        reframed: true,
+        reframeDetails: "Reframed from crawler to API monitoring",
+      },
+      problemId,
+    );
+
+    expect(result.id).toBe(problemId);
+    expect(result.projectId).toBe("proj-1");
+    expect(result.specId).toBe("spec-1");
+    expect(result.originalRequest).toBe("Build me an X crawler");
+    expect(result.realProblem).toBe("Monitor brand mentions on X");
+    expect(result.targetUser).toBe("Marketing team");
+    expect(result.assumptions).toEqual(["X API access", "Real-time not required"]);
+    expect(result.reframed).toBe(true);
+    expect(result.reframeDetails).toBe("Reframed from crawler to API monitoring");
+    expect(isISOString(result.createdAt)).toBe(true);
+    expect(isISOString(result.updatedAt)).toBe(true);
+  });
+
+  it("defaults optional fields correctly", () => {
+    const result = skillProblemToCore(
+      {
+        originalRequest: "Add logout",
+        realProblem: "Users need to log out",
+        targetUser: "All users",
+        reframed: false,
+      },
+      problemId,
+    );
+
+    expect(result.projectId).toBe("unknown");
+    expect(result.specId).toBeNull();
+    expect(result.assumptions).toEqual([]);
+    expect(result.reframeDetails).toBeNull();
+  });
+
+  it("handles null specId explicitly", () => {
+    const result = skillProblemToCore(
+      {
+        specId: null,
+        originalRequest: "test",
+        realProblem: "test",
+        targetUser: "user",
+        reframed: false,
+      },
+      problemId,
+    );
+
+    expect(result.specId).toBeNull();
   });
 });

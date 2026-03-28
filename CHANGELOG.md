@@ -4,13 +4,36 @@ All notable changes to Prism are documented here.
 
 ## [4.0.5.0] - 2026-03-28
 
+### Added
+- **Three-layer discovery protocol** — replaces 4-question checklist with adaptive Problem → Shape → Mirror layers. Depth calibrates to request complexity (Quick/Standard/Deep) and returning context.
+- **Skip-discovery override** — respects users who say "just build it" when they know what they want
+- **Assumption surfacing and reframe** — names embedded assumptions, reframes when request doesn't match the real problem
+- **ProblemStatement entity** — typed core entity capturing original request, real problem, target user, assumptions, and reframe details
+- **Problem repository** — file-based artifact storage following CompositeArtifactRepository pattern
+- **write-problem CLI command** — bridge CLI entry point for SKILL.md to persist discovery artifacts
+- **discovery_complete telemetry event** — records depth tier and reframe status after discovery
+- **Discovery eval scenarios** — 5 manual eval scenarios for dogfood testing (Quick through Deep + returning context)
+
 ### Changed
+- **SKILL.md Stage 1 Part A** — full protocol replaces shallow checklist; transition test now requires problem + shape + boundary answers (not just "enough for requirements")
+- **spec-format.md** — updated discovery section to match three-layer protocol
 - **YC Brain strategic upgrade** — Evaluation criteria now embed deeper strategic framework (Prism = product-building OS, not AI wrapper). Gate mode rules rebalanced: BUILD anything that helps users produce more with Prism, UI and workflow polish equally critical alongside user proof. Added anti-pattern checklist to review mode (AI wrapper test, foundation model improvement test).
 - **CLAUDE.md filter question** — Changed from wedge/demo/proof framing to user-outcome framing: "Does this help a user produce more with Prism than without it?"
 - **OVERSIGHT.md** — Renamed "What ChatGPT Is Overseeing" to "What The YC Brain Oversees". Added anti-patterns: AI wrapper, "multiple agents in one app", generates-but-doesn't-verify.
 - **SCORECARD.md** — Updated priority stack and "What Would YC Not Believe Yet?" with OS-vs-wrapper framing.
 
 ## [4.0.4.0] - 2026-03-28
+
+### Added
+- **Stage 4.6: Codex Second Opinion** — mandatory multi-model review step when Codex CLI is available. Graceful degradation when not installed. Once-per-cycle guard prevents infinite loops.
+- **Engineering review: cognitive patterns** — Review Mindset section with 5 engineering instincts (blast radius, boring by default, systems over heroes, essential vs accidental complexity, reversibility)
+- **Engineering review: failure modes** — new section requiring reviewers to identify production failure scenarios for each significant codepath
+- **Engineering review: scope drift** — new section comparing changed files against spec requirements
+- **Engineering review: test path diagrams** — ASCII diagrams with coverage markers for significant new codepaths
+- **Planning review: Step 0 scope challenge** — pre-review scope validation (existing code reuse, minimum changes, complexity smell, TODOS cross-ref, structural vs behavioral separation)
+- **Planning review: failure modes** — section requiring failure scenario analysis for each new codepath
+- **Ship readiness: Gate 9** — second opinion gate (GREEN/YELLOW/RED based on Codex availability and verdict)
+- **Ship readiness: review summary** — consolidated review verdict listing in output format
 
 ### Added — Performance Audit (10 fixes)
 - **Batch bridge CLI** — `batch` command executes multiple bridge operations in a single Node.js process, eliminating per-command cold start tax. Two-layer refactor: pure `exec*` functions (return data, throw on error) + `cmd*` wrappers (call `process.exit`). Batch calls the pure layer directly with per-command error isolation.
@@ -22,6 +45,11 @@ All notable changes to Prism are documented here.
 - **Timeout tests** — 4 new tests covering normal completion, SIGTERM, SIGKILL escalation, and error format.
 
 ### Changed
+- Stage 4 (QA) routing: non-UI products now flow to Stage 4.6 instead of Stage 5
+- Stage 4.5 (Design Review) routing: already-ran-this-cycle skip now routes to Stage 4.6
+- `ReviewType` union: added `"codex"` value
+- `REVIEW_TYPES` validation array: added `"codex"` for `record-review` CLI acceptance
+- `mapSkillStageToPhase()`: stage 4.6 now correctly maps to `"verify"` phase
 - **Parallel gate evaluation** — `gate-evaluator.ts` uses `Promise.all` for independent spec/checkpoint/review reads instead of sequential awaits
 - **Parallel resume reads** — `resume-engine.ts` parallelizes plan/spec/checkpoint reads with `Promise.all`
 - **Consolidated scan script** — `prism-scan.sh` replaces N×jq loop with bash string concatenation; consolidates 3 registry reads into single jq call

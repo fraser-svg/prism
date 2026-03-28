@@ -19,6 +19,7 @@ import type {
 import type {
   Spec,
   Plan,
+  ProblemStatement,
   Review,
   ReviewFinding,
   VerificationResult,
@@ -71,6 +72,17 @@ export interface SkillVerificationInput {
   checksRun?: string[];
   failures?: Array<{ check: string; details?: string }>;
   projectId?: string;
+}
+
+export interface SkillProblemInput {
+  projectId?: string;
+  specId?: string | null;
+  originalRequest: string;
+  realProblem: string;
+  targetUser: string;
+  assumptions?: string[];
+  reframed: boolean;
+  reframeDetails?: string | null;
 }
 
 export interface SkillCheckpointInput {
@@ -215,6 +227,26 @@ export function skillVerificationToCore(
   };
 }
 
+export function skillProblemToCore(
+  input: SkillProblemInput,
+  problemId: EntityId,
+): ProblemStatement {
+  const ts = now();
+  return {
+    id: problemId,
+    projectId: (input.projectId ?? "unknown") as EntityId,
+    specId: (input.specId ?? null) as EntityId | null,
+    originalRequest: input.originalRequest,
+    realProblem: input.realProblem,
+    targetUser: input.targetUser,
+    assumptions: input.assumptions ?? [],
+    reframed: input.reframed,
+    reframeDetails: input.reframeDetails ?? null,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+}
+
 export function skillCheckpointToCore(
   input: SkillCheckpointInput,
 ): Checkpoint {
@@ -249,5 +281,6 @@ function mapSkillStageToPhase(stage?: number | string): WorkflowPhase {
   if (n <= 3) return "execute";
   if (n <= 4) return "verify";
   if (n <= 4.5) return "verify"; // design review maps to verify phase
+  if (n <= 4.6) return "verify"; // codex second opinion maps to verify phase
   return "release";
 }

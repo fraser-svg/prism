@@ -14,6 +14,7 @@ import {
   createSpecRepository,
   createPlanRepository,
   createCheckpointRepository,
+  createProblemRepository,
   projectPaths,
   planPaths,
 } from "@prism/memory";
@@ -25,12 +26,14 @@ import { recordReview, recordVerification } from "./services";
 import {
   skillSpecToCore,
   skillPlanToCore,
+  skillProblemToCore,
   skillReviewToCore,
   skillVerificationToCore,
   skillCheckpointToCore,
   deriveProjectId,
   type SkillSpecInput,
   type SkillPlanInput,
+  type SkillProblemInput,
   type SkillReviewInput,
   type SkillVerificationInput,
   type SkillCheckpointInput,
@@ -91,7 +94,7 @@ function isWorkflowPhase(s: string): s is WorkflowPhase {
   return (WORKFLOW_PHASES as readonly string[]).includes(s);
 }
 
-const REVIEW_TYPES = ["planning", "engineering", "qa", "design", "ship_readiness"] as const;
+const REVIEW_TYPES = ["planning", "engineering", "qa", "design", "ship_readiness", "codex"] as const;
 function isReviewType(s: string): s is ReviewType {
   return (REVIEW_TYPES as readonly string[]).includes(s);
 }
@@ -243,6 +246,18 @@ async function execCheckpoint(args: string[], stdinData?: unknown): Promise<unkn
   return { written: true, phase: checkpoint.phase, id: checkpoint.id };
 }
 
+async function cmdWriteProblem(args: string[]): Promise<void> {
+  const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
+  const problemId = requireArg(args, 1, "problemId") as EntityId;
+  const input = enrichProjectId(await readStdinJson<SkillProblemInput>(), projectRoot);
+
+  const problem = skillProblemToCore(input, problemId);
+  const repo = createProblemRepository(projectRoot);
+  await repo.writeMetadata(problemId, problem);
+
+  output({ written: true, problemId, path: `${projectPaths(projectRoot).problemsDir}/${problemId}` });
+}
+
 async function execResume(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const projectId = (args[1] ?? "default") as EntityId;
@@ -377,6 +392,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   "write-spec": cmdWriteSpec,
   "write-plan": cmdWritePlan,
   "write-task-graph": cmdWriteTaskGraph,
+  "write-problem": cmdWriteProblem,
   "record-review": cmdRecordReview,
   "record-verification": cmdRecordVerification,
   "check-reviews": cmdCheckReviews,

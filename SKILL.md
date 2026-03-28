@@ -326,11 +326,68 @@ via `bash "$SKILL_DIR/scripts/prism-state.sh" status "$PROJECT_ROOT"`. Five path
 - **Split memory + small change/bugfix:** Read silently. No ceremony.
 - **Split memory + different product:** Ask: replace or new directory?
 
-**Part A — Sharpening questions (2-4, in main conversation):**
-- What exactly are you building?
-- What does done look like?
-- What are we NOT building?
-- Any constraints? (only if relevant)
+**Part A — Discovery (in main conversation):**
+
+Calibrate depth to the request. Never ask more questions than the request warrants.
+
+**Depth signals:**
+- *Request complexity:* Quick (1-2 Qs) for clear scoped tasks. Standard (3-4 Qs)
+  for new features. Deep (5-8 Qs) for new products or ambiguous problems.
+- *Returning context:* When PRODUCT.md exists and the request maps to a "What's Next"
+  phase, go lighter: "This looks like Phase N from your roadmap — [description].
+  Still the plan?" One confirming question, then proceed.
+
+The Operator does not announce the depth tier. Adjusts naturally.
+
+**Skip-discovery override:** If the user says "just build it," "I know what I want,"
+or similar directive language AND the request is specific enough to spec directly,
+acknowledge and move to Part B. Write the problem statement artifact with what you
+have. Do not force discovery on a user who has already done their own thinking.
+
+Three layers, moved through adaptively (not a fixed sequence):
+
+**Layer 1 — Problem:** Understand why this matters before accepting the proposed
+solution. Ask what situation created this need, what changes when it works, what
+they do today instead (pick 1-2).
+
+*Assumption surfacing (Standard/Deep):* After the user responds, name 2-3 assumptions
+embedded in the request: "I'm hearing a few assumptions: (a) [assumption],
+(b) [assumption]. Are those right?"
+
+*Reframe:* If there is a gap between the request and the real problem: "It sounds
+like the real goal is [Y]. [X] is one way, but [Z] might fit better because [reason].
+What do you think?"
+
+*Escape hatch:* If the problem is self-evident ("add a logout button"), state it back
+in one sentence and move on. Skip assumption surfacing.
+
+*Completion signal:* You can articulate, in one sentence, the problem being solved
+and for whom. Not the feature. The problem.
+
+**Layer 2 — Shape:** Define what we are building, informed by the problem. Ask for
+the simplest version that solves the problem, what the user walkthrough looks like,
+what this should NOT do (only if scope is ambiguous), any constraints. Skip questions
+the user already answered.
+
+*"What if" probe (Deep only):* "What if [key assumption from Layer 1] were wrong?
+Would you still build this the same way?"
+
+*Completion signal:* You can describe what the user will see, do, and experience
+when this works.
+
+**Layer 3 — Mirror:** Before spec generation, reflect back what you heard in 2-4
+sentences: the problem, the solution shape, the key boundary. "Does that sound
+right, or am I missing something?" If the user corrects: loop to the relevant layer
+(problem correction -> Layer 1, scope correction -> Layer 2), then mirror again.
+
+**Transition test:** Proceed to Part B when you can answer: (1) What problem are
+we solving, and for whom? (2) What will the user see and do when this works?
+(3) What are we explicitly not doing? If any answer is unclear, keep asking.
+
+Do NOT ask engineering questions (tech stack, architecture, patterns).
+
+**Discovery telemetry:** After Layer 3 confirmation:
+`bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" discovery_complete '{"change_name":"{change}","depth":"{quick|standard|deep}","reframed":{true|false}}'`
 
 **Part B — Spec generation (via subagent, hidden):**
 
@@ -341,6 +398,18 @@ Initialize registry for fresh builds (reset stale state first):
 bash "$SKILL_DIR/scripts/prism-registry.sh" reset "$PROJECT_ROOT" "_"
 bash "$SKILL_DIR/scripts/prism-registry.sh" init "$PROJECT_ROOT" "{feature-name}"
 ```
+
+**Problem statement (via bridge CLI, after registry init):**
+
+Write the problem statement to typed core via the bridge CLI. Advisory — failure
+does not block the workflow.
+
+`echo '{"projectId":"{project-id}","specId":null,"originalRequest":"{user request}","realProblem":"{1-2 sentences}","targetUser":"{who}","assumptions":["{a1}","{a2}"],"reframed":{true|false},"reframeDetails":{reframe-details-or-null}}' | npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" "$SKILL_DIR/packages/orchestrator/src/cli.ts" write-problem "$PROJECT_ROOT" "{feature-name}" 2>/dev/null || true`
+
+`{reframe-details-or-null}` is either `"the reframe explanation"` (quoted string) or `null` (bare JSON null). Do not emit the string `"null"` — use unquoted `null` when there are no reframe details.
+
+For Quick-depth requests where the escape hatch fired, still write the artifact
+(assumptions will be an empty array).
 
 Agent tool generates the spec following [references/spec-format.md](references/spec-format.md):
 1. `openspec new change "{feature-name}"` — if openspec CLI is not installed, fall back to:
@@ -557,7 +626,7 @@ If missing: skip directly to native QA fallback.
 - **Skip:** User can say "skip QA".
 - **Fallback:** If Skill tool errors OR skill is missing, run Prism-native QA review via
   Agent tool using the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
-- **Passed:** UI product → Stage 4.5. Otherwise → Stage 5.
+- **Passed:** UI product → Stage 4.5. Otherwise → Stage 4.6.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
 
 Auto-save after fixes: `"QA fixes for {change}"`
@@ -586,13 +655,59 @@ If missing: skip silently.
 - **Skip/graceful degradation:** Same as 2.5.
 - **Issues found (first time):** Fix → Build → QA. **Design review runs at most once
   per build cycle** to prevent infinite loops.
-- **Already ran this cycle:** Skip → Stage 5.
+- **Already ran this cycle:** Skip → Stage 4.6.
 
 **Bridge (after design review):** Record design review verdict.
 ```bash
 echo '{"verdict":"pass","summary":"Design review passed"}' | \
   $BRIDGE record-review "$PROJECT_ROOT" "{change}" design 2>/dev/null || true
 ```
+
+### Stage 4.6: Second Opinion (Codex)
+
+Tell user: "Reviews look good — getting an independent second opinion from a different AI."
+
+Check: `which codex 2>/dev/null`
+
+If codex CLI found:
+  Invoke: `Skill tool: skill="codex", args="review"`
+
+  This runs GStack's /codex skill which:
+  - Runs `codex review --base <base>` with xhigh reasoning
+  - Produces pass/fail gate with findings
+  - If /review was already run, produces cross-model comparison
+
+  If Codex finds P1 issues Claude missed → Stage 3 for fixes (first cycle only).
+  If Codex passes → Stage 5.
+  If Codex errors or times out → record verdict as "hold", tell user "Codex was
+  unavailable — proceeding with single-model review." → Stage 5.
+
+If codex CLI NOT found:
+  Tell user: "I'd normally get a second AI opinion on this code, but Codex CLI isn't
+  installed. You can install it with `npm install -g @openai/codex` for future builds.
+  Proceeding to ship."
+  → Stage 5.
+
+- **No skip option.** Mandatory when Codex CLI is available. Advisory when not installed
+  (graceful degradation — Prism works without Codex, but is better with it).
+- **Once-per-cycle guard:** Codex review runs at most once per build cycle to prevent
+  infinite loops. If already ran this cycle, skip → Stage 5.
+- **Fallback:** Graceful degradation only. No Prism-native fallback.
+
+Auto-save after Codex fixes: `"Codex-flagged fixes for {change}"`
+
+**Bridge (after Codex review):** Record the ACTUAL verdict from the /codex output.
+```bash
+echo '{"verdict":"{actual_verdict}","summary":"{actual_summary}"}' | \
+  npx tsx --tsconfig "$SKILL_DIR/packages/orchestrator/tsconfig.json" \
+  "$SKILL_DIR/packages/orchestrator/src/cli.ts" record-review \
+  "$PROJECT_ROOT" "{change}" codex 2>/dev/null || true
+```
+
+Where `{actual_verdict}` is derived from the /codex skill output:
+- If GATE: PASS → verdict = "pass"
+- If GATE: FAIL → verdict = "fail"
+- If Codex errored/timed out → verdict = "hold"
 
 ### Stage 5: Ship
 

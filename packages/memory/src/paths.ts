@@ -4,6 +4,7 @@ import type {
   CheckpointArtifactPaths,
   PlanArtifactPaths,
   PrismProjectPaths,
+  ProblemArtifactPaths,
   ProjectArtifactLocator,
   ReleaseStateArtifactPaths,
   ReviewArtifactPaths,
@@ -45,6 +46,7 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     evalsDir: joinPath(prismDir, "evals"),
     proposalsDir: joinPath(prismDir, "proposals"),
     releaseStateDir: joinPath(prismDir, "release-state"),
+    problemsDir: joinPath(prismDir, "problems"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),
@@ -127,6 +129,20 @@ export function releaseStatePaths(
   return {
     releaseStateDir,
     stateFile: joinPath(releaseStateDir, "state.json"),
+  };
+}
+
+export function problemPaths(
+  projectRoot: AbsolutePath,
+  problemId: EntityId
+): ProblemArtifactPaths {
+  const problemDir = joinPath(
+    projectPaths(projectRoot).problemsDir,
+    validateEntityId(problemId)
+  );
+  return {
+    problemDir,
+    metadataFile: joinPath(problemDir, "metadata.json"),
   };
 }
 
