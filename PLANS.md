@@ -208,10 +208,11 @@ Before major implementation:
 - create or update a spec/plan artifact
 - note architectural impact
 - define verification expectations
-- decide whether the upcoming work changes Prism's YC readiness profile
+- run `/yc-brain` before starting implementation — if the verdict is DEFER or STOP, the work goes to TODOS.md, not the current sprint
 
 After major implementation:
 - run verification
 - update memory/planning artifacts
 - record architecture decisions if they changed
-- run the YC oversight review at milestone boundaries and after major strategic changes
+- run `/yc-brain review` after completing any milestone for a full YC readiness audit
+- run `/yc-brain retro` after individual sessions to update the scorecard
