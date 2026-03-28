@@ -62,19 +62,20 @@ fi
 MEMORY_DIR=".prism/memory"
 MEMORY_FILES="product.md architecture.md roadmap.md state.md decisions.md"
 MEMORY_MODEL="none"
-MEMORY_FILES_FOUND="[]"
+MEMORY_FILES_FOUND="["
 MEMORY_FILE_COUNT=0
+_mf_first=true
 
 if [ -d "$MEMORY_DIR" ]; then
   for mf in $MEMORY_FILES; do
     if [ -f "$MEMORY_DIR/$mf" ]; then
       MEMORY_FILE_COUNT=$((MEMORY_FILE_COUNT + 1))
-      if [ "$HAS_JQ" = true ]; then
-        MEMORY_FILES_FOUND=$(printf '%s' "$MEMORY_FILES_FOUND" | jq --arg f "$mf" '. += [$f]')
-      fi
+      [ "$_mf_first" = true ] && _mf_first=false || MEMORY_FILES_FOUND="${MEMORY_FILES_FOUND},"
+      MEMORY_FILES_FOUND="${MEMORY_FILES_FOUND}\"${mf}\""
     fi
   done
 fi
+MEMORY_FILES_FOUND="${MEMORY_FILES_FOUND}]"
 
 if [ "$MEMORY_FILE_COUNT" -gt 0 ]; then
   MEMORY_MODEL="split"
@@ -120,8 +121,10 @@ REGISTRY_WORKERS=0
 if [ -f ".prism/registry.json" ] && [ "$HAS_JQ" = true ]; then
   if jq empty .prism/registry.json 2>/dev/null; then
     REGISTRY_STATUS="found"
-    REGISTRY_STAGE=$(jq -r '.change.stage // "unknown"' .prism/registry.json)
-    REGISTRY_WORKERS=$(jq '.workers | length' .prism/registry.json 2>/dev/null || echo "0")
+    # Single jq call extracts all 3 fields
+    _reg_data=$(jq -r '"\(.change.stage // "unknown") \(.workers | length)"' .prism/registry.json 2>/dev/null || echo "unknown 0")
+    REGISTRY_STAGE=$(echo "$_reg_data" | cut -d' ' -f1)
+    REGISTRY_WORKERS=$(echo "$_reg_data" | cut -d' ' -f2)
   else
     REGISTRY_STATUS="corrupted"
   fi

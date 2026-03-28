@@ -150,34 +150,37 @@ async function derivePhaseFromArtifacts(
     }
   };
 
+  // Parallel check: do plans and specs directories have entries?
+  const [hasPlan, hasSpec] = await Promise.all([
+    hasEntries(paths.plansDir),
+    hasEntries(paths.specsDir),
+  ]);
+
   // Check from highest phase to lowest
   // Plans exist → at least "plan" phase
-  // Specs exist → at least "spec" phase
-  const hasPlan = await hasEntries(paths.plansDir);
   if (hasPlan) {
     const planRepo = createPlanRepository(projectRoot);
     const planIds = await planRepo.list();
     if (planIds.length > 0) {
-      // Find the spec ID from the most recent plan
-      for (const planId of planIds) {
-        const plan = await planRepo.readMetadata(planId);
-        if (plan?.specId) {
-          return { phase: "execute", activeSpecId: plan.specId as EntityId };
-        }
+      // Parallel metadata reads instead of sequential loop
+      const plans = await Promise.all(planIds.map((id) => planRepo.readMetadata(id)));
+      const withSpec = plans.find((p) => p?.specId);
+      if (withSpec) {
+        return { phase: "execute", activeSpecId: withSpec.specId as EntityId };
       }
       return { phase: "execute", activeSpecId: null };
     }
   }
 
-  const hasSpec = await hasEntries(paths.specsDir);
+  // Specs exist → at least "spec" phase
   if (hasSpec) {
     const specRepo = createSpecRepository(projectRoot);
     const specIds = await specRepo.list();
-    for (const id of specIds) {
-      const spec = await specRepo.readMetadata(id);
-      if (spec?.status === "approved") {
-        return { phase: "plan", activeSpecId: id };
-      }
+    // Parallel metadata reads instead of sequential loop
+    const specs = await Promise.all(specIds.map((id) => specRepo.readMetadata(id)));
+    const approved = specs.findIndex((s) => s?.status === "approved");
+    if (approved !== -1) {
+      return { phase: "plan", activeSpecId: specIds[approved]! };
     }
     // Draft spec found — return the first one
     if (specIds.length > 0) {

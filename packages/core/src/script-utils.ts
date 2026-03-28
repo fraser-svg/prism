@@ -43,7 +43,8 @@ export async function parseScriptJson<T>(stdout: string): Promise<ScriptExecutio
 export async function execScriptWithJsonInput(
   script: AbsolutePath,
   args: string[],
-  payload: unknown
+  payload: unknown,
+  timeoutMs = 30_000,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(script, args, {
@@ -52,6 +53,18 @@ export async function execScriptWithJsonInput(
 
     let stdout = "";
     let stderr = "";
+    let killed = false;
+
+    const timer = setTimeout(() => {
+      killed = true;
+      console.error(`[prism] timeout: ${script} after ${timeoutMs}ms — sending SIGTERM`);
+      child.kill("SIGTERM");
+      // Escalate to SIGKILL after 5s grace period
+      setTimeout(() => {
+        try { child.kill("SIGKILL"); } catch { /* already dead */ }
+      }, 5_000);
+      reject(new Error(`Script timed out after ${timeoutMs}ms: ${script}`));
+    }, timeoutMs);
 
     child.stdout.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
@@ -61,8 +74,13 @@ export async function execScriptWithJsonInput(
       stderr += chunk.toString();
     });
 
-    child.on("error", reject);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
     child.on("close", (code) => {
+      clearTimeout(timer);
+      if (killed) return; // already rejected by timeout
       if (code === 0) {
         resolve(stdout);
         return;

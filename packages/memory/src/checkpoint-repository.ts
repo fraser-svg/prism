@@ -46,24 +46,45 @@ export class CheckpointRepository {
     const latest = await this.readLatest();
     if (latest?.activeSpecId === specId) return latest;
 
-    // Scan history for the most recent checkpoint matching this specId
+    // Read history directory once and use for both fast and slow paths
+    let historyFiles: string[];
     try {
-      const files = await readdir(this.paths.historyDir);
-      const jsonFiles = files.filter((f) => f.endsWith(".json")).sort().reverse();
-      for (const file of jsonFiles) {
-        try {
-          const content = await readFile(
-            `${this.paths.historyDir}/${file}`,
-            "utf-8",
-          );
-          const checkpoint = JSON.parse(content) as Checkpoint;
-          if (checkpoint.activeSpecId === specId) return checkpoint;
-        } catch {
-          continue;
-        }
-      }
+      historyFiles = await readdir(this.paths.historyDir);
     } catch {
       // History dir may not exist
+      return null;
+    }
+
+    // Fast path: indexed files with specId prefix
+    const indexed = historyFiles
+      .filter((f) => f.startsWith(`${specId}--`) && f.endsWith(".json"))
+      .sort()
+      .reverse();
+    for (const file of indexed) {
+      try {
+        const content = await readFile(
+          `${this.paths.historyDir}/${file}`,
+          "utf-8",
+        );
+        return JSON.parse(content) as Checkpoint;
+      } catch {
+        continue; // Corrupted file — try next most recent
+      }
+    }
+
+    // Slow fallback: scan non-indexed files (backward compat with pre-index checkpoints)
+    const jsonFiles = historyFiles.filter((f) => f.endsWith(".json") && !f.includes("--")).sort().reverse();
+    for (const file of jsonFiles) {
+      try {
+        const content = await readFile(
+          `${this.paths.historyDir}/${file}`,
+          "utf-8",
+        );
+        const checkpoint = JSON.parse(content) as Checkpoint;
+        if (checkpoint.activeSpecId === specId) return checkpoint;
+      } catch {
+        continue;
+      }
     }
 
     return null;
@@ -76,16 +97,25 @@ export class CheckpointRepository {
     const hasExisting = await this.exists();
     if (hasExisting) {
       await mkdir(this.paths.historyDir, { recursive: true });
+
+      // Read EXISTING checkpoint's specId for indexed filename (not the new one)
+      let existingSpecId = "no-spec";
+      try {
+        const existingContent = await readFile(this.paths.latestJson, "utf-8");
+        const parsed = JSON.parse(existingContent) as Checkpoint;
+        existingSpecId = parsed.activeSpecId ?? "no-spec";
+      } catch { /* first checkpoint or corrupted — use fallback prefix */ }
+
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       await copyFile(
         this.paths.latestJson,
-        `${this.paths.historyDir}/${timestamp}.json` as AbsolutePath
+        `${this.paths.historyDir}/${existingSpecId}--${timestamp}.json` as AbsolutePath
       );
       // Markdown archive is best-effort (may not exist)
       try {
         await copyFile(
           this.paths.latestMarkdown,
-          `${this.paths.historyDir}/${timestamp}.md` as AbsolutePath
+          `${this.paths.historyDir}/${existingSpecId}--${timestamp}.md` as AbsolutePath
         );
       } catch {
         // Markdown file may not exist — that's fine

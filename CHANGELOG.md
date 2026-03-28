@@ -15,12 +15,29 @@ All notable changes to Prism are documented here.
 - **Ship readiness: Gate 9** — second opinion gate (GREEN/YELLOW/RED based on Codex availability and verdict)
 - **Ship readiness: review summary** — consolidated review verdict listing in output format
 
+### Added — Performance Audit (10 fixes)
+- **Batch bridge CLI** — `batch` command executes multiple bridge operations in a single Node.js process, eliminating per-command cold start tax. Two-layer refactor: pure `exec*` functions (return data, throw on error) + `cmd*` wrappers (call `process.exit`). Batch calls the pure layer directly with per-command error isolation.
+- **Checkpoint filename indexing** — History files now use `{specId}--{timestamp}.json` format. `readLatestForSpec()` filters by prefix for O(1) lookup instead of scanning all files. Backward-compatible: falls back to full scan for pre-index files.
+- **Script timeout with SIGTERM→SIGKILL** — `execScriptWithJsonInput` accepts `timeoutMs` (default 30s). Sends SIGTERM on timeout, escalates to SIGKILL after 5s grace period.
+- **Scan parity test** — `scripts/test-scan-parity.sh` with 17 checks validating consolidated jq output matches original behavior.
+- **Checkpoint repository tests** — 8 new tests covering indexed write/read, corruption tolerance, fallback, and edge cases.
+- **Batch CLI tests** — 4 new tests covering success, partial failure, unknown commands, and empty arrays.
+- **Timeout tests** — 4 new tests covering normal completion, SIGTERM, SIGKILL escalation, and error format.
+
 ### Changed
 - Stage 4 (QA) routing: non-UI products now flow to Stage 4.6 instead of Stage 5
 - Stage 4.5 (Design Review) routing: already-ran-this-cycle skip now routes to Stage 4.6
 - `ReviewType` union: added `"codex"` value
 - `REVIEW_TYPES` validation array: added `"codex"` for `record-review` CLI acceptance
 - `mapSkillStageToPhase()`: stage 4.6 now correctly maps to `"verify"` phase
+- **Parallel gate evaluation** — `gate-evaluator.ts` uses `Promise.all` for independent spec/checkpoint/review reads instead of sequential awaits
+- **Parallel resume reads** — `resume-engine.ts` parallelizes plan/spec/checkpoint reads with `Promise.all`
+- **Consolidated scan script** — `prism-scan.sh` replaces N×jq loop with bash string concatenation; consolidates 3 registry reads into single jq call
+- **requireArg throws instead of fail()** — Prevents batch process from being killed by a single malformed sub-command
+
+### Fixed
+- Checkpoint `readLatestForSpec` corruption tolerance — iterates all indexed files with per-file try/catch instead of failing on first corrupt file
+- Duplicate `readdir` call eliminated — fast path and slow fallback now share a single directory read
 
 ## [4.0.3.2] - 2026-03-28
 
