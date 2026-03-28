@@ -11,6 +11,7 @@ The caller must provide:
   - A URL (e.g., `http://localhost:3000`) — preferred when a dev server is running
   - File paths to test (e.g., `src/`, `tests/`) — used when no server is available
 - **Test type:** `url` (browser/HTTP testing) or `file` (static/code inspection)
+- **Known failure patterns (optional):** A list of failure patterns from the skill catalogue for libraries/patterns used in this build. If provided, test these FIRST as priority checks. Example: `"NextAuth.js: known CSRF token rotation issue after session timeout"` → specifically test session timeout behavior before other checks.
 
 If the test target is a URL: attempt HTTP requests or describe browser interaction steps. If the test target is files: read the files and inspect them directly — check logic, data flows, and test files.
 

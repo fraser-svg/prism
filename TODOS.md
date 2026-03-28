@@ -17,15 +17,9 @@ M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` throug
 
 **How:** `git worktree add .prism/worktrees/{name} -b prism/worker/{name}` per worker, merge back with conflict reporting. Workers would run in isolated directories.
 
-## Prompt Learning (deferred from v3)
+## ~~Prompt Learning (deferred from v3)~~ — SUPERSEDED by Continuous Intelligence Layer
 
-**What:** `prism-learn.sh` — store successful prompt patterns and reuse them in future builds.
-
-**Why:** After 3+ successes with the same task type, mark the prompt pattern as "proven." Deferred from v3 because pattern reuse mechanism needs more design (staleness detection, selection logic).
-
-**When:** After v3 is stable and we have data on which prompt patterns succeed vs fail.
-
-**How:** Read/write patterns section of `.prism/registry.json`. Feed proven patterns into worker prompt generation.
+Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue records proven libraries, patterns, and approaches with confidence labels (emerging/established/proven). It's broader than prompt learning — it covers packages, skills, and implementation patterns, not just prompts.
 
 ## Multi-Factor Complexity Heuristic (v3.1)
 
@@ -160,3 +154,15 @@ M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` throug
 **How:** In ship.ts, before generating PR body, check for template file. If found, parse template sections and inject Prism content into matching sections (or append if no match). Fallback to current behavior if no template exists.
 
 **Depends on:** Ship Stage v2.0 (rich PR body generation).
+
+## Cross-User Catalogue Sharing (deferred from Continuous Intelligence Layer)
+
+**What:** Export/import skill catalogue entries between workspaces. Community seed catalogue with battle-tested packages for common domains (auth, payments, file upload, etc.).
+
+**Why:** Accepted as scope expansion during CEO review but deferred. Build the catalogue first, prove it works in single-user mode, then add sharing.
+
+**When:** After the Skill Catalogue has 50+ proven entries from real builds.
+
+**How:** `prism-catalogue.sh export` → JSON file. `prism-catalogue.sh import` with dedup + conflict resolution. Community seed published as a starter catalogue. Confidence labels reset to "emerging" on import (trust must be earned locally).
+
+**Depends on:** Continuous Intelligence Layer stable + Skill Catalogue proven useful.
