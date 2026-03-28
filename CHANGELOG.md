@@ -2,6 +2,26 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.3.0] - 2026-03-28
+
+### Added — M3: Skill-Bridge (Typed Core → SKILL.md)
+- **Bridge CLI** — `packages/orchestrator/src/cli.ts` with 10 commands (`gate-check`, `write-spec`, `write-plan`, `write-task-graph`, `record-review`, `record-verification`, `check-reviews`, `checkpoint`, `resume`, `release-state`). All output JSON to stdout, exit 0 for success, exit 1 for errors. Top-level try/catch ensures crashes produce structured `{ "error": "..." }` JSON.
+- **Bridge adapters** — `bridge-adapters.ts` with 6 converter functions (`skillSpecToCore`, `skillPlanToCore`, `skillReviewToCore`, `skillVerificationToCore`, `skillCheckpointToCore`, `mapSkillStageToPhase`). Gate-sufficient field mapping: exactly what the gate evaluator, review orchestration, and release-state derivation actually read.
+- **SKILL.md dual-write integration** — 9 integration points wired at every stage transition: Stage 0 (resume), Stage 1→2 (write-spec + gate-check), Stage 2 (record-review + write-plan + write-task-graph), Stage 2.5 (record design review), Stage 3 per-worker (checkpoint), Stage 3 post-workers (record-verification + gate-check), Stage 4 (record QA review + verification), Stage 4.5 (record design review), Stage 5 (release-state + check-reviews). All calls are advisory-only (`|| true`).
+- **Shell script contracts** — `docs/architecture/script-contracts.md` documenting JSON output formats for all 8 shell scripts
+- **67 new tests** — CLI subprocess tests (22), bridge adapter unit tests (35), full lifecycle integration tests (10). Total: 153 tests across 11 files.
+
+### Changed
+- `recordReview()` now writes both `{reviewType}.json` (latest) and `{reviewType}-{timestamp}.json` (archive) to preserve review history across multiple runs
+- `recordReview()` and `recordVerification()` accept pre-formed entities (with existing IDs) to prevent double ID generation when called from bridge adapters
+- `services.ts` exports bridge-adapters module for external consumption
+- PLANS.md updated: M2 marked LOCKED, M3 defined as Skill-Bridge
+- TODOS.md: added 2 items (graduate gates to blocking, deprecate OpenSpec)
+
+### Fixed
+- `mapSkillStageToPhase` NaN fallthrough: `parseFloat("garbage")` returned NaN, all comparisons were false, defaulting to "release" instead of "understand". Added `Number.isNaN(n)` guard.
+- CLI test timeout: subprocess tests using `npx tsx` exceeded default 5s vitest timeout. Added `vi.setConfig({ testTimeout: 30_000 })`.
+
 ## [4.0.2.0] - 2026-03-28
 
 ### Added — M2: Spec-Driven Lifecycle Enforcement

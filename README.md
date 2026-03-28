@@ -213,9 +213,19 @@ prism/
 │   ├── prism-verify.sh   # Syntax/lint/compile verification
 │   ├── prism-checkpoint.sh # Session context persistence
 │   └── test-scripts.sh   # Test suite for all scripts
+├── packages/             # Typed core — code-enforced lifecycle
+│   ├── core/             # Domain model (14 entities, branded types)
+│   ├── memory/           # Artifact repositories (.prism/ storage)
+│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI
+│   ├── guardian/         # Review matrix, release-state derivation
+│   └── execution/        # Intent policy, execution adapters
 ├── references/           # Personality, spec format, skill catalog, product context
 └── templates/            # Spec templates
 ```
+
+### Typed Core (packages/)
+
+The typed core runs alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
 
 ---
 

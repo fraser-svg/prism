@@ -2,12 +2,12 @@
 
 ## Current Phase
 
-Phase 2: Spec-Driven Workflow Enforcement
+Phase 3: Skill-Bridge
 
 Purpose:
-- turn the documented lifecycle into an enforced control plane
-- make specs, plans, reviews, and release state runtime requirements
-- prevent drift back into hidden-state or prompt-led execution
+- wire the typed core into the existing skill lifecycle via dual-write bridge
+- prove that core artifacts and skill artifacts can coexist and stay consistent
+- earn trust in gate checking before graduating to blocking enforcement
 
 ## Repo Truth
 
@@ -18,13 +18,16 @@ What exists now:
 - an exploratory app shell with early Forge-style UI ideas
 - typed core packages for domain, memory, orchestration, guardian, and execution
 - passing shell-script regression coverage for the current runtime substrate
+- explicit 8-phase lifecycle with gate evaluator, checkpoint history, and release-state derivation (M2 complete)
+- artifact gating that blocks execution without required spec/plan
+- release readiness derived from review, verification, memory, and approval evidence
 
 What is still missing:
-- executable lifecycle gates tied to canonical artifacts
-- canonical repositories for specs, plans, reviews, runs, and release state
-- approval-aware execution policy
-- review and release orchestration inside the guardian layer
-- resume semantics that rely on durable artifacts instead of transitional registry state
+- bridge wiring between typed core and existing skill lifecycle
+- dual-write producing typed artifacts alongside existing OpenSpec/script artifacts
+- gate checking at stage transitions (advisory mode first)
+- review evidence capture from gstack skills into typed artifacts
+- resume from typed checkpoints in real dogfood sessions
 
 ## Architecture Direction
 
@@ -82,7 +85,7 @@ Exit criteria:
 - durable schemas and artifact contracts exist
 - memory and orchestration stop depending on implicit prompt structure
 
-### M2. Spec-Driven Workflow Engine
+### M2. Spec-Driven Workflow Engine ✓ LOCKED
 
 Goal:
 - make `discover -> spec -> plan -> execute -> verify -> ship -> resume` explicit and enforceable
@@ -101,20 +104,23 @@ Exit criteria:
 - execution is blocked without required artifacts
 - release readiness is derived from evidence, not optimism
 
-### M3. Execution and Guardian
+### M3. Skill-Bridge (Dual-Write) ← CURRENT
 
 Goal:
-- execute bounded work safely and verify it properly
+- wire typed core into the existing skill lifecycle via dual-write bridge
 
 Scope:
-- provider adapters
-- worker boundaries
-- execution contracts
-- review pipeline
-- QA and recovery loop
+- bridge CLI in orchestrator package (10 commands)
+- gate checking at stage transitions (advisory, not blocking)
+- typed artifact dual-write (.prism/specs/, reviews/, plans/, runs/)
+- review evidence capture from gstack skills
+- resume from typed checkpoints
 
 Exit criteria:
-- Prism can perform bounded build work with meaningful validation and retries
+- SKILL.md calls bridge at all 9 integration points
+- dual-write produces valid typed artifacts alongside existing OpenSpec/script artifacts
+- gate checks fire at stage transitions (advisory)
+- at least one dogfood session produces full typed artifact trail
 
 ### M4. Local-First Workspace Foundation
 
@@ -142,24 +148,26 @@ Scope:
 - macOS-first decisions
 
 Exit criteria:
-- desktop shell can be built on top without re-architecting the core
+- desktop shell can consume the core cleanly
 
 ## Priority Stack
 
 ### Now
 
-- expand guardian review orchestration and release-state derivation
-- make execution intents approval-aware
-- prove one end-to-end lifecycle with durable resume
+- build bridge CLI in orchestrator package (10 commands)
+- wire SKILL.md to call bridge at all 9 integration points
+- implement typed artifact dual-write (.prism/specs/, reviews/, plans/, runs/)
 
 ### Next
 
-- evolve execution adapters toward active review triggering (M3)
-- wire intent policy enforcement into adapter call paths
+- add advisory gate checks at stage transitions
+- capture review evidence from gstack skills into typed artifacts
+- prove resume from typed checkpoints in dogfood session
 
 ### Later
 
-- evolve execution adapters
+- graduate bridge gates from advisory to blocking
+- deprecate OpenSpec for core spec storage
 - introduce desktop-facing APIs
 - build polished workspace UX
 - add sync/cloud features
@@ -188,10 +196,10 @@ Exit criteria:
 
 ## Immediate Next Moves
 
-1. Lock the M2 lifecycle contract and gate matrix in a durable spec.
-2. Define canonical repositories for spec, plan, checkpoint, review, verification, and release artifacts.
-3. Refactor orchestration to advance from canonical artifact state rather than registry strings.
-4. Add guardian-driven review and release evidence before any desktop-facing expansion.
+1. Build the bridge CLI in the orchestrator package with 10 commands for lifecycle integration.
+2. Update SKILL.md to call the bridge at all 9 integration points (dual-write mode).
+3. Implement typed artifact dual-write so .prism/ artifacts are produced alongside existing OpenSpec/script artifacts.
+4. Add advisory gate checks at stage transitions that log warnings but do not block.
 
 ## Working Rules
 
