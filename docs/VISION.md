@@ -112,7 +112,7 @@ One principle organizes everything Prism does internally:
 
 Four commitments make this concrete:
 
-**Assume unreliable until verified.** Prism treats every LLM output as suspect. The team does not present generated work as trustworthy until it has been checked — by deterministic verification, by a review pass, or by explicit test. The Guardian is not a final gate; suspicion runs through every stage. If the model is lying, Prism catches it before the creator sees it.
+**Assume unreliable until verified.** Prism treats every LLM output as suspect. The team should not present generated work as trustworthy until it has been checked — by deterministic verification, by a review pass, or by explicit test. The Guardian is not a final gate; suspicion should run through every stage. If the model is lying, Prism catches it before the creator sees it. (Today, verification gates enforce this at release; earlier stages have gaps that are being closed.)
 
 **Preserve the creator's resources.** Prism does not burn tokens on tasks that don't need intelligence. Deterministic scripts handle what deterministic scripts can handle. The cheapest correct answer wins. The creator's money and time are not Prism's to waste.
 
