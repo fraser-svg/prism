@@ -2,6 +2,27 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.8.0] - 2026-03-28
+
+### Added
+- **Structured planning system** — machine-executable plan format with `files`, `action`, `verify`, `done`, `mustHaves`, `wave`, and `contextBudgetPct` fields on TaskNode
+- **8-dimension plan quality gate** — blocks `plan → execute` transition when plans lack requirement coverage, task completeness, dependency correctness, key links, scope sanity, verification derivation, context budget, or artifact completeness
+- **Goal-backward verification** — `MustHaves` (ObservableTruths + ArtifactRequirements + KeyLinks) on tasks with AC ID traceability to spec acceptance criteria
+- **Wave-based execution** — task-level `wave` field enables parallel execution within waves and dependency ordering
+- **Deviation rules** — 4-tier escalation system (auto_fix → auto_fix_critical → auto_fix_blocking → ask_user) with file-creation cap
+- **Scope mode selection** — `full_build`, `targeted`, `exact`, `minimum_viable` modes with per-mode task count limits
+- **Implementation alternatives** — structured comparison of approaches with effort/risk/pros/cons
+- **Task graph binding validation** — task-graph.json `planId`/`specId` verified against expected IDs
+- **Spec validation in quality gate** — missing spec blocks v2 plans instead of silently passing
+- **29 unit tests** — comprehensive coverage of all 8 quality dimensions, edge cases, and backward compatibility
+
+### Changed
+- **Plan quality gate in gate-evaluator** — `plan → execute` now runs quality check on v2 plans; legacy plans (planVersion missing or 1) bypass with advisory note
+- **Bridge adapters** — `skillPlanToCore` extended with structured planning fields, defaults to `planVersion: 2` and `scopeMode: "exact"`
+- **Propose skill** — upgraded with structured task format template, traceability matrix, dual write (tasks.md + task-graph.json), execution preview
+- **Apply command** — upgraded with deviation rules, must-haves verification, wave-based execution
+- **Planning review** — added scope mode validation, goal-backward verification, must-haves audit, context budget check
+
 ## [4.0.7.0] - 2026-03-28
 
 ### Added
