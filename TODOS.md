@@ -3,20 +3,9 @@
 ## ~~Reduce verbose logs to milestone-only~~ — DONE in v3
 Replaced by `prism-registry.sh` JSON events. Only significant actions are logged.
 
-## Active Review Orchestration (deferred to M3)
+## ~~Active Review Orchestration (deferred to M3)~~ — DONE in v4.0.3.0
 
-**What:** Add active review trigger/execution to Prism Core so Guardian can invoke review runs through adapters (not just read existing evidence).
-
-**Why:** M2 added the review matrix, `checkRequiredReviews()`, `isReviewComplete()`, and verdict aggregation. Guardian now defines required reviews per spec type and gates release on their presence. But review artifacts still require an external process to produce them. M3 should close that loop by wiring Guardian to execution adapters that can trigger review runs.
-
-**When:** After M2 is stable in dogfooding.
-
-**How:** Keep the ownership split explicit:
-- `packages/guardian` owns review policy, required review matrix, and verdict aggregation (DONE in M2)
-- `packages/orchestrator` owns sequencing, pause/regress behavior, and lifecycle advancement (DONE in M2)
-- `packages/execution` owns invoking review runs through adapters (M3 scope)
-
-**Depends on:** M2 complete (repositories + gate evaluator + release-state derivation). **M2 prerequisites now met.**
+M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` through SKILL.md at all 9 integration points. Guardian's review matrix is now exercised at every stage transition via the dual-write bridge.
 
 ## Git Worktree Workers (deferred from v3)
 
@@ -75,3 +64,27 @@ Replaced by `prism-registry.sh` JSON events. Only significant actions are logged
 **How:** TBD — would need multiple active OpenSpec changes tracked in PRODUCT.md with independent lifecycles. Significant complexity increase.
 
 **Depends on:** Living Architecture Doc (PRODUCT.md) stable + at least 3 successful dogfood runs with the sequential flow.
+
+## Graduate Bridge Gates to Blocking (post-M3)
+
+**What:** After M3 dual-write bridge proves reliable across 2+ dogfood sessions, switch gates from advisory to blocking. The skill can't advance stages if the core says artifacts are missing.
+
+**Why:** M3 bridge is advisory-only to earn trust first. Once gate checks reliably match the skill's own state, graduating to blocking makes the core's lifecycle enforcement real.
+
+**When:** After 2+ successful dogfood sessions with full typed artifact trails.
+
+**How:** Change the SKILL.md bridge call pattern from `|| true` (silent failure) to checking the exit code and blocking on gate-check failures. Add user-facing messaging when a gate blocks.
+
+**Depends on:** M3 complete with proven reliability.
+
+## Deprecate OpenSpec for Core Spec Storage (post-M3)
+
+**What:** Migrate from OpenSpec (`openspec/changes/{name}/specs/`) as primary spec format to `.prism/specs/{specId}/` as the single source of truth. Remove the dual-write once the core is the canonical system.
+
+**Why:** Dual-write exists because both systems need to work in M3. Once the core proves reliable, maintaining two spec storage locations is unnecessary complexity.
+
+**When:** After M3 gates are graduated to blocking and the core is trusted.
+
+**How:** Update SKILL.md to write specs to `.prism/specs/` only. Update the spec-generator subagent. Migrate existing OpenSpec specs during a one-time migration pass. Keep OpenSpec archived as historical records.
+
+**Depends on:** Graduate Bridge Gates to Blocking.
