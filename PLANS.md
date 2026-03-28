@@ -197,8 +197,10 @@ Before major implementation:
 - create or update a spec/plan artifact
 - note architectural impact
 - define verification expectations
+- decide whether the upcoming work changes Prism's YC readiness profile
 
 After major implementation:
 - run verification
 - update memory/planning artifacts
 - record architecture decisions if they changed
+- run the YC oversight review at milestone boundaries and after major strategic changes
