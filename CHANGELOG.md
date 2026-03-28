@@ -2,6 +2,33 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.2.0] - 2026-03-28
+
+### Added — M2: Spec-Driven Lifecycle Enforcement
+- **Artifact repositories** — `JsonArtifactRepository<T>` for single-JSON entities, `CompositeArtifactRepository` for multi-file artifacts (specs, plans, reviews), custom `CheckpointRepository` with history rotation
+- **Entity repositories** — Thin wrappers for specs, plans, reviews, verifications, release-state, each backed by `.prism/` artifact directories
+- **Gate evaluator** — `evaluateTransition(from, to, projectRoot)` enforces artifact-based requirements per phase transition. No approved spec means no plan phase. No plan means no execute. No reviews means no release.
+- **Resume engine** — 4-tier fallback: checkpoint, artifact scan, legacy registry, cold start. Restores `approvalsPending` from checkpoint for durable approval state. Derives `activeSpecId` from artifact metadata.
+- **Review orchestration** — Required review matrix per spec type (product: 5 reviews, change: 2, task: 1). `checkRequiredReviews()` aggregates pass/hold/fail verdicts from `<reviewType>.json` slots. `isReviewComplete()` gates release transitions.
+- **Release-state derivation** — `deriveReleaseState()` aggregates 4 evidence dimensions: implementation (checkpoint), reviews (review matrix), verification (run results), approvals (workflow state). Returns ready/hold/pending decision.
+- **Execution intent policy** — `checkExecutionIntent()` blocks push/deploy/delete when `approvalsPending` is non-empty. Save always allowed.
+- **Canonical entity writers** — `createSpec`, `approveSpec`, `createPlan`, `recordVerification`, `recordReview`, `recordReleaseState` in orchestrator services. Each writes artifacts at canonical paths.
+- **GateResult type** in `@prism/core` — `{ allowed, blockers, evidence }` contract for all gate checks
+- **ExecutionIntent type** in `@prism/core` — typed intent declarations for policy enforcement
+- **86 tests** — artifact repository bases (17), gate evaluator (18), resume engine (8), services (6), review orchestration (9), release-state (7), intent policy (6), E2E lifecycle (11), checkpoint repository (4)
+
+### Changed
+- `WorkflowPhase` and `WORKFLOW_PHASES` moved from `@prism/orchestrator` to `@prism/core` (correct dependency direction)
+- `WorkflowState` and `WorkflowTransition` types moved to `@prism/core`
+- `recordReview()` writes `<reviewType>.json` slots (not `metadata.json`) matching `isReviewComplete()` read contract
+- `setWorkflowStage` and `RegistryStage` removed entirely (registry deprecated as workflow state store)
+- Registry-related adapters (`readRegistryStatus`, `updateRegistryChange`) marked `@deprecated`
+- Resume engine emits `console.warn` on legacy registry fallback
+
+### Fixed
+- Checkpoint archive used broad catch-all that swallowed partial archive failures. Now uses `exists()` check with best-effort markdown archive.
+- Artifact resume returned `activeSpecId: null` even when spec metadata was available. Now extracts spec ID from scanned artifact metadata.
+
 ## [4.0.1.0] - 2026-03-27
 
 ### Added — Prism Core Architecture Foundation
