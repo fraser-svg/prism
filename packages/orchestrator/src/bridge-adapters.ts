@@ -8,7 +8,6 @@
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
 import type {
-  AbsolutePath,
   EntityId,
   ISODateString,
   ReviewType,

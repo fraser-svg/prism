@@ -424,6 +424,52 @@ describe("review orchestration", () => {
   });
 });
 
+describe("readLatestForSpec history fallback", () => {
+  it("returns checkpoint from history when latest belongs to a different spec", async () => {
+    const specA = "spec-history-a" as EntityId;
+    const specB = "spec-history-b" as EntityId;
+
+    const checkpointRepo = createCheckpointRepository(projectRoot);
+
+    // Write checkpoint for spec-A (becomes latest)
+    const cpA = skillCheckpointToCore({
+      phase: "execute",
+      activeSpecId: specA,
+      runId: "run-a" as string,
+      projectId: "proj-history",
+    });
+    await checkpointRepo.write(cpA, "# Checkpoint A");
+
+    // Write checkpoint for spec-B (overwrites latest, archives spec-A to history)
+    const cpB = skillCheckpointToCore({
+      phase: "verify",
+      activeSpecId: specB,
+      runId: "run-b" as string,
+      projectId: "proj-history",
+    });
+    await checkpointRepo.write(cpB, "# Checkpoint B");
+
+    // Latest should be spec-B
+    const latest = await checkpointRepo.readLatest();
+    expect(latest?.activeSpecId).toBe(specB);
+
+    // readLatestForSpec(specA) should find spec-A in history
+    const foundA = await checkpointRepo.readLatestForSpec(specA);
+    expect(foundA).not.toBeNull();
+    expect(foundA!.activeSpecId).toBe(specA);
+    expect(foundA!.phase).toBe("execute");
+
+    // readLatestForSpec(specB) should return latest directly
+    const foundB = await checkpointRepo.readLatestForSpec(specB);
+    expect(foundB).not.toBeNull();
+    expect(foundB!.activeSpecId).toBe(specB);
+
+    // readLatestForSpec for nonexistent spec should return null
+    const foundC = await checkpointRepo.readLatestForSpec("spec-nonexistent" as EntityId);
+    expect(foundC).toBeNull();
+  });
+});
+
 describe("release state via CLI path (runId from checkpoint)", () => {
   it("derives release-ready state when runId is read from checkpoint, not injected", async () => {
     // This test mirrors the real SKILL.md flow:
