@@ -15,8 +15,7 @@ The filter question for every session: **Does this help a user produce more with
 ## Stop Building
 
 Do not work on these until the priority stack is resolved:
-- M4 Local-First Workspace Foundation
-- M5 Desktop Shell Enablement
+- M5 Desktop Shell Enablement (Electron, not Tauri)
 - Provider abstractions
 - Broad integrations
 - Enterprise governance
