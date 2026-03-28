@@ -77,6 +77,23 @@ Does not own:
 - product memory
 - raw provider execution
 
+### `packages/workspace`
+
+Owns:
+- workspace initialization and bootstrap (~/.prism/)
+- project registry (CRUD, auto-detect, switching)
+- workspace-level SQLite database (better-sqlite3, WAL mode)
+- cross-project search (FTS5)
+- project health badges and resume
+- integration cabinet (provider metadata, health checks)
+- workspace changelog (append-only event log)
+- project templates
+
+Does not own:
+- per-project artifact logic (that's `packages/memory`)
+- workflow decisions (that's `packages/orchestrator`)
+- UI rendering
+
 ### `packages/ui`
 
 Owns:
@@ -92,8 +109,9 @@ Does not own:
 ## Interaction Rules
 
 1. `core` is the source of vocabulary and shared contracts.
-2. `memory`, `orchestrator`, `execution`, `guardian`, and `ui` depend on `core`.
+2. `memory`, `orchestrator`, `execution`, `guardian`, `workspace`, and `ui` depend on `core`.
 3. `orchestrator` may call `memory`, `execution`, and `guardian`.
+3b. `workspace` depends on `core` and `memory`. It injects write-through callbacks into memory repos at construction time (no reverse dependency).
 4. `guardian` may read from `memory` and `core`, and may trigger `execution` of checks through adapters.
 5. `ui` should talk to orchestrated app-facing services, not directly to shell scripts.
 6. `execution` should return structured results, not redefine workflow state.

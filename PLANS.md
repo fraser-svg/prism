@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 3: Skill-Bridge
+Phase 4: Local-First Workspace Substrate (complete)
 
 Purpose:
 - wire the typed core into the existing skill lifecycle via dual-write bridge
@@ -103,7 +103,7 @@ Exit criteria:
 - execution is blocked without required artifacts
 - release readiness is derived from evidence, not optimism
 
-### M3. Skill-Bridge (Dual-Write) ← CURRENT
+### M3. Skill-Bridge (Dual-Write) ✓ LOCKED
 
 Goal:
 - wire typed core into the existing skill lifecycle via dual-write bridge
@@ -121,24 +121,26 @@ Exit criteria:
 - gate checks fire at stage transitions (advisory)
 - at least one dogfood session produces full typed artifact trail
 
-### M4. Local-First Workspace Foundation
+### M4. Local-First Workspace Substrate ✓ LOCKED
 
 Goal:
 - support multi-project local-first use
 
 Scope:
-- local storage layout
-- project switching
-- integrations cabinet model
-- progress and history surfaces
+- SQLite workspace database (better-sqlite3, WAL mode)
+- project registry with auto-detect + confirm
+- cross-project FTS5 search
+- health badges and resume
+- workspace changelog and templates
+- write-through indexing via onWrite callbacks
 
 Exit criteria:
-- Prism Core can power a real desktop workspace without losing continuity
+- Prism Core can power a real desktop workspace without losing continuity ✓
 
-### M5. Desktop Shell Enablement
+### M5. Desktop Shell Enablement ← NEXT
 
 Goal:
-- prepare the core for a Tauri-powered desktop product
+- prepare the core for an Electron-powered desktop product
 
 Scope:
 - app-facing APIs
