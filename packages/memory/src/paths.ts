@@ -51,6 +51,7 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     releaseStateDir: joinPath(prismDir, "release-state"),
     problemsDir: joinPath(prismDir, "problems"),
     shipsDir: joinPath(prismDir, "ships"),
+    researchDir: joinPath(prismDir, "research"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),

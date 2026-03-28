@@ -20,6 +20,9 @@ Before reviewing the plan itself:
 4. If `exact` or `minimum_viable` scope and plan introduces new abstractions/services: P1
 5. Are structural changes (new abstractions, refactors) and behavioral changes (new features) mixed? They should be separate.
 
+6. **Research alignment:** If `.prism/research/{change}/decision.md` exists, check whether the plan follows the recommended approach. If the plan deviates from the research decision without justification, flag as P1.
+7. **Build vs. buy:** For each new dependency or abstraction in the plan, search for an existing library that handles it. If one exists with >1000 weekly downloads, flag the custom implementation as P2 (Over-Engineering).
+
 If scope challenge finds issues, include them as P1 findings.
 
 ## Step 1: Goal-Backward Verification

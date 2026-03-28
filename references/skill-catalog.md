@@ -1,6 +1,31 @@
 # Skill Catalog
 
-Prism has two types of review capabilities: **native reviews** and **external gstack skills**.
+Prism has three capability layers: **research intelligence**, **native reviews**, and **external gstack skills**.
+
+## Research Intelligence (Continuous Intelligence Layer)
+
+Before planning and building, Prism researches the best approach. This is automatic and
+silent — the user sees outcomes, not process.
+
+**Research protocol:** `references/research-protocol.md` — subagent prompt for package/skill research
+**Approach comparison:** `references/reviews/approach-comparison.md` — generates competing approaches
+**Skill Catalogue:** `.prism/skill-catalogue.json` — persistent registry of proven solutions
+**Research scripts:**
+- `scripts/prism-research.sh` — orchestrates catalogue queries, persists results, writes to history.jsonl
+- `scripts/prism-catalogue.sh` — catalogue CRUD (query, record, promote, demote, list, evict)
+
+**How it works:**
+1. Stage 1 (Discover): Catalogue nudges inform spec drafting (max 2 suggestions)
+2. Stage 2 (Plan): Full research phase → approach comparison → planning review
+3. Stage 3 (Build): Workers receive research context; Guardian learns from failures
+4. Stage 4 (Verify): QA targets known failure patterns from catalogue
+
+**Complexity tiers:**
+- Quick (1-2 reqs): Catalogue query only
+- Standard (3-4 reqs): Package search + catalogue (30s budget)
+- Deep (5+ reqs): Full sweep including GitHub search + skill matching (2min budget)
+
+---
 
 ## Review Architecture
 

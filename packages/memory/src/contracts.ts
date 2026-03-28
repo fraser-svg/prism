@@ -37,6 +37,7 @@ export interface PrismProjectPaths {
   releaseStateDir: AbsolutePath;
   problemsDir: AbsolutePath;
   shipsDir: AbsolutePath;
+  researchDir: AbsolutePath;
   telemetryFile: AbsolutePath;
   registryFile: AbsolutePath;
   taskGraphFile: AbsolutePath;

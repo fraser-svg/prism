@@ -328,6 +328,20 @@ via `bash "$SKILL_DIR/scripts/prism-state.sh" status "$PROJECT_ROOT"`. Five path
 
 **Part A — Discovery (in main conversation):**
 
+**Catalogue-informed nudges (silent, max 2):** Before asking questions, query the catalogue
+for domain matches against the user's request:
+```bash
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" query "$PROJECT_ROOT" '[]'
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" catalogue_query \
+  '{"stage":"discover","matches":{N}}'
+```
+Read the catalogue output. Using semantic matching, find entries whose domain tags relate
+to the user's request. Sort by `successCount` descending, break ties by `lastUsedAt`
+descending, take the top 2. If matches found, silently incorporate them as suggestions
+in the spec draft. Confirm naturally: "I've included payment processing based on what
+we've built before. Sound right?" Do NOT announce the catalogue or explain where the
+suggestion came from. Max 2 nudges per discovery session.
+
 Calibrate depth to the request. Never ask more questions than the request warrants.
 
 **Depth signals:**
@@ -453,6 +467,88 @@ BATCH_RESULT=$(echo '[
 ### Stage 2: Plan (Auto-invoked via gstack)
 
 Read [references/skill-catalog.md](references/skill-catalog.md).
+
+#### Stage 2a: Research (silent, before planning review)
+
+**Staleness check:** If `.prism/research/{change}/` exists from a previous run and the spec
+was revised (Stage 1 Part B loop), invalidate stale research first:
+```bash
+bash "$SKILL_DIR/scripts/prism-research.sh" invalidate "$PROJECT_ROOT" "{change}"
+```
+
+**Pre-flight:** Check which research tools are available:
+```bash
+TOOLS_JSON=$(bash "$SKILL_DIR/scripts/prism-research.sh" check "$PROJECT_ROOT" 2>/dev/null)
+```
+Extract `skipped_sources` from the temp file. If all tools unavailable, skip to planning review.
+
+**Catalogue query + complexity gating:**
+```bash
+bash "$SKILL_DIR/scripts/prism-research.sh" run "$PROJECT_ROOT" "{change}" '["{req1}","{req2}",...]'
+```
+This queries the catalogue and determines the research tier (quick/standard/deep).
+
+**Quick tier (1-2 requirements):** Catalogue results only. No subagents needed.
+Proceed directly to approach selection with catalogue matches.
+
+**Standard/Deep tier (3+ requirements):** Dispatch research subagents in parallel.
+For each available source, dispatch one Agent tool subagent using the prompt from
+[references/research-protocol.md](references/research-protocol.md). Pass:
+- Requirements list
+- Catalogue entries (from the `run` command output)
+- Tier and time budget
+- Available tools (from pre-flight check)
+
+All subagents fire simultaneously (multiple Agent calls in one message). Each subagent's
+prompt includes its time budget — it returns partial results if time runs out.
+
+**After subagents return:** Verify each recommended package exists:
+```bash
+# For npm packages (parallel, backgrounded)
+npm info {package} version 2>/dev/null &
+# For pip packages
+pip index versions {package} 2>/dev/null &
+wait
+```
+Drop any package that fails verification. Log each check:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" package_verified \
+  '{"package":"{name}","exists":{true|false},"filtered":{true|false}}'
+```
+
+**Persist research:** Log the combined findings from all subagents:
+```bash
+bash "$SKILL_DIR/scripts/prism-research.sh" log "$PROJECT_ROOT" "{change}" '{findings_json}'
+```
+
+**Research telemetry:**
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" research_complete \
+  '{"tier":"{tier}","sources_queried":[...],"findings_count":{N},"duration_ms":{ms},"timeout_hit":{bool}}'
+```
+
+#### Stage 2b: Approach Comparison
+
+Read `.prism/research/{change}/report.json` if it exists.
+
+**Skip if:** Quick tier with no catalogue matches (nothing to compare).
+
+**For Standard builds (3-4 reqs):** Auto-select best approach silently. Dispatch one Agent
+tool subagent using the prompt from
+[references/reviews/approach-comparison.md](references/reviews/approach-comparison.md).
+Tell user one-line summary: "I'll use {approach} for {domain} — it's {confidence} across {N} builds."
+Persist decision to `.prism/research/{change}/decision.md`.
+
+**For Deep builds (5+ reqs):** Same subagent, but display the visual comparison table.
+Auto-select top approach. User can override: "Want me to switch to a different approach?"
+
+**Approach telemetry:**
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" approach_selected \
+  '{"approach":"{name}","confidence":"{label}","alternatives":{N},"user_override":{bool}}'
+```
+
+#### Stage 2c: Planning Review
 
 Tell user: "Your spec is ready — I'm going to run a quick architecture review."
 
@@ -585,6 +681,9 @@ Each worker via Agent tool:
 > "WORKING DIRECTORY: {project_root}
 > TASK: {description}. FILES TO READ: {paths}. CONSTRAINTS: {constraints}.
 > SHARED CONTEXT: {validated contracts from prior workers}.
+> RESEARCH CONTEXT: {recommended packages, catalogue matches, approach constraints from .prism/research/{change}/decision.md}.
+> Prefer the recommended libraries/patterns unless they don't fit. If you discover
+> a better approach, note why.
 > Build this task. Write working code.
 > When done, list ALL files you created or modified (one per line, relative paths)."
 
@@ -631,6 +730,21 @@ NOT a retry — each dispatch is smarter. In the Operator context (full build aw
    if failed worker has dependents that succeeded, roll back both.
    Escalate to user in plain English (non-technical).
 
+**Guardian Learning Loop:** When recovery succeeds using a DIFFERENT approach than the
+one that failed (not just a retry with better context):
+```bash
+# Demote the failed approach
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" demote "$PROJECT_ROOT" "{failed-approach-id}" "{error-category}: {error-summary}"
+# Record the successful alternative
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" record "$PROJECT_ROOT" \
+  '{"id":"{recovery-approach-id}","name":"{approach}","category":"pattern","domain":["{task-domain}"],"description":"{what-worked}","source":"guardian"}'
+# Telemetry
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" guardian_learning \
+  '{"failed_approach":"{id}","successful_approach":"{id}","task_type":"{domain}"}'
+```
+If recovery used the SAME approach (just with better error context), skip catalogue writes —
+there's nothing new to learn.
+
 #### Drift Detection + Completion
 
 After all workers complete:
@@ -654,6 +768,17 @@ BATCH_RESULT=$(echo '[
 
 Tell user: "Build looks complete — running QA to make sure everything works."
 
+**Catalogue failure pattern query (before QA):** Query catalogue for failure data on
+libraries/patterns used in this build. Inject known failure patterns into the QA prompt.
+```bash
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" query "$PROJECT_ROOT" '[]'
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" catalogue_query \
+  '{"stage":"verify","matches":{N}}'
+```
+Read the catalogue output. Filter entries where `failureCount > 0` and domain overlaps
+with this build's domains. Pass matching failure reasons as "Known failure patterns"
+input to the QA review prompt.
+
 Detect testable URL. If none: ask user for URL or description.
 Check skill availability: `[ -f "$HOME/.claude/skills/gstack/qa/SKILL.md" ]`
 If available: `Skill tool: skill="qa", args="Test at {URL}"`
@@ -662,6 +787,7 @@ If missing: skip directly to native QA fallback.
 - **Skip:** User can say "skip QA".
 - **Fallback:** If Skill tool errors OR skill is missing, run Prism-native QA review via
   Agent tool using the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
+  Pass known failure patterns as additional input.
 - **Passed:** UI product → Stage 4.5. Otherwise → Stage 4.6.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
 
@@ -673,6 +799,24 @@ BATCH_RESULT=$(echo '[
   {"command":"record-review","args":["'"$PROJECT_ROOT"'","{change}","qa"],"stdin":{"verdict":"pass","summary":"QA passed"}},
   {"command":"record-verification","args":["'"$PROJECT_ROOT"'","qa-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["qa"]}}
 ]' | $BRIDGE batch 2>/dev/null) || true
+```
+
+**Catalogue promotion (after QA pass):** Record all libraries/patterns used in this build.
+Read `.prism/research/{change}/decision.md` to identify which approach was selected.
+For each library/pattern in the selected approach:
+```bash
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" promote "$PROJECT_ROOT" "{approach-id}"
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" catalogue_write \
+  '{"entry_id":"{id}","source":"build","domain":["{domains}"]}'
+```
+If the approach was new (not already in catalogue), record it first:
+```bash
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" record "$PROJECT_ROOT" \
+  '{"id":"{id}","name":"{name}","category":"library","domain":["{domains}"],"description":"{desc}","source":"build"}'
+```
+Then run eviction check if catalogue is growing:
+```bash
+bash "$SKILL_DIR/scripts/prism-catalogue.sh" evict "$PROJECT_ROOT"
 ```
 
 **Bridge (QA regression → Stage 3):** When QA fails and regresses to Stage 3, check the

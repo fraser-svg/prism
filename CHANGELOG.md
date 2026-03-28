@@ -42,10 +42,37 @@ All notable changes to Prism are documented here.
 - **Core provider types** — `ModelProvider`, `ServiceProvider`, `RouteHint` types in `packages/core` with `TaskNode` extensions
 - **Google keychain support** — `google` provider added to all keychain probe loops, key management, and inject workflows
 - **Mock test suite** — 17 tests for the Gemini adapter covering happy path, envelope validation, path traversal, parallel safety, retry logic
+- **Continuous Intelligence Layer** — Prism now researches the optimum solution at every stage, silently
+- **Skill Catalogue** — persistent registry of proven solutions at `.prism/skill-catalogue.json` with confidence labels (emerging/established/proven), atomic writes, corruption recovery, and eviction at 500 entries
+- **Research phase** — embedded in Stage 2, parallel subagent research across catalogue, package registries (npm/pip/cargo), GitHub, and curated skill allowlist with complexity-gated tiers (quick/standard/deep)
+- **Approach comparison** — 2-3 competing approaches generated and auto-selected; visual table shown for deep builds (5+ reqs), silent one-liner for standard builds
+- **Anti-hallucination** — research subagents constrained to search-results-only + package verification (`npm info`/`pip index versions`)
+- **Worker research context** — build workers receive recommended packages and approach constraints from the research phase
+- **Guardian Learning Loop** — when Guardian recovers using a different approach, both the failure and success are recorded to the catalogue
+- **Discovery nudges** — catalogue-informed suggestions during Stage 1 (max 2, silent, confirmed naturally)
+- **Targeted QA** — failure patterns from catalogue fed to QA review as priority checks
+- **Research telemetry** — 7 new events: `research_complete`, `approach_selected`, `catalogue_write`, `catalogue_query`, `package_verified`, `guardian_learning`, `research_degraded`
+- **`scripts/prism-catalogue.sh`** — catalogue CRUD (query, record, promote, demote, list, evict)
+- **`scripts/prism-research.sh`** — research orchestration (run, log, summary, check, invalidate) with research-gate.sh compatibility
+- **`references/research-protocol.md`** — research subagent prompt with curated skill allowlist
+- **`references/reviews/approach-comparison.md`** — approach comparison subagent prompt
 
 ### Changed
 - **Supervisor route_hint pass-through** — `plan`, `next`, and `complete` commands now preserve and return `route_hint` (defaults to `"any"`)
 - **Telemetry** — added `gemini_fallback` event type; failures filter now includes `fallback` pattern
+- **SKILL.md Stage 2** — split into 2a (research), 2b (approach comparison), 2c (planning review)
+- **SKILL.md Stage 1** — added catalogue-informed discovery nudges
+- **SKILL.md Stage 3** — worker dispatch template includes RESEARCH CONTEXT; Guardian extended with learning loop
+- **SKILL.md Stage 4** — catalogue failure patterns queried before QA; catalogue promotion after QA pass
+- **Build worker SKILL.md** — added `research_context` input and "Check Research Context" stage
+- **Planning review** — added research alignment check (P1 if plan deviates from research decision) and build-vs-buy check
+- **QA review** — added "Known failure patterns" optional input
+- **Skill catalog** — documented Research Intelligence layer
+- **`packages/memory/src/paths.ts`** — added `researchDir` to project paths
+- **`packages/memory/src/contracts.ts`** — added `researchDir` to `PrismProjectPaths`
+
+### Superseded
+- **Prompt Learning TODO** — superseded by Skill Catalogue (broader scope: packages, patterns, skills)
 
 ## [4.0.6.0] - 2026-03-28
 
