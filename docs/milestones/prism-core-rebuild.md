@@ -56,19 +56,23 @@ Exit criteria:
 - execution cannot start without required artifacts ✓ (evaluateTransition blocks on missing spec/plan)
 - release decisions are derived from review, verification, memory, and approval evidence ✓ (deriveReleaseState aggregates 4 dimensions)
 
-## M3. Guardian And Verification
+## M3. Skill-Bridge (Dual-Write) ← CURRENT
 
 Objective:
-- make review and validation native, not optional
+- wire typed core into the existing skill lifecycle via dual-write bridge
 
 Scope:
-- verification runner policy
-- review orchestration
-- failure classification
-- recovery loop contracts
+- bridge CLI in orchestrator package (10 commands)
+- gate checking at stage transitions (advisory, not blocking)
+- typed artifact dual-write (.prism/specs/, reviews/, plans/, runs/)
+- review evidence capture from gstack skills
+- resume from typed checkpoints
 
 Exit criteria:
-- Prism can detect and report incomplete or unsafe work reliably
+- SKILL.md calls bridge at all 9 integration points
+- dual-write produces valid typed artifacts alongside existing OpenSpec/script artifacts
+- gate checks fire at stage transitions (advisory)
+- at least one dogfood session produces full typed artifact trail
 
 ## M4. Local-First Workspace Substrate
 
