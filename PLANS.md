@@ -148,16 +148,14 @@ Exit criteria:
 
 ### Now
 
-- lock M2 as the spec-driven workflow enforcement stage
-- define canonical lifecycle repositories and gate evaluation
-- move resume and phase transitions onto durable artifacts
-- make approvals and release evidence first-class runtime inputs
-
-### Next
-
 - expand guardian review orchestration and release-state derivation
 - make execution intents approval-aware
 - prove one end-to-end lifecycle with durable resume
+
+### Next
+
+- evolve execution adapters toward active review triggering (M3)
+- wire intent policy enforcement into adapter call paths
 
 ### Later
 
