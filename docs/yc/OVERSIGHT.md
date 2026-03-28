@@ -121,11 +121,11 @@ Each YC oversight review should produce:
 
 2. YC Readiness Scorecard
 - ICP clarity
-- wedge strength
-- demo readiness
-- product differentiation
+- wedge sharpness
+- magical workflow readiness
 - user proof readiness
-- execution discipline
+- category story strength
+- spec-driven discipline
 
 3. What is helping
 
@@ -142,7 +142,7 @@ Use a 0-5 scale for each dimension:
 - ICP clarity
 - wedge sharpness
 - magical workflow readiness
-- proof with real users readiness
+- user proof readiness
 - category story strength
 - spec-driven discipline
 
@@ -166,3 +166,9 @@ Every review should pressure test:
 ## Rule
 
 If the answer to “does this move us closer to a wedge, a magical workflow, or real user proof?” is weak, the work should be questioned.
+
+## Live Scorecard
+
+The persistent YC readiness state is maintained at `docs/yc/SCORECARD.md` by the `/yc-brain` command. It tracks scores over time and shows whether Prism is getting closer to YC-ready or drifting.
+
+Run `/yc-brain review` for a full audit. Run `/yc-brain retro` after completing work.

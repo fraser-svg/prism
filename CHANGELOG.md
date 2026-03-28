@@ -2,6 +2,17 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.3.1] - 2026-03-28
+
+### Added — YC Build Brain
+- **CLAUDE.md** — always-on YC awareness layer loaded every Claude Code session. Contains deadline, priority stack, stop-building list, and pre-work gate directive.
+- **/yc-brain command** — three-mode slash command (gate/review/retro) that evaluates proposed work against 6 YC readiness dimensions and returns BUILD/DEFER/STOP verdicts. Replaces the ChatGPT-based oversight workflow.
+- **SCORECARD.md** — persistent YC readiness state with two-section structure: Current State (overwritten each review) and History (append-only trend log). Seeded with initial scores (15/30).
+
+### Changed
+- PLANS.md working rules now require `/yc-brain` gate before implementation and `/yc-brain review` after milestones
+- OVERSIGHT.md dimension names unified across Required Output and Scoring sections; added Live Scorecard pointer
+
 ## [4.0.3.0] - 2026-03-28
 
 ### Added — M3: Skill-Bridge (Typed Core → SKILL.md)
