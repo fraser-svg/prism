@@ -971,6 +971,37 @@ Tell user: "All done! When you're ready, the next piece is **{next phase}**."
 
 On failure at any step: "Something went wrong with shipping. Want me to help sort it out?"
 
+**Deploy offer (after PR created):**
+
+Check Vercel connection (no token exposed):
+```bash
+security find-generic-password -s "prism-vercel" -a "prism" 2>/dev/null && echo "CONNECTED" || echo "NOT_CONNECTED"
+```
+
+If CONNECTED:
+  "Your code is committed. Want me to make it live? I can deploy it and give you a URL."
+  If user says yes → run via subagent:
+    `bash "$SKILL_DIR/scripts/prism-deploy.sh" "$PROJECT_ROOT" preview`
+    Parse JSON output from temp file.
+    On OK: "It's live! Your app is at: **{url}** — anyone with this link can use it."
+           If env_synced > 0: "I also synced {N} API keys to Vercel so your app works."
+    On FAIL: show plain English reason from error table. "Want me to try again?"
+  If user says no → "No problem — your code is saved and the pull request is ready. Say 'deploy' anytime."
+
+If NOT_CONNECTED:
+  "Your code is committed and the pull request is open. To make it live on the web,
+   connect Vercel: `prism: connect vercel` — then say 'deploy'."
+
+### Global Deploy Command
+
+"deploy" / "make it live" / "put it online" — available at ANY stage, not just Stage 5.
+
+1. Check for uncommitted changes or unverified code. If found, warn (advisory, not blocking):
+   "Heads up — this code hasn't been through verification yet. Deploy anyway?"
+2. Run via subagent: `bash "$SKILL_DIR/scripts/prism-deploy.sh" "$PROJECT_ROOT" preview`
+3. Parse and present results (same as Stage 5 deploy offer flow above).
+4. For production: user must explicitly say "deploy to production" — passes "production" mode.
+
 ### Spec Changes
 
 When user requests changes to an existing build:

@@ -8,7 +8,6 @@ Runs the pre-ship checklist for a completed Prism build: squashes auto-save comm
 
 **Activates when user input matches:**
 - `ship( it)?$`
-- `deploy( this)?$`
 - `create (a )?pull request`
 - `open (a )?pr`
 - `push (to )?(main|prod|production)`

@@ -9,7 +9,6 @@ description: >
 
 trigger_patterns:
   - "ship( it)?$"
-  - "deploy( this)?$"
   - "create (a )?pull request"
   - "open (a )?pr"
   - "push (to )?(main|prod|production)"

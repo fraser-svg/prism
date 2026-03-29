@@ -4,7 +4,6 @@ description: |
   Runs the ship workflow for a completed Prism build: squashes all branch commits into one clean conventional commit, creates a rich pull request, optionally deploys, archives the spec, updates product memory, and records a durable ship receipt.
   Activates on patterns:
   - ship( it)?$
-  - deploy( this)?$
   - create (a )?pull request
   - open (a )?pr
   - push (to )?(main|prod|production)

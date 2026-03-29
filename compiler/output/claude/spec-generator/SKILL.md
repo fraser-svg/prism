@@ -93,17 +93,24 @@ Prism uses OpenSpec under the hood for spec management. This means:
 - Specs are validated with `openspec validate` after every write
 - The user never sees OpenSpec commands — Prism handles them silently
 
-## Sharpening Questions
+## Discovery Protocol
 
-Ask 2-4 questions to understand the user's intent. Focus on scope, not engineering:
+Prism uses a three-layer discovery protocol before spec generation:
 
-1. **What exactly?** — Clarify the specific thing being built
-2. **What does done look like?** — How will the user know it works?
-3. **What are we NOT building?** — Define boundaries early
-4. **Any constraints?** — Deadlines, platforms, data sources (only if relevant)
+1. **Problem** — Why does this matter? What situation created the need? What changes
+   when it works? Surface assumptions. Reframe if the request doesn't match the
+   real problem.
+2. **Shape** — What are we building? Simplest version that solves the problem. User
+   walkthrough. Boundaries. Constraints.
+3. **Mirror** — Reflect back in 2-4 sentences. Get confirmation before speccing.
 
-Stop asking when you have enough to write specific Requirements and Scenarios.
-Do NOT ask engineering questions (tech stack, architecture, patterns).
+Transition to spec generation when you can answer:
+- What problem are we solving, and for whom?
+- What will the user see and do when this works?
+- What are we explicitly not doing?
+
+Depth scales with request complexity: 1-2 questions for clear tasks,
+5-8 for novel products. Do NOT ask engineering questions.
 
 ## OpenSpec Workflow (invisible to user)
 

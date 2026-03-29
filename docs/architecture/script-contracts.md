@@ -988,6 +988,67 @@ Exit code is always `0`. Check the result JSON for logical errors.
 
 ---
 
+## prism-deploy.sh
+
+Deploys a project to Vercel via CLI. Handles token retrieval, CLI installation,
+env var sync, health verification, and deploy state persistence.
+
+### Usage
+
+```
+bash scripts/prism-deploy.sh <project_root> [mode]
+```
+
+| Arg             | Required | Description                                    |
+|-----------------|----------|------------------------------------------------|
+| `project_root`  | yes      | Project root directory                         |
+| `mode`          | no       | `"preview"` (default), `"production"`, `"status"` |
+
+### Stdout
+
+```
+OK: url=https://my-app-abc123.vercel.app mode=preview -> /tmp/prism-deploy-{PID}.json
+FAIL: reason=no_token -> /tmp/prism-deploy-{PID}.json
+```
+
+### Temp file: `/tmp/prism-deploy-{PID}.json`
+
+```json
+{
+  "status": "ok|fail",
+  "url": "https://...",
+  "mode": "preview|production",
+  "reason": null,
+  "project_id": null,
+  "duration_ms": 45000,
+  "env_synced": 3,
+  "detail": ""
+}
+```
+
+### Key fields
+
+| Field         | Type    | Values / Notes                                                    |
+|---------------|---------|-------------------------------------------------------------------|
+| `status`      | string  | `"ok"` or `"fail"`                                                |
+| `url`         | string  | Vercel deploy URL on success; `null` on failure                   |
+| `mode`        | string  | `"preview"` or `"production"`                                     |
+| `reason`      | string  | Present on failure: `"no_token"`, `"no_cli"`, `"install_failed"`, `"no_npm"`, `"not_deployable"`, `"build_error"`, `"timeout"`, `"auth_401"`, `"forbidden_403"`, `"rate_limited_429"`, `"network"`, `"conflict"`, `"unhealthy"`, `"no_url_parsed"` |
+| `env_synced`  | number  | Count of Prism-managed env vars pushed to Vercel                  |
+| `duration_ms` | number  | Deploy duration in milliseconds                                   |
+| `detail`      | string  | Additional error context (last 5 lines of stderr on failure)      |
+
+### Notes
+- Requires `jq` and `curl`.
+- Token retrieved from macOS Keychain (`prism-vercel`), passed via env var (never CLI args).
+- Auto-installs Vercel CLI via `npm i -g vercel` if missing.
+- Verifies deploy URL health with up to 3 retries at 15s intervals.
+- Persists deploy state to `$PROJECT_ROOT/.prism/deploy-state.json`.
+- Records telemetry via `prism-telemetry.sh` (`deploy_start`, `deploy_complete`, `deploy_fail`).
+- Uses portable timeout (background + wait + kill) instead of GNU `timeout`.
+
+---
+
 ## Typed Bridge CLI Commands (Ship Stage)
 
 These commands are implemented in TypeScript (`packages/orchestrator/src/cli.ts`) and
