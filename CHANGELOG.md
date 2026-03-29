@@ -2,6 +2,22 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.10.0] - 2026-03-29
+
+### Added
+- **`prism-deploy.sh`** — Vercel deploy script following the repo's JSON temp file contract: token from macOS Keychain, env var sync for connected providers, portable timeout, URL health verification (3 retries), deploy-state persistence at `.prism/deploy-state.json`, and telemetry events
+- **Deploy offer in Stage 5** — after PR creation succeeds, Prism checks for a Vercel token and offers to make the project live with a shareable URL
+- **Global deploy command** — "deploy" / "make it live" triggers at any stage with an advisory warning if code hasn't been through verification
+- **Deploy telemetry events** — `deploy_start`, `deploy_complete`, `deploy_fail` added to `prism-telemetry.sh`
+- **`prism-deploy.sh` script contract** — documented in `docs/architecture/script-contracts.md`
+- **21 deploy test cases** — cover all 14 failure reasons, env sync, .gitignore addition, deploy-state persistence, and telemetry recording (231/231 tests passing)
+
+### Changed
+- **`ship-readiness.yaml`** — removed `"deploy( this)?$"` trigger pattern to prevent collision with the new global deploy command
+
+### Fixed
+- **Critical bash bug** — `$?` inside `if ! cmd; then` always captures 0 (the negated exit), not the real exit code; restructured timeout detection to capture exit code before the conditional
+
 ## [4.0.8.0] - 2026-03-28
 
 ### Added
