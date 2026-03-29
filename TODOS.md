@@ -77,6 +77,36 @@ M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` throug
 
 **Depends on:** M3 complete with proven reliability.
 
+## Database Recovery UX for Desktop (M5.2)
+
+**What:** When `WorkspaceDatabase.open()` throws (corrupt DB, missing FTS5), show a recovery dialog instead of crashing: "Your workspace data needs repair. [Repair] [Start Fresh]."
+
+**Why:** Non-developer users can't debug SQLite errors. A crashed Electron window with no explanation is the worst possible UX. The backup-before-migrate mechanism already exists (WorkspaceDatabase.backupBeforeMigrate), so "Repair" can attempt re-open with a fresh DB, and "Start Fresh" can offer to restore from the most recent backup.
+
+**How:** Wrap `WorkspaceFacade` construction in the main process with try/catch. On failure, show a native Electron dialog (`dialog.showMessageBox`) with recovery options. Implement repair logic: (1) try re-running migrations, (2) if that fails, rename corrupt DB and create fresh, (3) offer backup restore if backup files exist.
+
+**Depends on:** M5.1 (Electron scaffold exists). Should be implemented during M5.2 when the renderer and error states are being built.
+
+## Reduced-Motion Accessibility (M5.2+)
+
+**What:** Add `prefers-reduced-motion` media query support. When enabled: show text instantly (no thought-pace animation), skip 300ms pane transitions, disable phase indicator dot animations, remove background darkening on >3s wait.
+
+**Why:** Some users experience motion sickness or vestibular disorders. WCAG 2.1 AAA requires reduced-motion support. M5.2 introduces several motion behaviors (text write-in at ~40 chars/sec, pane slide transitions, phase dot color transitions) that all need static fallbacks.
+
+**How:** CSS `@media (prefers-reduced-motion: reduce)` for transition/animation overrides. For the JS-driven text write-in, check `window.matchMedia('(prefers-reduced-motion: reduce)')` and render text instantly if true.
+
+**Depends on:** M5.2 (motion behaviors must exist to have fallbacks for).
+
+## High-Contrast Mode (M5.2+)
+
+**What:** Support macOS high-contrast accessibility setting (`prefers-contrast: more`). When enabled: increase border widths from 1px to 2px, boost text contrast ratios, make focus rings thicker (3px), increase tonal separation between surfaces.
+
+**Why:** DESIGN.md's warm dark palette relies on subtle tonal differences (e.g., `#1A1917` vs `#242320` — only 10 lightness units apart). Low-vision users need stronger visual boundaries.
+
+**How:** CSS `@media (prefers-contrast: more)` overrides for border-width, outline-width, and swap subtle surface colors for higher-contrast alternatives (e.g., `#1A1917` base stays, but elevated surfaces move from `#242320` to `#38352F` for more separation).
+
+**Depends on:** M5.2 (base components must exist).
+
 ## Deprecate OpenSpec for Core Spec Storage (post-M3)
 
 **What:** Migrate from OpenSpec (`openspec/changes/{name}/specs/`) as primary spec format to `.prism/specs/{specId}/` as the single source of truth. Remove the dual-write once the core is the canonical system.

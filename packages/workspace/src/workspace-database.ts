@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { readFileSync, readdirSync, copyFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { MIGRATIONS as EMBEDDED_MIGRATIONS } from "./migrations/embedded";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -88,28 +89,33 @@ export class WorkspaceDatabase {
     version: number;
     sql: string;
   }> {
+    const currentVersion = this.getCurrentVersion();
+
+    // Try filesystem-based migrations first (works in dev/unbundled),
+    // fall back to embedded migrations (works when bundled by Vite/Rollup).
     const migrationsDir = join(__dirname, "migrations");
-    let files: string[];
+    let files: string[] | null = null;
     try {
       files = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort();
     } catch {
-      return [];
+      // Filesystem migrations not available (bundled environment)
     }
 
-    const currentVersion = this.getCurrentVersion();
-    const pending: Array<{ version: number; sql: string }> = [];
-
-    for (const file of files) {
-      const match = file.match(/^(\d+)-/);
-      if (!match) continue;
-      const version = parseInt(match[1], 10);
-      if (version <= currentVersion) continue;
-
-      const sql = readFileSync(join(migrationsDir, file), "utf-8");
-      pending.push({ version, sql });
+    if (files && files.length > 0) {
+      const pending: Array<{ version: number; sql: string }> = [];
+      for (const file of files) {
+        const match = file.match(/^(\d+)-/);
+        if (!match) continue;
+        const version = parseInt(match[1], 10);
+        if (version <= currentVersion) continue;
+        const sql = readFileSync(join(migrationsDir, file), "utf-8");
+        pending.push({ version, sql });
+      }
+      return pending;
     }
 
-    return pending;
+    // Fallback: use embedded migrations
+    return EMBEDDED_MIGRATIONS.filter((m) => m.version > currentVersion);
   }
 
   private runMigrations(): void {

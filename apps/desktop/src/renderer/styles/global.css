@@ -1,0 +1,167 @@
+/*
+ * DESIGN.md tokens applied as CSS custom properties.
+ * Dark mode is default. Light mode toggled via [data-theme="light"] on <html>.
+ */
+
+:root {
+  /* ── Neutrals (warm gray scale) ─────────────────────────────── */
+  --neutral-50: #FAFAF7;
+  --neutral-100: #F3F2EE;
+  --neutral-200: #E8E6E0;
+  --neutral-300: #D4D1C9;
+  --neutral-400: #A8A49B;
+  --neutral-500: #7A766D;
+  --neutral-600: #5C584F;
+  --neutral-700: #3D3A33;
+  --neutral-800: #242320;
+  --neutral-900: #1A1917;
+  --neutral-950: #121110;
+
+  /* ── Accent (warm amber/copper) ─────────────────────────────── */
+  --accent-brand: #C47A2A;
+  --accent-fill: #C47A2A;
+  --accent-border: rgba(196, 122, 42, 0.4);
+
+  /* ── Semantic ───────────────────────────────────────────────── */
+  --success: #2D6A4F;
+  --warning: #D4A017;
+  --error: #C1292E;
+  --info: #4A7FA5;
+
+  /* ── Graphite (data panels) ─────────────────────────────────── */
+  --graphite-bg: #2C2B28;
+  --graphite-header: #38352F;
+  --graphite-active: #4A463E;
+
+  /* ── Spacing (8px base) ─────────────────────────────────────── */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* ── Border radius ──────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* ── Typography ─────────────────────────────────────────────── */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Instrument Sans', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  --text-3xl: 3rem;     /* 48px — hero headings */
+  --text-2xl: 2.25rem;  /* 36px — page titles */
+  --text-xl: 1.75rem;   /* 28px — section headings */
+  --text-lg: 1.375rem;  /* 22px — subheadings */
+  --text-md: 1rem;      /* 16px — body */
+  --text-sm: 0.875rem;  /* 14px — labels */
+  --text-xs: 0.75rem;   /* 12px — captions */
+  --text-mono: 0.8125rem; /* 13px — code/data */
+
+  /* ── Motion ─────────────────────────────────────────────────── */
+  --ease-enter: ease-out;
+  --ease-exit: ease-in;
+  --ease-move: ease-in-out;
+  --duration-micro: 80ms;
+  --duration-short: 150ms;
+  --duration-medium: 300ms;
+  --duration-long: 500ms;
+
+  /* ── Dark mode defaults ─────────────────────────────────────── */
+  --bg-page: var(--neutral-900);
+  --bg-surface: var(--neutral-800);
+  --bg-deep: var(--neutral-950);
+  --text-primary: var(--neutral-50);
+  --text-secondary: var(--neutral-500);
+  --text-tertiary: var(--neutral-400);
+  --accent-fg: #D4923A;
+  --accent-subtle-bg: #2A2118;
+  --border-default: var(--neutral-800);
+}
+
+[data-theme="light"] {
+  --bg-page: var(--neutral-50);
+  --bg-surface: var(--neutral-100);
+  --bg-deep: white;
+  --text-primary: var(--neutral-700);
+  --text-secondary: var(--neutral-600);
+  --text-tertiary: var(--neutral-400);
+  --accent-fg: #8A5520;
+  --accent-subtle-bg: #F5EDE0;
+  --border-default: var(--neutral-200);
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-micro: 0ms;
+    --duration-short: 0ms;
+    --duration-medium: 0ms;
+    --duration-long: 0ms;
+  }
+}
+
+/* ── Reset ────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  background-color: var(--bg-page);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Drag region for titlebar ─────────────────────────────────── */
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ── Focus ring (amber, keyboard-only) ────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent-brand);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Scrollbar (subtle, warm) ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-700);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-600);
+}

@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist/preload",
+    "paths": {
+      "@prism/core": ["../../packages/core/src/index.ts"],
+      "@prism/workspace": ["../../packages/workspace/src/index.ts"],
+      "@prism/memory": ["../../packages/memory/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts",
+    "../../packages/core/src/**/*.ts",
+    "../../packages/workspace/src/**/*.ts",
+    "../../packages/memory/src/**/*.ts"
+  ],
+  "exclude": [
+    "../../packages/*/src/**/*.test.ts",
+    "src/shared/*.test.ts"
+  ]
+}

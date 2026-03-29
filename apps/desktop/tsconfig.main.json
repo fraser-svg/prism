@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist/main",
+    "paths": {
+      "@prism/core": ["../../packages/core/src/index.ts"],
+      "@prism/workspace": ["../../packages/workspace/src/index.ts"],
+      "@prism/orchestrator": ["../../packages/orchestrator/src/index.ts"],
+      "@prism/memory": ["../../packages/memory/src/index.ts"],
+      "@prism/guardian": ["../../packages/guardian/src/index.ts"],
+      "@prism/execution": ["../../packages/execution/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/shared/**/*.ts",
+    "../../packages/*/src/**/*.ts"
+  ],
+  "exclude": [
+    "../../packages/*/src/**/*.test.ts",
+    "src/shared/*.test.ts"
+  ]
+}
