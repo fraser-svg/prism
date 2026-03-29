@@ -4,7 +4,6 @@ description: |
   Runs the ship workflow for a completed Prism build: squashes all branch commits into one clean conventional commit, creates a rich pull request, optionally deploys, archives the spec, updates product memory, and records a durable ship receipt.
   Activates on patterns:
   - ship( it)?$
-  - deploy( this)?$
   - create (a )?pull request
   - open (a )?pr
   - push (to )?(main|prod|production)
@@ -31,44 +30,44 @@ Closes the loop on a completed build by producing a clean git history, a reviewa
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `change_name` | string | required | The spec ID / change name (e.g., "add-auth"). Used to locate the spec entity, read reviews, and label the commit. |
-| `project_root` | filepath | required | Absolute path to the project root. |
-| `base_branch` | string | optional | Target branch for the PR. Defaults to "main". |
-| `commit_message` | string | optional | Optional override for the commit message. If omitted, derived from the spec entity title and acceptance criteria count. |
+| `change_name` | string | required | The spec ID / change name (e.g., "add-auth"). Used to locate the spec entity, read reviews, and label the commit.  |
+| `project_root` | filepath | required | Absolute path to the project root.  |
+| `base_branch` | string | optional | Target branch for the PR. Defaults to "main".  |
+| `commit_message` | string | optional | Optional override for the commit message. If omitted, derived from the spec entity title and acceptance criteria count.  |
 
 ## Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ship_result` | json | Full ship result JSON including squash, push, PR, tag, and deploy status. |
-| `pr_url` | string | URL of the created pull request. |
-| `receipt_path` | file | Path to the ship receipt JSON at .prism/ships/{specId}/receipt.json. |
+| `ship_result` | json | Full ship result JSON including squash, push, PR, tag, and deploy status.  |
+| `pr_url` | string | URL of the created pull request.  |
+| `receipt_path` | file | Path to the ship receipt JSON at .prism/ships/{specId}/receipt.json.  |
 
 ## Stages
 
 ### Stage 1: Preflight
 
-Verify the build is actually done: run advisory release-state and check-reviews batch call. Log results but don't block. If release state shows "hold", note missing evidence in the build log.
+Verify the build is actually done: run advisory release-state and check-reviews batch call. Log results but don't block. If release state shows "hold", note missing evidence in the build log. 
 
 ### Stage 2: Ship
 
-Run $BRIDGE ship to squash all commits on the branch into one clean conventional commit via git reset --soft to merge-base, push to origin, create a rich PR from spec + reviews + verification, and tag the commit. Prism owns the branch — all commits are squashed regardless of prefix.
+Run $BRIDGE ship to squash all commits on the branch into one clean conventional commit via git reset --soft to merge-base, push to origin, create a rich PR from spec + reviews + verification, and tag the commit. Prism owns the branch — all commits are squashed regardless of prefix. 
 
 _Auto-advances on success._
 
 ### Stage 3: Deploy
 
-Run $BRIDGE deploy-detect to check for deployment platforms (Vercel, Netlify, Railway, Fly.io, Render). If detected, ask the user before triggering. If auto-deploy is configured, note it. Never auto-trigger.
+Run $BRIDGE deploy-detect to check for deployment platforms (Vercel, Netlify, Railway, Fly.io, Render). If detected, ask the user before triggering. If auto-deploy is configured, note it. Never auto-trigger. 
 
 ### Stage 4: Archive And Update
 
-Archive the registry entry, archive the openspec change (best-effort), update product memory with "Last Shipped" section, and record the ship receipt to .prism/ships/{specId}/receipt.json.
+Archive the registry entry, archive the openspec change (best-effort), update product memory with "Last Shipped" section, and record the ship receipt to .prism/ships/{specId}/receipt.json. 
 
 _Auto-advances on success._
 
 ### Stage 5: Receipt
 
-Present the structured ship receipt to the user: what was built, requirements verified, review verdicts, PR URL, commit, tag, deploy status, and what's next. Offer branch cleanup and auto-merge.
+Present the structured ship receipt to the user: what was built, requirements verified, review verdicts, PR URL, commit, tag, deploy status, and what's next. Offer branch cleanup and auto-merge. 
 
 ## Scripts
 
@@ -101,13 +100,13 @@ Present the structured ship receipt to the user: what was built, requirements ve
 ## Examples
 
 **Input:** `add-auth: Ship the authentication feature`
-**Expected:** Reads spec entity for "add-auth" → "feat: Add JWT Authentication — 3 requirements verified". Squashes all commits, pushes, creates PR with rich body (spec summary, requirements checklist, review table). Tags as prism/add-jwt-authentication. Archives spec. Records receipt.
+**Expected:** Reads spec entity for "add-auth" → "feat: Add JWT Authentication — 3 requirements verified". Squashes all commits, pushes, creates PR with rich body (spec summary, requirements checklist, review table). Tags as prism/add-jwt-authentication. Archives spec. Records receipt. 
 
 **Input:** `user-dashboard: Ship with custom message 'feat: user dashboard v1'`
-**Expected:** Uses custom commit message override. Creates PR with rich body from spec entity. All other steps identical.
+**Expected:** Uses custom commit message override. Creates PR with rich body from spec entity. All other steps identical. 
 
 **Input:** `contact-form: Ship (with Vercel detected)`
-**Expected:** Ships normally. deploy-detect finds vercel.json. Asks user "Want me to deploy?" If yes, triggers vercel --prod with health check.
+**Expected:** Ships normally. deploy-detect finds vercel.json. Asks user "Want me to deploy?" If yes, triggers vercel --prod with health check. 
 
 ## Eval Cases
 

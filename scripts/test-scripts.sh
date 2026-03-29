@@ -1021,10 +1021,262 @@ _assert_contains "all: empty dir returns error" "$OUT" "ERROR\|no .yaml"
 
 # ============================================================
 echo ""
+echo "=== prism-deploy.sh ==="
+# ============================================================
+
+# Create a mock bin directory OUTSIDE test root (survives _setup resets)
+MOCK_BIN="/tmp/prism-mock-bin-$$"
+mkdir -p "$MOCK_BIN"
+
+_mock_vercel() {
+  local behavior="$1"
+  cat > "$MOCK_BIN/vercel" << EOF
+#!/usr/bin/env bash
+case "$behavior" in
+  success_preview)
+    echo "Deploying..."
+    echo "https://test-app-abc123.vercel.app"
+    exit 0
+    ;;
+  success_prod)
+    echo "Deploying to production..."
+    echo "https://test-app.vercel.app"
+    exit 0
+    ;;
+  build_error)
+    echo "Error: Build failed" >&2
+    exit 1
+    ;;
+  auth_401)
+    echo "Error: 401 Unauthorized" >&2
+    exit 1
+    ;;
+  forbidden_403)
+    echo "Error: 403 Forbidden" >&2
+    exit 1
+    ;;
+  network)
+    echo "Error: ENOTFOUND api.vercel.com" >&2
+    exit 1
+    ;;
+  conflict)
+    echo "Error: project already exists conflict" >&2
+    exit 1
+    ;;
+  no_url)
+    echo "Deployed successfully"
+    exit 0
+    ;;
+  env_add)
+    exit 0
+    ;;
+esac
+EOF
+  chmod +x "$MOCK_BIN/vercel"
+}
+
+# Mock security command to avoid real keychain access
+_mock_security() {
+  local has_vercel="$1"
+  if [ "$has_vercel" = "true" ]; then
+    cat > "$MOCK_BIN/security" << 'EOF'
+#!/usr/bin/env bash
+if echo "$*" | grep -q "prism-vercel"; then
+  if echo "$*" | grep -q -- "-w"; then
+    echo "mock-vercel-token"
+  fi
+  exit 0
+fi
+exit 1
+EOF
+  else
+    cat > "$MOCK_BIN/security" << 'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+  fi
+  chmod +x "$MOCK_BIN/security"
+}
+
+# Mock curl for health checks
+_mock_curl_healthy() {
+  cat > "$MOCK_BIN/curl" << 'MOCK'
+#!/usr/bin/env bash
+echo "200"
+exit 0
+MOCK
+  chmod +x "$MOCK_BIN/curl"
+}
+
+_mock_curl_unhealthy() {
+  cat > "$MOCK_BIN/curl" << 'MOCK'
+#!/usr/bin/env bash
+echo "503"
+exit 0
+MOCK
+  chmod +x "$MOCK_BIN/curl"
+}
+
+DEPLOY_SCRIPT="$SCRIPT_DIR/prism-deploy.sh"
+
+# --- Test: missing project root ---
+_setup
+OUT=$(bash "$DEPLOY_SCRIPT" "" 2>&1 || true)
+_assert_contains "deploy: missing root shows usage" "$OUT" "Usage"
+
+# --- Test: non-existent project root ---
+OUT=$(bash "$DEPLOY_SCRIPT" "/tmp/nonexistent-$$" 2>&1 || true)
+_assert_contains "deploy: bad root shows error" "$OUT" "does not exist"
+
+# --- Test: status mode with no state ---
+_setup
+OUT=$(bash "$DEPLOY_SCRIPT" "$TEST_ROOT" status 2>&1)
+_assert_contains "deploy: status with no state" "$OUT" "no deploy state"
+
+# --- Test: status mode with existing state ---
+_setup
+mkdir -p "$TEST_ROOT/.prism"
+echo '{"url":"https://test.vercel.app","mode":"preview"}' > "$TEST_ROOT/.prism/deploy-state.json"
+OUT=$(bash "$DEPLOY_SCRIPT" "$TEST_ROOT" status 2>&1)
+_assert_contains "deploy: status with state" "$OUT" "deploy state found"
+
+# --- Test: no token ---
+_setup
+_mock_security "false"
+_mock_vercel "success_preview"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: no token fails" "$OUT" "no_token"
+
+# --- Test: not deployable (no package.json or index.html) ---
+_setup
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_healthy
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: not deployable" "$OUT" "not_deployable"
+
+# --- Test: happy path preview deploy ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_healthy
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: preview success" "$OUT" "OK:"
+_assert_contains "deploy: preview URL in output" "$OUT" "test-app-abc123.vercel.app"
+# Check deploy state was persisted
+[ -f "$TEST_ROOT/.prism/deploy-state.json" ]
+_assert "deploy: deploy-state.json created" "$?" "0"
+
+# --- Test: happy path with index.html instead of package.json ---
+_setup
+touch "$TEST_ROOT/index.html"
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_healthy
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: index.html is deployable" "$OUT" "OK:"
+
+# --- Test: deployable in subdirectory ---
+_setup
+mkdir -p "$TEST_ROOT/app"
+touch "$TEST_ROOT/app/package.json"
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_healthy
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: subdir app/ is deployable" "$OUT" "OK:"
+
+# --- Test: build error ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "build_error"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: build error" "$OUT" "build_error"
+
+# --- Test: auth 401 ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "auth_401"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: auth 401" "$OUT" "auth_401"
+
+# --- Test: forbidden 403 ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "forbidden_403"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: forbidden 403" "$OUT" "forbidden_403"
+
+# --- Test: network error ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "network"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: network error" "$OUT" "network"
+
+# --- Test: conflict error ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "conflict"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: conflict error" "$OUT" "conflict"
+
+# --- Test: no URL parsed ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "no_url"
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: no URL parsed" "$OUT" "no_url_parsed"
+
+# --- Test: unhealthy URL ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_unhealthy
+OUT=$(PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview 2>&1)
+_assert_contains "deploy: unhealthy URL" "$OUT" "unhealthy"
+
+# --- Test: .vercel added to .gitignore ---
+_setup
+touch "$TEST_ROOT/package.json"
+echo "node_modules" > "$TEST_ROOT/.gitignore"
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_healthy
+PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview >/dev/null 2>&1
+grep -qxF '.vercel' "$TEST_ROOT/.gitignore"
+_assert "deploy: .vercel added to .gitignore" "$?" "0"
+
+# --- Test: telemetry events recorded ---
+_setup
+touch "$TEST_ROOT/package.json"
+_mock_security "true"
+_mock_vercel "success_preview"
+_mock_curl_healthy
+PATH="$MOCK_BIN:$PATH" bash "$DEPLOY_SCRIPT" "$TEST_ROOT" preview >/dev/null 2>&1
+if [ -f "$TEST_ROOT/.prism/telemetry.jsonl" ]; then
+  DEPLOY_EVENTS=$(grep -c "deploy_" "$TEST_ROOT/.prism/telemetry.jsonl" 2>/dev/null || echo "0")
+  [ "$DEPLOY_EVENTS" -ge 2 ]
+  _assert "deploy: telemetry events recorded" "$?" "0"
+else
+  _assert "deploy: telemetry file exists" "false" "true"
+fi
+
+# ============================================================
+echo ""
 echo "=== SUMMARY ==="
 # ============================================================
 
 _teardown
+rm -rf "$MOCK_BIN" 2>/dev/null || true
 
 TOTAL=$((PASS + FAIL))
 echo "Results: $PASS/$TOTAL passed"

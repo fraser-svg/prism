@@ -107,6 +107,18 @@ Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue
 
 **Depends on:** Graduate Bridge Gates to Blocking.
 
+## Typed DeploymentEntity in packages/core (P2)
+
+**What:** Add a `Deployment` entity to `packages/core/src/entities.ts` with a repository in `packages/memory/`. Track deployment URL, Vercel project ID, environment, timestamp, and status per spec/change.
+
+**Why:** The JSON file (`deploy-state.json`) works for v1 but doesn't integrate with the bridge, resume engine, or release gates. A typed entity enables: bridge queries for deployment status, resume engine knowing what's live, release gates including deployment as a gate, and multi-provider support.
+
+**When:** After prism-deploy.sh proves reliable in 2+ dogfood sessions.
+
+**How:** Add `Deployment` type to `packages/core/src/entities.ts`, add a memory repository, and wire it to the deploy flow.
+
+**Depends on:** This PR (prism-deploy.sh + deploy sections in SKILL.md) shipped first.
+
 ## Deploy Rollback Support (P3)
 
 **What:** After a deploy fails or breaks, offer to rollback via the platform CLI (e.g., `vercel rollback`, `netlify rollback`).
