@@ -32,7 +32,6 @@ Implements one decomposed unit of work from the Stage 3 dependency graph. Each w
 | `files_to_read` | array | required | List of relative file paths (max 10) the worker must read before starting. Includes relevant source files, types, and API definitions.  |
 | `constraints` | string | required | Hard constraints from the spec and PRODUCT.md Architecture Decisions. Workers MUST NOT violate these (e.g., "Use PostgreSQL, not SQLite").  |
 | `shared_context` | string | optional | Validated exported symbols, interfaces, and API contracts from prior workers that this worker depends on. Extracted from .prism/contracts/{worker-id}.json.  |
-| `research_context` | string | optional | Recommended packages, catalogue matches, and approach constraints from the research phase. Prefer these libraries/patterns unless they don't fit the task. If you discover a better approach, note why in your output.  |
 | `project_root` | filepath | required | Absolute path to the project root.  |
 | `worker_id` | string | required | Unique identifier for this worker (e.g., "w3"). Used for registry tracking and contract storage.  |
 
@@ -47,21 +46,13 @@ Implements one decomposed unit of work from the Stage 3 dependency graph. Each w
 
 ### Stage 1: Read Context
 
-Read all files listed in files_to_read. Read shared_context contracts from prior workers. Do NOT read anything outside this list.
-
-_Auto-advances on success._
-
-### Stage 1.5: Check Research Context
-
-If research_context is provided, read the recommended packages and approach constraints.
-Prefer the recommended libraries/patterns for this task. If they don't fit (wrong platform,
-missing capability, constraint violation), note why and proceed with your own approach.
+Read all files listed in files_to_read. Read shared_context contracts from prior workers. Do NOT read anything outside this list. 
 
 _Auto-advances on success._
 
 ### Stage 2: Plan Implementation
 
-Silently determine the implementation approach. Identify what to create vs modify. Check constraints. If research_context recommended specific packages, plan to use them unless constraints prevent it. No output at this stage. 
+Silently determine the implementation approach. Identify what to create vs modify. Check constraints. No output at this stage. 
 
 _Auto-advances on success._
 

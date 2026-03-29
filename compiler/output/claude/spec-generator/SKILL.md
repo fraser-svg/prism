@@ -103,6 +103,16 @@ Prism uses a three-layer discovery protocol before spec generation:
 2. **Shape** — What are we building? Simplest version that solves the problem. User
    walkthrough. Boundaries. Constraints.
 3. **Mirror** — Reflect back in 2-4 sentences. Get confirmation before speccing.
+4. **Scope** — After confirming understanding, ask ONE question:
+
+   > "How much should we build?"
+   > - **Full build** — Everything described, plus obvious supporting pieces
+   > - **Targeted** — Core feature, supporting pieces only where critical
+   > - **Exactly this** — Only what's described, nothing more
+   > - **Minimum viable** — Smallest thing that proves the concept
+
+   Store the answer as `scopeMode` on the Plan. This constrains task count
+   and review posture downstream. Default if user doesn't choose: "Exactly this."
 
 Transition to spec generation when you can answer:
 - What problem are we solving, and for whom?
