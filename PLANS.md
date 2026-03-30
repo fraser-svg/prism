@@ -34,6 +34,8 @@ What is still missing:
 
 This repo becomes the owned Prism Core first.
 
+Primary ICP: agency operators and owners delivering software outcomes for clients. Semi-technical creators are the expansion play post-traction.
+
 Prism Core responsibilities:
 - domain models
 - workflow orchestration
@@ -43,7 +45,7 @@ Prism Core responsibilities:
 - execution coordination
 - provider abstraction
 
-The future desktop app is a client shell on top of this core, not a substitute for it.
+The future desktop app (Electron) is a client shell on top of this core, not a substitute for it. See `docs/designs/prism-os-roadmap.md` for the full target architecture.
 
 ## Milestones
 
@@ -139,41 +141,42 @@ Scope:
 Exit criteria:
 - Prism Core can power a real desktop workspace without losing continuity ✓
 
-### M5. Desktop Shell Enablement ← NEXT
+### M5. Direction Reset + Hardening ← NEXT
 
 Goal:
-- prepare the core for an Electron-powered desktop product
-
-Scope:
-- app-facing APIs
-- desktop integration boundaries
-- packaging constraints
-- macOS-first decisions
+- align repo docs to agency-first ICP and Electron shell decision
+- harden gate evaluator and resume engine for real user sessions
+- add structured session logging for user proof evidence
+- write vision doc for the Prism OS roadmap (9-stage lifecycle, entity expansion, desktop shell)
 
 Exit criteria:
-- desktop shell can consume the core cleanly
+- repo tells one coherent story (agency operators, Electron, 9-stage target)
+- gate evaluator and resume engine handle corrupt/missing artifacts gracefully
+- Patrick session produces structured evidence via session logging
+- vision doc committed to docs/designs/prism-os-roadmap.md
 
 ## Priority Stack
 
 ### Now
 
-- Patrick-ready by March 30 — UI polished, workflow smooth, full session completable end-to-end
-- Record a demo-ready walkthrough of the magical workflow
-- Sharpen the one-liner and YC application narrative
+- M5 Direction Reset + Hardening (gate/resume resilience, session logging, doc alignment)
+- Patrick session — first real user proof
+- Record a demo-ready walkthrough of the agency workflow
+- Sharpen the one-liner and YC application narrative around agency operators
 
 ### Next
 
 - Graduate bridge gates from advisory to blocking (post-M3)
 - Deprecate OpenSpec for core spec storage
-- User proof from real dogfood sessions
+- Implement 9-stage lifecycle migration (see docs/designs/prism-os-roadmap.md)
+- IntakeBrief and Deployment entities (Tier 1)
 
 ### Later
 
-- graduate bridge gates from advisory to blocking
-- deprecate OpenSpec for core spec storage
-- introduce desktop-facing APIs
-- build polished workspace UX
-- add sync/cloud features
+- Agency entity expansion (ClientAccount, SolutionThesis, FeedbackRecord — Tier 2)
+- App-facing service layer (packages/ui AppService facade)
+- Electron desktop shell
+- Sync/cloud features
 
 ### Not Now
 
@@ -197,10 +200,11 @@ Exit criteria:
 
 ## Immediate Next Moves
 
-1. Polish end-to-end workflow for Patrick demo (March 30 deadline).
-2. Record demo walkthrough: Socratic discovery → spec → research → build → verification → ship.
-3. Sharpen YC one-liner and application narrative.
-4. Collect user proof from real dogfood sessions.
+1. Ship M5 hardening (gate/resume resilience, session logging, doc alignment).
+2. Get Patrick through a full Prism session with structured session logging.
+3. Record demo walkthrough: Socratic discovery → spec → research → build → verification → ship.
+4. Sharpen YC one-liner around agency operators hitting the 80% wall.
+5. Collect user proof from real dogfood sessions.
 
 ## Working Rules
 

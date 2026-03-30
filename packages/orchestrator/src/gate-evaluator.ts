@@ -86,138 +86,143 @@ export async function evaluateTransition(
   const blockers: string[] = [];
   const evidence: string[] = [];
 
-  if (from === "understand" && to === "identify_problem") {
-    const prismDir = projectPaths(projectRoot).prismDir;
-    if (await pathExists(prismDir)) {
-      evidence.push(".prism/ directory exists");
-    } else {
-      blockers.push(".prism/ directory does not exist");
-    }
-  }
-
-  if (from === "identify_problem" && to === "spec") {
-    // Lightweight — no artifact requirement
-    evidence.push("lightweight transition, no artifacts required");
-  }
-
-  if (from === "spec" && to === "plan") {
-    if (!activeSpecId) {
-      blockers.push("no active spec ID provided");
-    } else {
-      const specRepo = createSpecRepository(projectRoot);
-      const spec = await specRepo.readMetadata(activeSpecId);
-      if (!spec) {
-        blockers.push(`spec ${activeSpecId} not found`);
+  try {
+    if (from === "understand" && to === "identify_problem") {
+      const prismDir = projectPaths(projectRoot).prismDir;
+      if (await pathExists(prismDir)) {
+        evidence.push(".prism/ directory exists");
       } else {
-        if (spec.status !== "approved") {
-          blockers.push(`spec status is "${spec.status}", expected "approved"`);
-        }
-        if (!spec.acceptanceCriteria || spec.acceptanceCriteria.length === 0) {
-          blockers.push("spec has no acceptance criteria");
-        }
-        if (spec.status === "approved" && spec.acceptanceCriteria?.length > 0) {
-          evidence.push("spec is approved with acceptance criteria");
+        blockers.push(".prism/ directory does not exist");
+      }
+    }
+
+    if (from === "identify_problem" && to === "spec") {
+      // Lightweight — no artifact requirement
+      evidence.push("lightweight transition, no artifacts required");
+    }
+
+    if (from === "spec" && to === "plan") {
+      if (!activeSpecId) {
+        blockers.push("no active spec ID provided");
+      } else {
+        const specRepo = createSpecRepository(projectRoot);
+        const spec = await specRepo.readMetadata(activeSpecId);
+        if (!spec) {
+          blockers.push(`spec ${activeSpecId} not found`);
+        } else {
+          if (spec.status !== "approved") {
+            blockers.push(`spec status is "${spec.status}", expected "approved"`);
+          }
+          if (!spec.acceptanceCriteria || spec.acceptanceCriteria.length === 0) {
+            blockers.push("spec has no acceptance criteria");
+          }
+          if (spec.status === "approved" && spec.acceptanceCriteria?.length > 0) {
+            evidence.push("spec is approved with acceptance criteria");
+          }
         }
       }
     }
-  }
 
-  if (from === "plan" && to === "execute") {
-    if (!activeSpecId) {
-      blockers.push("no active spec ID provided");
-    } else {
-      const planRepo = createPlanRepository(projectRoot);
-      const planIds = await planRepo.list();
-      // Parallel metadata reads instead of sequential loop
-      const plans = await Promise.all(planIds.map((id) => planRepo.readMetadata(id)));
-      const matchIdx = plans.findIndex((p) => p && p.specId === activeSpecId);
-      if (matchIdx !== -1) {
-        const planId = planIds[matchIdx]!;
-        evidence.push(`plan ${planId} exists for spec ${activeSpecId}`);
-        // Check task graph file exists
-        const paths = planPaths(projectRoot, planId);
-        if (await pathExists(paths.taskGraphFile)) {
-          evidence.push("task graph file exists");
-          // Quality gate check
-          const qualityResult = await evaluatePlanQuality(projectRoot, planId, activeSpecId! as EntityId);
-          if (!qualityResult.passed && !qualityResult.legacy) {
-            blockers.push(qualityResult.summary);
-            for (const qDim of qualityResult.dimensions.filter((d) => !d.passed)) {
-              blockers.push(`  ${qDim.name}: ${qDim.details}`);
+    if (from === "plan" && to === "execute") {
+      if (!activeSpecId) {
+        blockers.push("no active spec ID provided");
+      } else {
+        const planRepo = createPlanRepository(projectRoot);
+        const planIds = await planRepo.list();
+        // Parallel metadata reads instead of sequential loop
+        const plans = await Promise.all(planIds.map((id) => planRepo.readMetadata(id)));
+        const matchIdx = plans.findIndex((p) => p && p.specId === activeSpecId);
+        if (matchIdx !== -1) {
+          const planId = planIds[matchIdx]!;
+          evidence.push(`plan ${planId} exists for spec ${activeSpecId}`);
+          // Check task graph file exists
+          const paths = planPaths(projectRoot, planId);
+          if (await pathExists(paths.taskGraphFile)) {
+            evidence.push("task graph file exists");
+            // Quality gate check
+            const qualityResult = await evaluatePlanQuality(projectRoot, planId, activeSpecId! as EntityId);
+            if (!qualityResult.passed && !qualityResult.legacy) {
+              blockers.push(qualityResult.summary);
+              for (const qDim of qualityResult.dimensions.filter((d) => !d.passed)) {
+                blockers.push(`  ${qDim.name}: ${qDim.details}`);
+              }
             }
-          }
-          if (qualityResult.legacy) {
-            evidence.push("legacy plan format — quality check skipped");
-          }
-          if (qualityResult.passed) {
-            evidence.push(qualityResult.summary);
+            if (qualityResult.legacy) {
+              evidence.push("legacy plan format — quality check skipped");
+            }
+            if (qualityResult.passed) {
+              evidence.push(qualityResult.summary);
+            }
+          } else {
+            blockers.push("task graph file does not exist");
           }
         } else {
-          blockers.push("task graph file does not exist");
+          blockers.push("no plan found for spec");
         }
-      } else {
-        blockers.push("no plan found for spec");
       }
     }
-  }
 
-  if (from === "execute" && to === "verify") {
-    const checkpointRepo = createCheckpointRepository(projectRoot);
-    if (activeSpecId) {
-      const checkpoint = await checkpointRepo.readLatestForSpec(activeSpecId as EntityId);
-      if (checkpoint) {
-        evidence.push("checkpoint exists for spec");
-      } else {
-        blockers.push("no checkpoint found for spec");
-      }
-    } else if (await checkpointRepo.exists()) {
-      evidence.push("checkpoint exists");
-    } else {
-      blockers.push("no checkpoint found");
-    }
-  }
-
-  if (from === "verify" && to === "release") {
-    if (!activeSpecId) {
-      blockers.push("no active spec ID provided");
-    } else {
-      // Parallel round 1: read spec + checkpoint simultaneously
-      const specRepo = createSpecRepository(projectRoot);
+    if (from === "execute" && to === "verify") {
       const checkpointRepo = createCheckpointRepository(projectRoot);
-      const [spec, checkpoint] = await Promise.all([
-        specRepo.readMetadata(activeSpecId),
-        checkpointRepo.readLatestForSpec(activeSpecId as EntityId),
-      ]);
-
-      if (!spec) {
-        blockers.push(`spec ${activeSpecId} not found`);
+      if (activeSpecId) {
+        const checkpoint = await checkpointRepo.readLatestForSpec(activeSpecId as EntityId);
+        if (checkpoint) {
+          evidence.push("checkpoint exists for spec");
+        } else {
+          blockers.push("no checkpoint found for spec");
+        }
+      } else if (await checkpointRepo.exists()) {
+        evidence.push("checkpoint exists");
       } else {
-        // Parallel round 2: reviews + verification (depend on spec.type and checkpoint.runId)
-        const runId = checkpoint?.runId;
-        const [reviewsPass, verification] = await Promise.all([
-          isReviewComplete(activeSpecId, spec.type, projectRoot),
-          runId
-            ? createVerificationRepository(projectRoot).read(runId)
-            : Promise.resolve(null),
+        blockers.push("no checkpoint found");
+      }
+    }
+
+    if (from === "verify" && to === "release") {
+      if (!activeSpecId) {
+        blockers.push("no active spec ID provided");
+      } else {
+        // Parallel round 1: read spec + checkpoint simultaneously
+        const specRepo = createSpecRepository(projectRoot);
+        const checkpointRepo = createCheckpointRepository(projectRoot);
+        const [spec, checkpoint] = await Promise.all([
+          specRepo.readMetadata(activeSpecId),
+          checkpointRepo.readLatestForSpec(activeSpecId as EntityId),
         ]);
 
-        if (reviewsPass) {
-          evidence.push("all required reviews passing");
+        if (!spec) {
+          blockers.push(`spec ${activeSpecId} not found`);
         } else {
-          blockers.push("required reviews incomplete or not passing");
-        }
+          // Parallel round 2: reviews + verification (depend on spec.type and checkpoint.runId)
+          const runId = checkpoint?.runId;
+          const [reviewsPass, verification] = await Promise.all([
+            isReviewComplete(activeSpecId, spec.type, projectRoot),
+            runId
+              ? createVerificationRepository(projectRoot).read(runId)
+              : Promise.resolve(null),
+          ]);
 
-        if (runId) {
-          if (verification?.passed) {
-            evidence.push("verification passed");
+          if (reviewsPass) {
+            evidence.push("all required reviews passing");
           } else {
-            blockers.push("verification not passed");
+            blockers.push("required reviews incomplete or not passing");
           }
-        } else {
-          blockers.push("no run ID in checkpoint for verification lookup");
+
+          if (runId) {
+            if (verification?.passed) {
+              evidence.push("verification passed");
+            } else {
+              blockers.push("verification not passed");
+            }
+          } else {
+            blockers.push("no run ID in checkpoint for verification lookup");
+          }
         }
       }
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    blockers.push(`artifact read error during ${from}→${to} gate check: ${message}`);
   }
 
   return {

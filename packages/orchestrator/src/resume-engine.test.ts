@@ -180,6 +180,47 @@ describe("resumeFromArtifacts", () => {
     expect(result.workflow.phase).toBe("verify");
   });
 
+  it("falls through to cold start when checkpoint JSON is corrupt", async () => {
+    const checkpointsDir = join(testDir, ".prism", "checkpoints");
+    await mkdir(checkpointsDir, { recursive: true });
+    await writeFile(join(checkpointsDir, "latest.json"), "NOT VALID JSON{{{");
+
+    const result = await resumeFromArtifacts(abs(testDir), PROJECT_ID);
+    // Should NOT throw — should fall through to artifact scan or cold start
+    expect(result.source).toBe("cold_start");
+    expect(result.workflow.phase).toBe("understand");
+  });
+
+  it("recovers from history when latest checkpoint is corrupt", async () => {
+    const checkpointsDir = join(testDir, ".prism", "checkpoints");
+    const historyDir = join(checkpointsDir, "history");
+    await mkdir(historyDir, { recursive: true });
+
+    // Corrupt latest.json
+    await writeFile(join(checkpointsDir, "latest.json"), "NOT VALID JSON{{{");
+
+    // Valid checkpoint in history
+    const historyCheckpoint = makeCheckpoint({ phase: "plan" });
+    await writeFile(
+      join(historyDir, `${SPEC_ID}--2026-01-01T00-00-00-000Z.json`),
+      JSON.stringify(historyCheckpoint),
+    );
+
+    const result = await resumeFromArtifacts(abs(testDir), PROJECT_ID);
+    expect(result.source).toBe("checkpoint");
+    expect(result.workflow.phase).toBe("plan");
+  });
+
+  it("falls through to cold start when artifact scan encounters corrupt spec", async () => {
+    const specDir = join(testDir, ".prism", "specs", "spec-bad");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(join(specDir, "metadata.json"), "CORRUPT JSON{{{");
+
+    const result = await resumeFromArtifacts(abs(testDir), PROJECT_ID);
+    // Should NOT throw — should fall through past artifact scan
+    expect(["artifacts", "cold_start"]).toContain(result.source);
+  });
+
   it("records resume transition in history", async () => {
     const checkpointsDir = join(testDir, ".prism", "checkpoints");
     await mkdir(checkpointsDir, { recursive: true });

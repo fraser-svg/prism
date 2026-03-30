@@ -340,4 +340,17 @@ describe("evaluateTransition", () => {
     expect(result.allowed).toBe(false);
     expect(result.blockers).toContain("invalid transition from understand to release");
   });
+
+  // --- error resilience ---
+
+  it("spec -> plan: returns blocker instead of throwing on corrupt spec JSON", async () => {
+    const specId = "spec-corrupt" as EntityId;
+    const specDir = join(tmpDir, ".prism", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    await writeFile(join(specDir, "metadata.json"), "NOT VALID JSON{{{");
+
+    const result = await evaluateTransition("spec", "plan", projectRoot, specId);
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.some((b) => b.includes("artifact read error"))).toBe(true);
+  });
 });

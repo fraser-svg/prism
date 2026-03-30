@@ -6,16 +6,22 @@ Before implementing any change in this repo, run `/yc-brain` with a description 
 
 The filter question for every session: **Does this help a user produce more with Prism than without it, more easily than without it? If the answer is weak, say so before building.**
 
+## ICP
+
+Primary: **Agency operators** delivering software outcomes for clients. Semi-technical creators are the expansion play.
+
 ## Priority Stack (current)
 
-1. **Patrick-ready by March 30** — UI polished, workflow smooth, full session completable end-to-end
-2. **Record a demo-ready walkthrough** of the magical workflow (Socratic discovery → spec → build → verification)
-3. **Sharpen the one-liner and YC application narrative**
+1. **M5 Direction Reset + Hardening** — gate/resume resilience, session logging, doc alignment
+2. **Patrick session** — first real user proof with structured evidence capture
+3. **Record a demo-ready walkthrough** of the agency workflow (Socratic discovery → spec → build → verification → deploy)
+4. **Sharpen the one-liner and YC application narrative** around agency operators
 
 ## Stop Building
 
 Do not work on these until the priority stack is resolved:
-- M5 Desktop Shell Enablement (Electron, not Tauri)
+- Electron Desktop Shell (post-YC — see `docs/designs/prism-os-roadmap.md`)
+- 9-stage lifecycle migration (vision doc written, implementation deferred)
 - Provider abstractions
 - Broad integrations
 - Enterprise governance

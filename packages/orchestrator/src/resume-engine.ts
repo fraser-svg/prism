@@ -1,11 +1,11 @@
-import type { AbsolutePath, EntityId, WorkflowPhase } from "@prism/core";
+import type { AbsolutePath, Checkpoint, EntityId, WorkflowPhase } from "@prism/core";
 import {
   createCheckpointRepository,
   createSpecRepository,
   createPlanRepository,
   projectPaths,
 } from "@prism/memory";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
 import {
   createInitialWorkflowState,
@@ -35,32 +35,82 @@ export async function resumeFromArtifacts(
   changeName?: string,
 ): Promise<ResumeResult> {
   // 1. Try checkpoint
-  const checkpointRepo = createCheckpointRepository(projectRoot);
-  const checkpoint = await checkpointRepo.readLatest();
+  try {
+    const checkpointRepo = createCheckpointRepository(projectRoot);
+    const checkpoint = await checkpointRepo.readLatest();
 
-  if (checkpoint) {
-    const workflow = createInitialWorkflowState(projectId, checkpoint.activeSpecId);
-    workflow.phase = checkpoint.phase;
-    workflow.blockers = checkpoint.blockers ?? [];
-    workflow.approvalsPending = checkpoint.approvalsPending ?? [];
-    workflow.transitionHistory = [
-      { from: "resume" as WorkflowPhase, to: checkpoint.phase, reason: "resume" },
-    ];
+    if (checkpoint) {
+      const workflow = createInitialWorkflowState(projectId, checkpoint.activeSpecId);
+      workflow.phase = checkpoint.phase;
+      workflow.blockers = checkpoint.blockers ?? [];
+      workflow.approvalsPending = checkpoint.approvalsPending ?? [];
+      workflow.transitionHistory = [
+        { from: "resume" as WorkflowPhase, to: checkpoint.phase, reason: "resume" },
+      ];
 
-    return {
-      workflow,
-      summary: {
-        phase: checkpoint.phase,
-        activeSpecId: checkpoint.activeSpecId,
-        blockers: checkpoint.blockers ?? [],
-        nextActions: checkpoint.nextRecommendedActions ?? [],
-      },
-      source: "checkpoint",
-    };
+      return {
+        workflow,
+        summary: {
+          phase: checkpoint.phase,
+          activeSpecId: checkpoint.activeSpecId,
+          blockers: checkpoint.blockers ?? [],
+          nextActions: checkpoint.nextRecommendedActions ?? [],
+        },
+        source: "checkpoint",
+      };
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`Checkpoint read failed (corrupt or missing): ${message}`);
+
+    // Fallback: scan history directory for the most recent valid checkpoint
+    try {
+      const historyDir = `${projectRoot}/.prism/checkpoints/history`;
+      const historyFiles = await readdir(historyDir);
+      const jsonFiles = historyFiles.filter((f) => f.endsWith(".json")).sort().reverse();
+
+      for (const file of jsonFiles) {
+        try {
+          const content = await readFile(`${historyDir}/${file}`, "utf-8");
+          const checkpoint = JSON.parse(content) as Checkpoint;
+          if (checkpoint.phase) {
+            console.warn(`Recovered checkpoint from history: ${file}`);
+            const workflow = createInitialWorkflowState(projectId, checkpoint.activeSpecId);
+            workflow.phase = checkpoint.phase;
+            workflow.blockers = checkpoint.blockers ?? [];
+            workflow.approvalsPending = checkpoint.approvalsPending ?? [];
+            workflow.transitionHistory = [
+              { from: "resume" as WorkflowPhase, to: checkpoint.phase, reason: "resume" },
+            ];
+
+            return {
+              workflow,
+              summary: {
+                phase: checkpoint.phase,
+                activeSpecId: checkpoint.activeSpecId,
+                blockers: checkpoint.blockers ?? [],
+                nextActions: checkpoint.nextRecommendedActions ?? [],
+              },
+              source: "checkpoint",
+            };
+          }
+        } catch {
+          continue; // Corrupted history file — try next
+        }
+      }
+    } catch {
+      // History dir doesn't exist or is unreadable — fall through to artifact scan
+    }
   }
 
   // 2. Try artifact scan
-  const artifactResult = await derivePhaseFromArtifacts(projectRoot);
+  let artifactResult: ArtifactPhaseResult | null = null;
+  try {
+    artifactResult = await derivePhaseFromArtifacts(projectRoot);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`Artifact scan failed (corrupt or missing files), falling through to registry: ${message}`);
+  }
   if (artifactResult) {
     const workflow = createInitialWorkflowState(projectId, artifactResult.activeSpecId);
     workflow.phase = artifactResult.phase;
@@ -162,8 +212,11 @@ async function derivePhaseFromArtifacts(
     const planRepo = createPlanRepository(projectRoot);
     const planIds = await planRepo.list();
     if (planIds.length > 0) {
-      // Parallel metadata reads instead of sequential loop
-      const plans = await Promise.all(planIds.map((id) => planRepo.readMetadata(id)));
+      // Parallel metadata reads — allSettled so one corrupt file doesn't reject all
+      const planResults = await Promise.allSettled(planIds.map((id) => planRepo.readMetadata(id)));
+      const plans = planResults
+        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof planRepo.readMetadata>>> => r.status === "fulfilled")
+        .map((r) => r.value);
       const withSpec = plans.find((p) => p?.specId);
       if (withSpec) {
         return { phase: "execute", activeSpecId: withSpec.specId as EntityId };
@@ -176,8 +229,11 @@ async function derivePhaseFromArtifacts(
   if (hasSpec) {
     const specRepo = createSpecRepository(projectRoot);
     const specIds = await specRepo.list();
-    // Parallel metadata reads instead of sequential loop
-    const specs = await Promise.all(specIds.map((id) => specRepo.readMetadata(id)));
+    // Parallel metadata reads — allSettled so one corrupt file doesn't reject all
+    const specResults = await Promise.allSettled(specIds.map((id) => specRepo.readMetadata(id)));
+    const specs = specResults
+      .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof specRepo.readMetadata>>> => r.status === "fulfilled")
+      .map((r) => r.value);
     const approved = specs.findIndex((s) => s?.status === "approved");
     if (approved !== -1) {
       return { phase: "plan", activeSpecId: specIds[approved]! };

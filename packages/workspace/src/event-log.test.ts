@@ -127,6 +127,54 @@ describe("EventLog", () => {
     expect(events).toHaveLength(5);
   });
 
+  it("logSession writes a typed session event", () => {
+    log.logSession({
+      projectId: "proj-1",
+      action: "session:start",
+      summary: "User started a session",
+      metadata: { operator: "fraser" },
+    });
+
+    const events = log.query({ eventType: "session:start" });
+    expect(events).toHaveLength(1);
+    expect(events[0].summary).toBe("User started a session");
+    expect(events[0].metadata).toEqual({ operator: "fraser" });
+    expect(events[0].projectId).toBe("proj-1");
+  });
+
+  it("sessionTimeline returns only session events in chronological order", () => {
+    // Insert session events and a non-session event
+    log.logSession({
+      projectId: "proj-1",
+      action: "session:start",
+      summary: "Started",
+    });
+    log.append({
+      projectId: "proj-1",
+      eventType: "project:registered",
+      summary: "Not a session event",
+    });
+    log.logSession({
+      projectId: "proj-1",
+      action: "session:decision",
+      summary: "User chose plan A",
+    });
+    log.logSession({
+      projectId: "proj-1",
+      action: "session:end",
+      summary: "Ended",
+    });
+
+    const timeline = log.sessionTimeline("proj-1");
+    expect(timeline).toHaveLength(3);
+    expect(timeline[0].eventType).toBe("session:start");
+    expect(timeline[1].eventType).toBe("session:decision");
+    expect(timeline[2].eventType).toBe("session:end");
+    // Verify ASC ordering (first inserted = first in timeline)
+    expect(timeline[0].summary).toBe("Started");
+    expect(timeline[2].summary).toBe("Ended");
+  });
+
   it("recentForProject returns limited events for a project", () => {
     for (let i = 0; i < 20; i++) {
       log.append({
