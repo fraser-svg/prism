@@ -12,6 +12,7 @@ import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { generatePrBody } from "./ship.js";
 
 const execFile = promisify(execFileCb);
 
@@ -302,5 +303,58 @@ describe("ship", () => {
     // The untracked file should NOT be in the squash commit
     const files = await git(tmpDir, "diff", "--name-only", "main..HEAD");
     expect(files).not.toContain("secret.env");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR body confidence tests
+// ---------------------------------------------------------------------------
+
+describe("generatePrBody confidence", () => {
+  const spec = {
+    title: "Test Feature",
+    summary: "A test feature",
+    acceptanceCriteria: [{ description: "Works", status: "passing" }],
+  };
+  const verdicts = { engineering: "pass" as string | null };
+
+  it("includes HIGH confidence line when level is high", () => {
+    const body = generatePrBody(spec, verdicts, undefined, { level: "high" });
+    expect(body).toContain("**Build confidence:** HIGH");
+    expect(body).toContain("all approaches validated");
+  });
+
+  it("includes MEDIUM confidence line when level is medium", () => {
+    const body = generatePrBody(spec, verdicts, undefined, { level: "medium" });
+    expect(body).toContain("**Build confidence:** MEDIUM");
+    expect(body).toContain("some checks skipped or concerns noted");
+  });
+
+  it("includes LOW confidence line when level is low", () => {
+    const body = generatePrBody(spec, verdicts, undefined, { level: "low" });
+    expect(body).toContain("**Build confidence:** LOW");
+    expect(body).toContain("unresolved concerns flagged during review");
+  });
+
+  it("includes LOW confidence line when level is user-accepted-low", () => {
+    const body = generatePrBody(spec, verdicts, undefined, { level: "user-accepted-low" });
+    expect(body).toContain("**Build confidence:** LOW");
+    expect(body).toContain("user accepted known concerns");
+  });
+
+  it("includes UNKNOWN confidence line when level is unknown", () => {
+    const body = generatePrBody(spec, verdicts, undefined, { level: "unknown" });
+    expect(body).toContain("**Build confidence:** UNKNOWN");
+    expect(body).toContain("validation checks did not run");
+  });
+
+  it("does not include confidence line when confidence is null", () => {
+    const body = generatePrBody(spec, verdicts, undefined, null);
+    expect(body).not.toContain("Build confidence:");
+  });
+
+  it("does not include confidence line when confidence is undefined", () => {
+    const body = generatePrBody(spec, verdicts);
+    expect(body).not.toContain("Build confidence:");
   });
 });

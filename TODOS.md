@@ -195,6 +195,42 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Continuous Intelligence Layer stable + Skill Catalogue proven useful.
 
+## Auto-Tune Red Team Aggressiveness (P3)
+
+**What:** Track Red Team false alarm rate (concerns raised that turned out wrong). If >50%, reduce aggressiveness. If <10%, increase it. Adjust the prompt dynamically.
+
+**Why:** The "at least one concern" rule could produce noise over time. Auto-tuning keeps the signal-to-noise ratio high without manual prompt editing.
+
+**When:** After 20+ Red Team runs with outcome data.
+
+**How:** Correlate Red Team concerns with build outcomes (did the concern materialise?). Adjust prompt temperature or add "your last 5 reviews had X% false alarm rate" context.
+
+**Depends on:** Better Solution Finding feature shipped + 20+ builds with telemetry.
+
+## Cross-Build Confidence Trending (P2)
+
+**What:** Aggregate confidence scores across builds to answer: do builds with higher initial confidence have fewer QA failures? Do builds where the user overrode low confidence have more issues?
+
+**Why:** Validates whether the confidence scoring system actually predicts build quality. If it doesn't correlate, the scoring needs recalibration.
+
+**When:** After 10+ builds with confidence scores.
+
+**How:** Read `.prism/ships/*/receipt.json` confidence fields. Correlate with QA pass/fail rates and post-ship issue reports.
+
+**Depends on:** Better Solution Finding feature shipped + 10+ builds with confidence data.
+
+## Red Team Replay Eval (P1)
+
+**What:** Build an eval that replays the marketing verification scenario. Give Prism a task requiring JS execution to detect content. Verify: (1) taxonomy flags "js-rendering," (2) Red Team catches static approach blind spots, (3) confidence reflects the gap.
+
+**Why:** Without this eval, you can't prove the system works. The development logs are ground truth.
+
+**When:** After Better Solution Finding is shipped + seed taxonomy is populated.
+
+**How:** Add to `evals/` directory. Script that simulates the marketing verification task inputs and asserts Red Team + taxonomy outputs.
+
+**Depends on:** Better Solution Finding feature shipped + seed taxonomy entries.
+
 ## Graduate Advisory Prescriptions to Auto-Tightening Gates (P2)
 
 **What:** After 5+ consecutive sessions where a prescription's advice is followed (dimension scores >= 7), automatically tighten the corresponding gate to enforce the behavior instead of just advising it.

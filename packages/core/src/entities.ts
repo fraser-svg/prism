@@ -379,6 +379,15 @@ export interface ShipReceipt extends AuditStamp {
   reviewVerdicts: Record<string, string | null>;
   changelogUpdated: boolean;
   shippedAt: ISODateString;
+  confidence?: {
+    level: 'high' | 'medium' | 'low' | 'unknown' | 'user-accepted-low';
+    method: string;
+    concerns: string[];
+    escalated: boolean;
+    escalationCount: number;
+    checksRun: string[];
+    checksSkipped: string[];
+  };
 }
 
 export interface VerificationObservation {

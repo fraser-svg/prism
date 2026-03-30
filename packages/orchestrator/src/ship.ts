@@ -129,10 +129,11 @@ async function readReviewVerdicts(
 // PR body generation
 // ---------------------------------------------------------------------------
 
-function generatePrBody(
+export function generatePrBody(
   spec: { title: string; summary: string; acceptanceCriteria: Array<{ description: string; status: string }> } | null,
   verdicts: Record<string, string | null>,
   changeName?: string,
+  confidence?: { level: string } | null,
 ): string {
   const lines: string[] = [];
 
@@ -166,6 +167,22 @@ function generatePrBody(
   }
   lines.push("");
 
+  if (confidence) {
+    lines.push("");
+    if (confidence.level === "high") {
+      lines.push("**Build confidence:** HIGH \u2014 all approaches validated");
+    } else if (confidence.level === "medium") {
+      lines.push("**Build confidence:** MEDIUM \u2014 some checks skipped or concerns noted");
+    } else if (confidence.level === "user-accepted-low") {
+      lines.push("**Build confidence:** LOW \u2014 user accepted known concerns");
+    } else if (confidence.level === "low") {
+      lines.push("**Build confidence:** LOW \u2014 unresolved concerns flagged during review");
+    } else {
+      lines.push("**Build confidence:** UNKNOWN \u2014 validation checks did not run");
+    }
+    lines.push("");
+  }
+
   lines.push("---");
   lines.push("_Built by Prism_");
 
@@ -197,9 +214,11 @@ export async function execShip(args: string[]): Promise<ShipResult> {
   // Parse optional flags
   let baseBranch = "main";
   let messageOverride: string | null = null;
+  let confidenceLevel: string | null = null;
   for (let i = 2; i < args.length; i++) {
     if (args[i] === "--base" && args[i + 1]) { baseBranch = args[++i]!; }
     if (args[i] === "--message" && args[i + 1]) { messageOverride = args[++i]!; }
+    if (args[i] === "--confidence-level" && args[i + 1]) { confidenceLevel = args[++i]!; }
   }
 
   const result: ShipResult = {
@@ -317,7 +336,7 @@ export async function execShip(args: string[]): Promise<ShipResult> {
       }
     } catch {
       // No existing PR — create one
-      const prBody = generatePrBody(spec, verdicts);
+      const prBody = generatePrBody(spec, verdicts, undefined, confidenceLevel ? { level: confidenceLevel } : undefined);
       const tmpDir = await mkdtemp(join(tmpdir(), "prism-pr-"));
       const bodyFile = join(tmpDir, "pr-body.md");
       await writeFile(bodyFile, prBody, "utf-8");

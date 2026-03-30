@@ -1,0 +1,52 @@
+[
+  {
+    "id": "js-rendering",
+    "category": "detection",
+    "description": "Content loaded via JavaScript (GTM containers, SPAs, dynamic forms) is invisible to static HTML parsers.",
+    "detection_keywords": ["static", "html", "parse", "beautifulsoup", "requests", "scrape", "fetch"],
+    "mitigation": "Use a real browser (Playwright, Puppeteer) with JavaScript execution.",
+    "source": "seed",
+    "added_at": "2026-03-30T17:00:00Z",
+    "hit_count": 0
+  },
+  {
+    "id": "consent-gates",
+    "category": "detection",
+    "description": "Cookie consent banners (CookieYes, Cookiebot, Complianz, OneTrust) block JavaScript-rendered content until accepted.",
+    "detection_keywords": ["cookie", "consent", "banner", "gdpr", "privacy", "tracking", "pixel"],
+    "mitigation": "Auto-accept consent banners before checking for gated content.",
+    "source": "seed",
+    "added_at": "2026-03-30T17:00:00Z",
+    "hit_count": 0
+  },
+  {
+    "id": "binary-detection",
+    "category": "epistemology",
+    "description": "Absence of detection is not evidence of absence. Binary true/false results from detection tools should never be presented as confirmed absence.",
+    "detection_keywords": ["false", "not found", "no evidence", "absent", "missing", "undetected", "boolean"],
+    "mitigation": "Use confidence scoring (high/medium/low/unknown) instead of binary results.",
+    "source": "seed",
+    "added_at": "2026-03-30T17:00:00Z",
+    "hit_count": 0
+  },
+  {
+    "id": "single-page-analysis",
+    "category": "coverage",
+    "description": "Checking only the homepage or a single page produces systematically incomplete results. Email forms, service-specific pixels, and secondary CTAs rarely live on the homepage.",
+    "detection_keywords": ["homepage", "single page", "main page", "landing page", "one page"],
+    "mitigation": "Check multiple pages (sitemap-guided, minimum 4-5 pages per site).",
+    "source": "seed",
+    "added_at": "2026-03-30T17:00:00Z",
+    "hit_count": 0
+  },
+  {
+    "id": "cdn-blocking",
+    "category": "detection",
+    "description": "Headless browsers may block CDN requests for tracking pixels (connect.facebook.net, etc.) due to default fingerprinting restrictions.",
+    "detection_keywords": ["headless", "chrome", "cdn", "blocked", "network", "pixel", "request", "intercept"],
+    "mitigation": "Add HTML fallback detection alongside network interception.",
+    "source": "seed",
+    "added_at": "2026-03-30T17:00:00Z",
+    "hit_count": 0
+  }
+]
