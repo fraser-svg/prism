@@ -9,7 +9,7 @@
 PRISMATIC v{version}
 For agency operators who need to turn client briefs into shipped software.
 Prismatic finds the real problem, shapes the right solution, then specs, builds, and verifies it.
-To begin: describe the your need...
+To begin: describe your need...
 
 ---
 
@@ -29,11 +29,14 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 
 - A **Socratic discovery flow** that finds the real problem before building starts
 - A **spec-driven lifecycle** (understand, identify problem, spec, plan, build, verify, ship) with artifact gating
-- **Typed core packages** for domain model, memory, orchestration, guardian, and execution
+- **Typed core packages** for domain model, memory, orchestration, guardian, execution, and workspace
 - A **dual-write bridge** connecting the Claude Code skill to typed core artifacts
 - **Local-first workspace** with SQLite, FTS5 search, health badges, and multi-project resume
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
+- **Hook integrations** for Claude Code event-driven automation
+- **Evaluation harnesses** for quality measurement
+- A **spec compiler** pipeline
 
 ### What Is Future Direction
 
@@ -105,6 +108,7 @@ Like a real team would.
 
 ### Prerequisites
 
+- Node.js (v18+)
 - Claude Code
 - OpenSpec
 - gstack
@@ -177,28 +181,41 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION
+├── VERSION               # 4.0.12.0
 ├── CHANGELOG.md
-├── scripts/              # The body — deterministic bookkeeping
+├── CLAUDE.md             # YC Build Brain gate
+├── AGENTS.md             # Agent orchestration config
+├── packages/             # Typed core — code-enforced lifecycle
+│   ├── core/             # Domain model (branded types, entities)
+│   ├── memory/           # Artifact repositories (.prism/ storage)
+│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI
+│   ├── guardian/         # Review matrix, release-state derivation
+│   ├── execution/        # Intent policy, execution adapters
+│   └── workspace/        # SQLite workspace, multi-project, FTS5 search
+├── scripts/              # Deterministic bookkeeping (16 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
 │   ├── prism-verify.sh   # Syntax/lint/compile verification
 │   ├── prism-checkpoint.sh # Session context persistence
-│   └── test-scripts.sh   # Test suite for all scripts
-├── packages/             # Typed core — code-enforced lifecycle
-│   ├── core/             # Domain model (14 entities, branded types)
-│   ├── memory/           # Artifact repositories (.prism/ storage)
-│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI
-│   ├── guardian/         # Review matrix, release-state derivation
-│   └── execution/        # Intent policy, execution adapters
+│   ├── prism-deploy.sh   # Vercel deploy detection and triggering
+│   ├── prism-research.sh # Solution research before building
+│   ├── prism-catalogue.sh # Skill catalogue CRUD
+│   └── ...               # eval, improve, supervisor, telemetry, state, gemini-worker
+├── compiler/             # Spec compilation pipeline
+├── hooks/                # Claude Code hook integrations
+├── evals/                # Evaluation harnesses
+├── openspec/             # OpenSpec integration
 ├── references/           # Personality, spec format, skill catalog, product context
-└── templates/            # Spec templates
+├── templates/            # Spec templates
+├── planning/             # Planning artifacts
+├── test/                 # Test infrastructure
+└── docs/                 # Architecture, designs, YC readiness, specs
 ```
 
 ### Typed Core (packages/)
 
-The typed core runs alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
+Six TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, and health tracking. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
 
 ---
 
