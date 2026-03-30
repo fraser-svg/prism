@@ -12,11 +12,11 @@ Maintained by `/yc-brain`. Updated on every review and retro.
 
 | Dimension | Score | Reason |
 |-----------|-------|--------|
-| ICP clarity | 3/5 | Focused on semi-technical builders (agency operators, freelancers, founder-operators) but needs external validation beyond Fraser and Patrick |
+| ICP clarity | 3/5 | Focused on agency operators (freelancers, studio owners) delivering software outcomes for clients, but needs external validation beyond Fraser and Patrick |
 | Wedge sharpness | 3/5 | The 80% wall is real and painful, but "scope-locking + guardrails" framing is still abstract — needs a demo that makes it concrete |
 | Magical workflow readiness | 2/5 | Socratic discovery → spec → build → verification exists in SKILL.md but is not demo-polished or recorded |
 | User proof readiness | 0/5 | No external users. Fraser is the only person who has used Prism. Patrick has not yet done a full session. CRITICAL GAP |
-| Category story strength | 3/5 | Clear positioning ("intent-first for creators," "the 80% wall fix") but one-liner needs sharpening |
+| Category story strength | 3/5 | Clear positioning ("intent-first for agency operators," "the 80% wall fix") but one-liner needs sharpening |
 | Spec-driven discipline | 4/5 | Strong spec-driven culture. M1-M3 shipped cleanly with specs, plans, and milestone gates |
 
 **Total: 15/30**

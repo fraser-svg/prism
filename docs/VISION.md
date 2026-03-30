@@ -2,13 +2,13 @@
 
 ## What Prism Is
 
-Prism gives every creator a world-class founding team.
+Prism gives every agency operator a world-class founding team.
 
-Not a code editor. Not a chatbot. Not a no-code tool. A team — one that understands your vision, challenges your thinking, builds while you sleep, and never lets you get lost. The creator speaks in ideas, vibes, and direction. Prism translates that into working product through an invisible team of experts that handles everything the creator shouldn't have to think about.
+Not a code editor. Not a chatbot. Not a no-code tool. A team — one that understands your client's problem, challenges your assumptions, builds while you focus on the business, and never lets you get lost. The operator speaks in briefs, direction, and judgment calls. Prism translates that into delivered client software through an invisible team of experts that handles everything the operator shouldn't have to think about.
 
-The creator's job is taste, vision, and judgment calls. Everything else is Prism's.
+The operator's job is taste, vision, and client relationships. Everything else is Prism's.
 
-Prism exists to help non-developers build the real solution to the real problem — the solution they would previously have needed an unaffordable dream team to create.
+Prism exists to help agency operators deliver the real solution to the real problem — the solution they would previously have needed an unaffordable dream team to create.
 
 ## The Problem
 
@@ -16,13 +16,13 @@ Every AI tool today gives you power without confidence. You can generate code in
 
 This fails for three reasons:
 
-1. **The tools speak engineer.** They force you to flatten your thinking into prompts, interpret terminal output, and manage context across sessions. Creation becomes project management.
+1. **The tools speak engineer.** They force you to flatten your thinking into prompts, interpret terminal output, and manage context across sessions. Delivery becomes project management.
 
 2. **Nobody interrogates intent.** AI tools take instructions at face value. "Build me an X crawler" gets a web scraper — nobody asks "why do you want that? What's the actual goal? There are better approaches." The wrong thing gets built fast.
 
-3. **The creator is alone.** There's no team challenging assumptions, verifying quality, catching mistakes, or keeping the big picture in focus. It's one person and a machine that forgets everything between sessions.
+3. **The operator is alone.** There's no team challenging assumptions, verifying quality, catching mistakes, or keeping the big picture in focus. It's one person and a machine that forgets everything between sessions.
 
-The result: 80% of ambitious projects die. Not because the idea was bad or the founder wasn't capable. Because the tools gave them power without a team.
+The result: 80% of ambitious projects die. Not because the idea was bad or the operator wasn't capable. Because the tools gave them power without a team.
 
 ## The Insight
 
@@ -38,13 +38,13 @@ That team is not there to blindly build the user's first request. It is there to
 
 ## The User
 
-Semi-technical creators who want to build startups, internal tools, or passion projects. People who already have businesses they want to improve. People who have taste, vision, and ambition but don't have the time, ability, or bandwidth to become Claude Code power users.
+**Primary ICP: Agency operators** — freelancers, studio owners, and owner-operators who use AI coding tools to deliver software outcomes for clients. They already have briefs, client relationships, and delivery pressure. They need a force multiplier — the ability to direct a team, not learn a craft.
 
-They are not engineers who want a faster IDE. They are not beginners who need tutorials. They are intelligent, capable early adopters who need a force multiplier — the ability to direct a team, not learn a craft.
+Think of it this way: imagine a hyper-capable agency owner with unlimited resources. They wouldn't go learn to code. They'd hire the world's best experts and talk to them about what the client needs. The team would interpret their brief into a product. They'd explain what's happening in terms the operator understands. They'd make decisions within their expertise and surface judgment calls to the operator. They'd never bog the operator down in details that are a foreign language.
 
-Think of it this way: imagine a hyper-capable founder with unlimited resources. They wouldn't go learn to code. They'd hire the world's best experts and talk to them about what they want. The team would interpret their words into a product. They'd explain what's happening in terms the founder understands. They'd make decisions within their expertise and surface judgment calls to the founder. They'd never bog the founder down in details that are a foreign language.
+That's Prism. The dream team for agency operators.
 
-That's Prism. The dream team for everyone.
+**Expansion play:** Semi-technical creators (frustrated vibe coders, designers, domain experts, solo founders) remain the broader market. The "dream team" narrative works for both. Agency operators are the beachhead, not the ceiling.
 
 ## The Dream Team
 
@@ -69,19 +69,19 @@ Once intent is clear, the architect researches approaches, evaluates tradeoffs, 
 The architect never builds without a plan. Never commits to an approach without researching alternatives. Never presents an unverified suggestion as viable.
 
 ### The Builder (Invisible Construction)
-The builder writes code, runs tests, handles security, manages dependencies — all invisibly. The creator never sees code, diffs, or terminal output unless they ask. The builder speaks in outcomes: "The signup flow is working. Users can create an account in under 30 seconds."
+The builder writes code, runs tests, handles security, manages dependencies — all invisibly. The operator never sees code, diffs, or terminal output unless they ask. The builder speaks in outcomes: "The signup flow is working. Users can create an account in under 30 seconds."
 
 ### The Guardian (Quality & Safety)
-The guardian runs continuously: code review, security scanning, test coverage, complexity monitoring. When something is wrong, the guardian speaks up. When everything is fine, silence. The creator should feel confident that someone competent is watching.
+The guardian runs continuously: code review, security scanning, test coverage, complexity monitoring. When something is wrong, the guardian speaks up. When everything is fine, silence. The operator should feel confident that someone competent is watching.
 
 ### The Translator (Communication Layer)
-The translator ensures the creator only receives information at the right level. Engineering decisions are silent. Product decisions surface as judgment checkpoints — clear options with a recommendation. The creator's time is spent on taste and direction, never on implementation details.
+The translator ensures the operator only receives information at the right level. Engineering decisions are silent. Product decisions surface as judgment checkpoints — clear options with a recommendation. The operator's time is spent on taste and direction, never on implementation details.
 
 Together, these roles help the user arrive at the real solution, not just a fast answer to the first prompt.
 
 ## The Decision Boundary
 
-This is the core design principle — what the team handles silently vs. what gets surfaced to the creator:
+This is the core design principle — what the team handles silently vs. what gets surfaced to the operator:
 
 **Silent** (team decides, never mentions):
 - Code structure, file organization, framework choices
@@ -90,18 +90,18 @@ This is the core design principle — what the team handles silently vs. what ge
 - Installing tools, running commands, configuring environments
 - Any decision that is reversible AND business-invisible
 
-**Judgment checkpoint** (surface to creator with a recommendation):
-- Anything involving the creator's money (paid APIs, service tiers)
+**Judgment checkpoint** (surface to operator with a recommendation):
+- Anything involving the operator's money (paid APIs, service tiers)
 - Build approach when multiple viable paths exist with different tradeoffs
 - Capability limitations that affect what the product can do
 - Anything that changes the user-facing experience from what was described
 - Any decision that is irreversible OR business-visible
 
 **Hard rules** (never violated):
-- Never send the creator to another terminal window
+- Never send the operator to another terminal window
 - Never present an unverified approach as viable
 - Never skip discovery — always understand intent before building
-- Never make cost decisions without consulting the creator
+- Never make cost decisions without consulting the operator
 - Never mistake the first request for the real problem without testing it
 
 ## The Operating Principles
@@ -112,9 +112,9 @@ One principle organizes everything Prism does internally:
 
 Four commitments make this concrete:
 
-**Assume unreliable until verified.** Prism treats every LLM output as suspect. The team should not present generated work as trustworthy until it has been checked — by deterministic verification, by a review pass, or by explicit test. The Guardian is not a final gate; suspicion should run through every stage. If the model is lying, Prism catches it before the creator sees it. (Today, verification gates enforce this at release; earlier stages have gaps that are being closed.)
+**Assume unreliable until verified.** Prism treats every LLM output as suspect. The team should not present generated work as trustworthy until it has been checked — by deterministic verification, by a review pass, or by explicit test. The Guardian is not a final gate; suspicion should run through every stage. If the model is lying, Prism catches it before the operator sees it. (Today, verification gates enforce this at release; earlier stages have gaps that are being closed.)
 
-**Preserve the creator's resources.** Prism does not burn tokens on tasks that don't need intelligence. Deterministic scripts handle what deterministic scripts can handle. The cheapest correct answer wins. The creator's money and time are not Prism's to waste.
+**Preserve the operator's resources.** Prism does not burn tokens on tasks that don't need intelligence. Deterministic scripts handle what deterministic scripts can handle. The cheapest correct answer wins. The operator's money and time are not Prism's to waste.
 
 **Choose the right tool for the task.** Not every task needs the most powerful model. Prism selects models by capability match — smaller models for formatting and simple generation, larger models for architecture and deep reasoning. This is not about cost alone; it's about using the right instrument, the way a good team assigns work by expertise.
 
@@ -122,9 +122,9 @@ Four commitments make this concrete:
 
 ## The Feeling
 
-**Power.** Not control — power. The feeling of sitting down with a rough idea and watching it become real. The feeling of being understood by a system that remembers what you meant. The feeling that nothing is being lost, nothing is being forgotten, and the team is working as hard as you are.
+**Power.** Not control — power. The feeling of sitting down with a client brief and watching it become real. The feeling of being understood by a system that remembers what you meant. The feeling that nothing is being lost, nothing is being forgotten, and the team is working as hard as you are.
 
-The benchmark: a creator sits down, describes an idea, and ships a working product without ever feeling lost, confused, overwhelmed, or alone.
+The benchmark: an agency operator takes a client brief, describes the need, and ships a working product without ever feeling lost, confused, overwhelmed, or alone.
 
 The anti-benchmark: the dogfooding session where Prism suggested a broken API, made cost decisions silently, required manual terminal steps, and felt like "a watered-down version of gstack." That's what failure feels like. Never again.
 
@@ -135,28 +135,21 @@ It must not become AI slop or a random app generator.
 
 Prism is a layer on top of gstack. gstack IS the dream team — the engineering expertise, the verification systems, the workflow patterns. Prism's job is to orchestrate gstack's capabilities in a way that's accessible to non-power-users.
 
-### Phase 1: The Skill (Now)
-Prism runs as a Claude Code skill. The creator types `/prism` and enters a session. The skill:
+### Current Form Factor: Claude Code Skill + Typed Core Runtime
+Prism runs as a Claude Code skill. The operator types `/prism` and enters a session. The skill:
 1. Captures intent through Socratic conversation
 2. Generates a build plan with acceptance criteria
 3. Builds in verified chunks, surfacing judgment calls
 4. Maintains intent memory across sessions via `.prism/` files
-5. Keeps the creator in creative flow — never lost, never confused
+5. Keeps the operator in creative flow — never lost, never confused
 
-**The immediate priority:** Fix the five enforcement failures identified during dogfooding (rule salience, research gate defaults, verification requirements, operator boundary examples, gstack version sync).
+The typed core runtime (`packages/`) enforces the lifecycle, gates transitions, and persists durable artifacts alongside the skill.
 
-### Phase 2: The Companion (Next)
-A lightweight web interface that shows project state, judgment checkpoints, and progress visually. The terminal does the work; the companion makes it visible. The creator can see their product taking shape without reading terminal output.
+### Future: Electron Desktop Shell
+The future desktop product is an Electron app on top of Prism Core. See `docs/designs/prism-os-roadmap.md` for the full architecture. The desktop shell is a rendering client — all product logic lives in the core.
 
-### Phase 3: The Studio (Future)
-Multi-project management from one interface. Conductor-style multi-agent orchestration under the hood. Bleeding-edge monitoring that keeps Prism current with the best tools and practices. A self-curating library of capabilities — not 81,000 skills, but the curated best-of that 80% of creators need.
+## Market Context
 
-### Phase 4: The Forge (Horizon)
-The full spatial vision. Vessels, structural depth, tension lines, voice input, temporal navigation. Ideas enter as living matter and become form through shaping, pressure, and revision. This is where the spatial canvas vision lives — not as v1, but as the destination that the dream team experience earns its way toward.
-
-## The Business
-
-### Market Size
 The AI-assisted software creation market is exploding:
 - Lovable: $6.6B valuation, $300M ARR (Feb 2026)
 - Replit: $9B valuation, $240M revenue (2025)
@@ -186,81 +179,50 @@ Prism's dream team — Socratic discovery, verified chunks, quality gates, inten
         Lovable          |           PRISM
         v0               |
                          |
-                   FOR CREATORS
+                   FOR OPERATORS
 ```
 
-The bottom-right quadrant — intent-first for creators — is empty. Prism creates this category.
-
-### Revenue Model
-
-| Tier | Price | What You Get |
-|------|-------|-------------|
-| Spark | Free | 3 projects, basic team, community |
-| Founder | $29/mo | Unlimited projects, full team, intent memory |
-| Studio | $99/mo | Multi-project, team collaboration, priority AI |
-| Enterprise | Custom | SSO, audit trails, dedicated support |
+The bottom-right quadrant — intent-first for operators — is empty. Prism creates this category.
 
 ### Moat
-**Intent memory.** Every session makes Prism better at understanding what this creator means. The accumulated context — every decision, every rejected alternative, every "why" — becomes a moat no competitor can replicate by cloning the interface.
+**Intent memory.** Every session makes Prism better at understanding what this operator means. The accumulated context — every decision, every rejected alternative, every "why" — becomes a moat no competitor can replicate by cloning the interface.
 
 Secondary moats:
 - The dream team orchestration — invisible quality gates that make the output suspiciously good
-- Community effects — shared patterns, templates, and knowledge
+- Portfolio retention — an agency with 5 active client projects can't leave
 - The feeling — once you've experienced it, chat-based tools feel broken
 
 ## First 100 Customers
 
 Five archetypes:
 
-1. **Frustrated Vibe Coders (40/100)** — Tried Claude Code or Cursor, hit the 80% wall. Found on r/ClaudeAI, X, Indie Hackers. Hook: "What if you had a team and never got lost?"
+1. **Agency Operators (40/100)** — Freelancers, studios, and agencies delivering client software with AI tools. Hit the 80% wall on every project. Found on freelance platforms, agency forums, Indie Hackers. Hook: "Your expert founding team. No equity, no hiring."
 
-2. **Designers Who Want to Build (20/100)** — UI/UX talent with zero backend knowledge. Found on Dribbble, Figma Community, Design Twitter. Hook: "Describe what you see. Prism builds what you mean."
+2. **Frustrated Vibe Coders (25/100)** — Tried Claude Code or Cursor, hit the 80% wall. Found on r/ClaudeAI, X, Indie Hackers. Hook: "What if you had a team and never got lost?"
 
-3. **Domain Experts with Ideas (15/100)** — Doctors, teachers, consultants with software ideas and $50K quotes from developers. Found in professional communities, no-code forums. Hook: "You know the problem better than any engineer. That's enough."
+3. **Designers Who Want to Build (15/100)** — UI/UX talent with zero backend knowledge. Found on Dribbble, Figma Community, Design Twitter. Hook: "Describe what you see. Prism builds what you mean."
 
-4. **Repeat Founders Going Solo (15/100)** — Built companies before, want to validate without hiring. Found on YC alumni channels, founder communities. Hook: "Your expert founding team. No equity, no hiring."
+4. **Domain Experts with Ideas (10/100)** — Doctors, teachers, consultants with software ideas and $50K quotes from developers. Found in professional communities, no-code forums. Hook: "You know the problem better than any engineer. That's enough."
 
-5. **Agencies / Studios (10/100)** — Design agencies bottlenecked by engineering. Found on freelance platforms, agency forums. Hook: "Brief to prototype in a day."
+5. **Repeat Founders Going Solo (10/100)** — Built companies before, want to validate without hiring. Found on YC alumni channels, founder communities. Hook: "Brief to prototype in a day."
 
 ### The Viral Loop
-1. Creator ships something good — because the invisible team handled quality
-2. Someone asks "how did you build this?" — because the quality is suspiciously high for a solo creator
-3. Creator says "Prism"
+1. Operator ships something good — because the invisible team handled quality
+2. Someone asks "how did you build this?" — because the quality is suspiciously high for a solo operator
+3. Operator says "Prism"
 4. Asker tries Prism, hits the first-session magic, stays
-
-## The Path
-
-### Phase 1: The Feeling (Now)
-Fix the Prism skill to deliver the dream team feeling reliably. Five enforcement fixes from dogfooding. Then test with Patrick (external validation).
-
-**Success metric:** A creator describes an idea and ships a working product in one session without ever feeling lost. The dream team feeling sustains through the entire build.
-
-### Phase 2: The Companion (Month 2-3)
-Web interface for visual judgment checkpoints and project state. Terminal still does the work.
-
-**Success metric:** A non-technical creator builds a product primarily through the companion, not the terminal.
-
-### Phase 3: The Studio (Month 4-6)
-Multi-project, multi-agent, bleeding-edge tool curation. Desktop app with clean onboarding.
-
-**Success metric:** A creator runs 3+ projects simultaneously and Prism keeps each one on track.
-
-### Phase 4: The Forge (Month 9+)
-Spatial canvas. Vessels. Structural depth. Voice input. The full vision.
-
-**Success metric:** A non-technical person builds and ships a product that would have taken an engineering team weeks — and the process feels like sculpting, not typing.
 
 ## Risks
 
 1. **Anthropic/OpenAI build it.** HIGH risk. Mitigation: the dream team orchestration and intent memory are the moat, not the AI backend. Speed matters.
 
-2. **Prompt enforcement ceiling.** MEDIUM risk. Claude may not reliably follow complex skill instructions. Mitigation: hooks-based enforcement as fallback; web companion reduces dependency on prompt compliance.
+2. **Prompt enforcement ceiling.** MEDIUM risk. Claude may not reliably follow complex skill instructions. Mitigation: hooks-based enforcement as fallback; desktop shell reduces dependency on prompt compliance.
 
 3. **AI compute costs.** MEDIUM risk. Mitigation: model costs dropping 50%/year; intent memory reduces redundant calls; usage-based pricing.
 
 4. **Solo founder.** HIGH risk. Mitigation: AI is the co-founder. First hires at seed funding.
 
-5. **No external validation yet.** HIGH risk. Mitigation: Patrick test THIS WEEK. Then 2-3 more before committing to Phase 2.
+5. **No external validation yet.** HIGH risk. Mitigation: Patrick test THIS WEEK. Then 2-3 more before committing further.
 
 ## Why This Founder
 

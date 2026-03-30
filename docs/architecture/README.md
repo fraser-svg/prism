@@ -4,139 +4,72 @@
 
 This directory defines the architecture of Prism Core.
 
-Prism Core is the owned local-first product brain that will later power the Prism desktop workspace.
+Prism Core is the owned local-first product brain that will later power the Prism Electron desktop workspace.
 
 This is not a generic app folder.
 This is the contract for how Prism should think, remember, plan, execute, verify, and evolve.
 Its job is to help users discover the real problem and engineer the real solution properly, not just automate the first request.
 
-## Architecture Truth Report
+## Current Architecture Status
 
-### Strong
+Prism Core exists as five cooperating layers, implemented across `packages/`:
 
-- The product thesis is unusually clear.
-- The repo already contains meaningful deterministic infrastructure.
-- Product memory, review prompts, hooks, compiler assets, and supervisor logic already exist.
+### 1. Core Domain Layer (`packages/core`)
+- 14 typed entities with branded types
+- Workflow enums and artifact schemas
+- Shared contracts
+- Provider-agnostic domain model
 
-### Weak
+### 2. Memory Layer (`packages/memory`)
+- Local artifact layout under `.prism/`
+- Product memory reads/writes
+- Project continuity logic
+- Write-through indexing to workspace SQLite
 
-- The repo does not yet have a formal top-level architecture.
-- Core responsibilities are spread across prompts, scripts, and docs.
-- There is no locked domain model for projects, specs, plans, checkpoints, reviews, or releases.
+### 3. Orchestration Layer (`packages/orchestrator`)
+- Lifecycle engine with gate evaluator
+- Checkpoint history and resume engine
+- Bridge CLI (10 commands) connecting SKILL.md to typed core
+- Approval boundary handling
 
-### Missing
+### 4. Execution Layer (`packages/execution`)
+- Intent policy
+- Execution adapters
+- Worker execution contracts
 
-- repo-wide operating rules
-- definition of done
-- release gates
-- ADR history
-- canonical module boundaries
-- local-first storage and artifact contracts
+### 5. Guardian Layer (`packages/guardian`)
+- Review matrix and review orchestration
+- Release-state derivation from evidence
+- Verification policy
 
-### Highest-Leverage Move
+### Shell Scripts (alongside packages)
 
-Lock the architecture and operating model before major feature work.
+Existing deterministic scripts (`scripts/`) handle bookkeeping: task registry, auto-save, project scanning, verification, and checkpointing. These run alongside the typed core via the dual-write bridge. The scripts are adapters, not the architecture.
 
-## Target Architecture
+## Workspace Layer (`packages/workspace`)
 
-Prism should be designed as five cooperating layers.
+Added in M4:
+- SQLite workspace database (better-sqlite3, WAL mode)
+- Multi-project registry with auto-detect
+- Cross-project FTS5 search
+- Health badges and resume
+- Write-through indexing via onWrite callbacks
 
-### 1. Experience Layer
+## Stage Lifecycle
 
-What users experience:
-- calm workspace
-- project list
-- discovery flows
-- checkpoints
-- progress
-- previews
-- shipped changes
+The current codebase uses an 8-phase lifecycle:
 
-This layer must stay non-technical.
+```
+understand → identify_problem → spec → plan → execute → verify → release → resume
+```
 
-### 2. Core Domain Layer
+The target lifecycle is 9 stages (see `docs/designs/prism-os-roadmap.md`):
 
-The canonical product model:
-- project
-- product brief
-- product memory
-- spec
-- plan
-- task graph
-- checkpoint
-- review
-- verification result
-- release state
+```
+intake → clarify → shape → spec → plan → build → verify → deploy → observe
+```
 
-This layer should be typed and provider-agnostic.
-It should preserve the difference between:
-- what the user first asked for
-- what problem Prism determined they actually need solved
-- what solution Prism is intentionally building
-
-### 3. Orchestration Layer
-
-Responsible for:
-- workflow state machine
-- phase transitions
-- approval boundaries
-- worker coordination
-- checkpointing
-- resumability
-
-This layer should decide what happens next.
-
-### 4. Execution and Provider Layer
-
-Responsible for:
-- model-provider adapters
-- tool and shell invocation
-- bounded worker execution
-- future sandbox/runtime adapters
-
-This layer should not own product truth.
-
-### 5. Guardian Layer
-
-Responsible for:
-- engineering review
-- QA review
-- ship readiness
-- verification policy
-- regression prevention
-- recovery loops
-
-This layer decides whether work is safe to call complete.
-
-## Proposed Module Boundaries
-
-Initial target boundaries:
-
-- `packages/core`
-  - domain types
-  - workflow enums
-  - artifact schemas
-  - shared contracts
-
-- `packages/memory`
-  - local artifact layout
-  - product memory reads/writes
-  - project continuity logic
-
-- `packages/orchestrator`
-  - lifecycle engine
-  - approval boundary handling
-  - task graph coordination
-
-- `packages/execution`
-  - shell adapters
-  - model adapters
-  - worker execution contracts
-
-- `packages/guardian`
-  - verification policy
-  - review orchestration
-  - release gates
+Old phase names exist in code and will be migrated additively. `resume` becomes a cross-cutting capability rather than a stage. See the roadmap for the full migration plan.
 
 ## Storage Principles
 
@@ -145,19 +78,19 @@ Prism is local-first.
 Preferred storage characteristics:
 - durable local state
 - file-based artifacts for transparency
-- simple local DB for indexed operational state
+- SQLite for indexed operational state (proven in M4)
 - explicit project directories
 - no hidden state that only exists in model context
 
-Expected MVP storage split:
-- files for durable artifacts and human-readable memory
-- SQLite for indexed runtime state, queues, and lookup-friendly metadata
+Current storage split:
+- files for durable artifacts and human-readable memory (`.prism/` per project)
+- SQLite for indexed runtime state, queues, and lookup-friendly metadata (workspace-level)
 
 ## Artifact Principles
 
 Artifacts are first-class product infrastructure.
 
-Prism should preserve:
+Prism preserves:
 - product memory
 - decisions
 - specs
@@ -168,14 +101,14 @@ Prism should preserve:
 - progress state
 - release state
 
-Artifacts should be:
+Artifacts are:
 - durable
 - inspectable
 - updateable
 - resumable
 - usable without re-prompting a model for hidden context
 
-Artifacts should also make it clear why Prism is building a particular solution, especially when it differs from the user's initial framing.
+Artifacts also make it clear why Prism is building a particular solution, especially when it differs from the user's initial framing.
 
 ## Delivery Principle
 
@@ -210,7 +143,7 @@ Bias toward:
 - TypeScript for core logic
 - shell scripts where deterministic and simpler
 - local-first state
-- Tauri readiness
+- Electron readiness for future desktop shell
 - bounded workers
 - provider abstraction
 

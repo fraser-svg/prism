@@ -36,7 +36,7 @@ If no argument was provided, ask the user: "What are you about to build?"
 
 Evaluate the proposed work against the 6 canonical YC dimensions:
 
-1. **ICP clarity** — Does this sharpen who Prism is for? Prism serves semi-technical builders who hit the 80% wall. Does this work make their experience more concrete and demonstrable?
+1. **ICP clarity** — Does this sharpen who Prism is for? Prism serves agency operators who hit the 80% wall delivering client software. Does this work make their experience more concrete and demonstrable?
 2. **Wedge sharpness** — Does this make Prism's scope-locking + guardrails wedge more concrete? Does it make Prism look like a system of work (good) or an AI wrapper (bad)?
 3. **Magical workflow readiness** — Does this make the Socratic → spec → build → verify flow more polished or demoable? Does Prism own the full path or just one step? The workflow is where Prism proves it's an operating system, not a chatbot.
 4. **User proof readiness** — Does this get a real person through Prism or capture evidence of usage? A polished UI and smooth workflow ARE how you close this gap — Patrick's experience is the proof.
@@ -89,7 +89,6 @@ Required inputs:
 - `docs/VISION.md`
 - `docs/architecture/README.md`
 - `docs/quality/definition-of-done.md`
-- `docs/milestones/prism-core-rebuild.md`
 - `docs/yc/OVERSIGHT.md`
 - `docs/yc/SCORECARD.md`
 - `DOGFOOD.md` (if it exists — captures real usage sessions and evidence)

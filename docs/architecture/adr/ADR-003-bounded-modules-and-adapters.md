@@ -40,7 +40,7 @@ Existing shell scripts and prompt assets are allowed to remain, but should be tr
 - improves long-term maintainability
 - reduces hidden coupling
 - supports gradual migration instead of rewrite chaos
-- makes future Tauri desktop integration cleaner
+- makes future Electron desktop integration cleaner
 
 ### Negative
 
