@@ -29,7 +29,7 @@ Prism Core exists as five cooperating layers, implemented across `packages/`:
 ### 3. Orchestration Layer (`packages/orchestrator`)
 - Lifecycle engine with gate evaluator
 - Checkpoint history and resume engine
-- Bridge CLI (10 commands) connecting SKILL.md to typed core
+- Bridge CLI (16 commands) connecting SKILL.md to typed core
 - Approval boundary handling
 
 ### 4. Execution Layer (`packages/execution`)
