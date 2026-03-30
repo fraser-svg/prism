@@ -5,12 +5,11 @@ All notable changes to Prism are documented here.
 ## [4.0.13.0] - 2026-03-30
 
 ### Added
-- **Red Team Challenge** — adversarial subagent dispatched at two decision points (Stage 2e after planning review, Stage 4.7 after Codex) to stress-test approach assumptions before committing to a build
-- **Failure-Class Taxonomy** — keyword-based checklist of known failure classes (`references/failure-taxonomy.json`) with 5 seed entries from real marketing verification failures; managed by `scripts/prism-taxonomy.sh` (check, add, list, grow)
-- **Confidence-Scored Outputs** — pipeline confidence enum (`high`/`medium`/`low`/`unknown`/`user-accepted-low`) replacing binary pass/fail, with escalation protocol (max 2 rounds) and user override path
-- **Confidence in ShipReceipt** — optional `confidence` field on `ShipReceipt` entity tracking level, method, concerns, escalation state, and which checks ran or were skipped
-- **Confidence in PR body** — `generatePrBody()` renders build confidence summary (HIGH/MEDIUM/LOW/UNKNOWN) with level-specific descriptions
-- **Red Team prompt template** — `references/reviews/red-team-challenge.md` challenges approach on 5 dimensions: assumption audit, failure-class coverage, architecture blind spots, confidence calibration, alternative challenge
+- **Red Team Challenge** — Prism now stress-tests its own approach at two checkpoints (after planning review and after Codex review) before committing to a build, catching blind spots that would otherwise surface during QA
+- **Failure-Class Taxonomy** — a curated checklist of known failure patterns (`references/failure-taxonomy.json`) seeded with 5 entries from real build failures; Prism checks every approach against these before building and learns new patterns from Guardian failures
+- **Confidence-Scored Outputs** — builds now carry an honest confidence score (HIGH/MEDIUM/LOW/UNKNOWN) instead of binary pass/fail, with a max-2-round escalation protocol when confidence is low and a "just build it" override path
+- **Confidence in Ship Receipts & PRs** — ship receipts track what checks ran, what was skipped, and any concerns; PR bodies show the build confidence summary so reviewers see it upfront
+- **Red Team prompt template** — adversarial review challenges approaches on 5 dimensions: assumption audit, failure-class coverage, architecture blind spots, confidence calibration, and alternative challenge
 - **Taxonomy telemetry events** — `taxonomy_check`, `red_team_complete`, `red_team_vacuous`, `red_team_timeout`, `confidence_escalation`, `confidence_override`, `taxonomy_growth` added to valid event types
 - **3 deferred TODOs** — Auto-Tune Red Team Aggressiveness (P3), Cross-Build Confidence Trending (P2), Red Team Replay Eval (P1)
 - **Trust-First Self-Healing Engine** — Session Report Cards, Learning Journal, Advisory Prescriptions, HEALTH.md dashboard, and auto-generated DOGFOOD.md entries

@@ -35,6 +35,7 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
+- A **Red Team + Taxonomy + Confidence pipeline** that stress-tests approach assumptions before building, checks against known failure classes, and scores build confidence honestly
 
 ### What Is Future Direction
 
@@ -186,6 +187,7 @@ prism/
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
 │   ├── prism-verify.sh   # Syntax/lint/compile verification
 │   ├── prism-checkpoint.sh # Session context persistence
+│   ├── prism-taxonomy.sh  # Failure-class taxonomy (check, add, list, grow)
 │   └── test-scripts.sh   # Test suite for all scripts
 ├── packages/             # Typed core — code-enforced lifecycle
 │   ├── core/             # Domain model (branded types, lifecycle entities)
