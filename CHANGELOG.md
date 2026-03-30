@@ -5,6 +5,7 @@ All notable changes to Prism are documented here.
 ## [4.0.12.0] - 2026-03-30
 
 ### Changed
+- **Startup banner clarification** — changed the terminal banner branding to `PRISMATIC` and expanded the banner copy so it states who Prism is for, what it does, and how to start in plain English
 - **Doc cleanup: agency-first ICP alignment** — removed all Tauri references (→ Electron), Prismatic branding, hosted-web-app language, and creator-first ICP framing from active docs
 - **README.md full rewrite** — replaced marketing language with truthful "What Prism Is Today" framing; accurate lifecycle stages; agency operators as primary ICP
 - **docs/VISION.md rewrite** — cut premature revenue model and duplicate roadmap sections; rewrote for agency operators throughout

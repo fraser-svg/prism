@@ -6,8 +6,10 @@
     ██║     ██║  ██║██║███████║██║ ╚═╝ ██║
     ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝
 
-AI concierge for building software
-Describe what you want. I'll spec it, build it, ship it.
+PRISMATIC v{version}
+For agency operators who need to turn client briefs into shipped software.
+Prismatic finds the real problem, shapes the right solution, then specs, builds, and verifies it.
+To begin: describe the your need...
 
 ---
 
