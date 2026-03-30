@@ -107,11 +107,23 @@ Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue
 
 **Depends on:** Graduate Bridge Gates to Blocking.
 
-## Typed DeploymentEntity in packages/core (P2)
+## IntakeBrief Entity (P2 — Tier 1)
+
+**What:** Add an `IntakeBrief` entity to `packages/core/src/entities.ts` and a basic repository in `packages/memory/`. Persists structured Socratic discovery output: client context, workflow described, pain/failure captured, assumptions, unresolved questions.
+
+**Why:** Currently, discovery output lives only in prompt history — it's not persisted as a structured artifact. For the agency workflow (intake → clarify → shape), this is the #1 artifact gap. Without it, the `clarify` stage has no durable output and sessions aren't resumable from discovery. Part of the 9-stage lifecycle vision (see `docs/designs/prism-os-roadmap.md`).
+
+**When:** After Patrick session validates the current flow works without it.
+
+**How:** Add `IntakeBrief` type to entities.ts (fields: projectId, clientContext, workflowDescription, painPoints, assumptions, unresolvedQuestions, operatorId). Add `IntakeBriefRepository` to memory package. Wire into Socratic discovery output path.
+
+**Depends on:** Nothing — additive entity.
+
+## Typed DeploymentEntity in packages/core (P2 — Tier 1)
 
 **What:** Add a `Deployment` entity to `packages/core/src/entities.ts` with a repository in `packages/memory/`. Track deployment URL, Vercel project ID, environment, timestamp, and status per spec/change.
 
-**Why:** The JSON file (`deploy-state.json`) works for v1 but doesn't integrate with the bridge, resume engine, or release gates. A typed entity enables: bridge queries for deployment status, resume engine knowing what's live, release gates including deployment as a gate, and multi-provider support.
+**Why:** The JSON file (`deploy-state.json`) works for v1 but doesn't integrate with the bridge, resume engine, or release gates. A typed entity enables: bridge queries for deployment status, resume engine knowing what's live, release gates including deployment as a gate, and multi-provider support. For agency operators, "is the client's site live and healthy?" is a first-class question — it can't stay as a field on ShipReceipt. Part of the 9-stage lifecycle vision (see `docs/designs/prism-os-roadmap.md`).
 
 **When:** After prism-deploy.sh proves reliable in 2+ dogfood sessions.
 

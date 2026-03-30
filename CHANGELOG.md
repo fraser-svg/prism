@@ -2,6 +2,19 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.11.0] - 2026-03-30
+
+### Added
+- **Session observability** — `logSession()` and `sessionTimeline()` methods on EventLog for tracking user sessions end-to-end (start, decisions, gates, errors, end)
+- **Checkpoint history recovery** — when `latest.json` is corrupt, resume engine scans `.prism/checkpoints/history/` for the most recent valid checkpoint before falling through
+- **8 new tests** — corrupt JSON resilience for gate evaluator, resume engine (checkpoint + artifact scan), history recovery, session logging, and timeline ordering
+
+### Changed
+- **Gate evaluator error resilience** — outer try/catch wraps all gate checks; corrupt artifacts produce blockers instead of crashes
+- **Resume engine error resilience** — try/catch on checkpoint read and artifact scan steps; `Promise.allSettled` replaces `Promise.all` for plan/spec metadata reads so one corrupt file doesn't reject the entire scan
+- **Session timeline ordering** — `ORDER BY timestamp ASC, id ASC` tie-breaker for same-second events
+- **Doc alignment** — CLAUDE.md, PLANS.md, TODOS.md updated for agency-first ICP, Electron shell decision, and 9-stage lifecycle vision
+
 ## [4.0.10.0] - 2026-03-29
 
 ### Added
