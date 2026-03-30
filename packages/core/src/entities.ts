@@ -21,6 +21,13 @@ import type {
   SpecType,
   TaskStatus,
   WorkflowPhase,
+  EvidenceConfidence,
+  EvidenceDirection,
+  VerificationScenarioType,
+  TrendDirection,
+  PrescriptionSeverity,
+  PrescriptionStatus,
+  ReportCardDimensionSource,
 } from "./common";
 
 export interface Workspace extends AuditStamp {
@@ -87,6 +94,8 @@ export interface AcceptanceCriterion {
 export interface VerificationPlan {
   checks: string[];
   notes: string[];
+  scenarios?: VerificationScenario[];
+  handoffCriteria?: string[];
 }
 
 export interface Spec extends AuditStamp, NamedEntity {
@@ -254,6 +263,7 @@ export interface Checkpoint extends AuditStamp {
   nextRecommendedActions: string[];
   lastVerificationSummary: string | null;
   approvalsPending?: ApprovalRequirement[];
+  currentSessionId?: string;
 }
 
 export interface ReviewFinding {
@@ -263,6 +273,10 @@ export interface ReviewFinding {
   details: string;
   filePath?: RelativePath;
   line?: number;
+  evidenceDirection?: EvidenceDirection;
+  evidenceConfidence?: EvidenceConfidence;
+  evidenceBasis?: string;
+  verificationObservationIds?: EntityId[];
 }
 
 export interface Review extends AuditStamp {
@@ -289,6 +303,11 @@ export interface VerificationResult extends AuditStamp {
   passed: boolean;
   failures: VerificationFailure[];
   timestamp: ISODateString;
+  scenarioResults?: VerificationScenarioResult[];
+  confidence?: "high" | "medium" | "low";
+  knownRisks?: string[];
+  handoffSummary?: string;
+  observations?: VerificationObservation[];
 }
 
 export interface ReleaseState extends AuditStamp {
@@ -369,4 +388,130 @@ export interface ShipReceipt extends AuditStamp {
     checksRun: string[];
     checksSkipped: string[];
   };
+}
+
+export interface VerificationObservation {
+  id: EntityId;
+  subject: string;
+  direction: EvidenceDirection;
+  confidence: EvidenceConfidence;
+  source: string;
+  details?: string;
+  relatedCheck?: string;
+}
+
+export interface VerificationScenario {
+  id: EntityId;
+  type: VerificationScenarioType;
+  description: string;
+  method: string;
+  required: boolean;
+}
+
+export interface VerificationScenarioResult {
+  scenarioId: EntityId;
+  type: VerificationScenarioType;
+  passed: boolean;
+  details: string;
+}
+
+export interface IntakeBrief extends AuditStamp {
+  id: EntityId;
+  projectId: EntityId;
+  specId?: EntityId;
+  clientContext: string;
+  workflowDescription: string;
+  painPoints: string[];
+  assumptions: string[];
+  unresolvedQuestions: string[];
+  operatorId?: EntityId;
+}
+
+export interface SolutionAlternative {
+  name: string;
+  description: string;
+  effort: "low" | "medium" | "high";
+  risk: "low" | "medium" | "high";
+  pros: string[];
+  cons: string[];
+}
+
+export interface SolutionThesis extends AuditStamp {
+  id: EntityId;
+  projectId: EntityId;
+  specId?: EntityId;
+  recommendation: string;
+  recommendationReason: string;
+  alternatives: SolutionAlternative[];
+}
+
+export interface ReportCardDimension {
+  score: number | null;
+  source: ReportCardDimensionSource;
+  evidence: string | null;
+}
+
+export interface SessionReportCard {
+  schemaVersion: 1;
+  sessionId: string;
+  projectId: EntityId;
+  timestamp: ISODateString;
+  dimensions: {
+    guided_start: ReportCardDimension;
+    research_proof: ReportCardDimension;
+    stress_verification: ReportCardDimension;
+    evidence_quality: ReportCardDimension;
+    post_handoff_bugs: ReportCardDimension;
+    user_corrections: ReportCardDimension;
+  };
+  overallScore: number | null;
+  summary: string;
+  replaySessionId: string;
+  crashRecovery: boolean;
+  capabilitiesAvailable: string[];
+}
+
+export interface LearningJournalPattern {
+  dimension: string;
+  trend: TrendDirection;
+  avgScore: number;
+  occurrences: number;
+  recurring: boolean;
+  firstRecurringAt: ISODateString | null;
+  detail: string;
+  recentScores: (number | null)[];
+}
+
+export interface LearningJournal {
+  schemaVersion: 1;
+  lastUpdated: ISODateString;
+  totalSessions: number;
+  patterns: LearningJournalPattern[];
+  overallTrend: TrendDirection;
+  overallAvgScore: number;
+}
+
+export interface Prescription {
+  schemaVersion: 1;
+  id: EntityId;
+  dimension: string;
+  prescription: string;
+  severity: PrescriptionSeverity;
+  createdAt: ISODateString;
+  status: PrescriptionStatus;
+  resolvedAt: ISODateString | null;
+  dismissedAt?: ISODateString | null;
+  basedOnSessions: number;
+  patternDetail: string;
+}
+
+export interface DogfoodIndexEntry {
+  dimension: string;
+  dogfoodNumber: number;
+  status: "OPEN" | "RESOLVED";
+  createdAt: ISODateString;
+}
+
+export interface DogfoodIndex {
+  entries: DogfoodIndexEntry[];
 }

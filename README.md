@@ -6,8 +6,10 @@
     ██║     ██║  ██║██║███████║██║ ╚═╝ ██║
     ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝
 
-AI concierge for building software
-Describe what you want. I'll spec it, build it, ship it.
+PRISMATIC v{version}
+For agency operators who need to turn client briefs into shipped software.
+Prismatic finds the real problem, shapes the right solution, then specs, builds, and verifies it.
+To begin: describe the your need...
 
 ---
 
@@ -32,12 +34,13 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Local-first workspace** with SQLite, FTS5 search, health badges, and multi-project resume
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
+- A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
 
 ### What Is Future Direction
 
 - **Electron desktop shell** on top of Prism Core (see `docs/designs/prism-os-roadmap.md`)
 - **9-stage lifecycle** (intake, clarify, shape, spec, plan, build, verify, deploy, observe)
-- **Agency entity expansion** (client accounts, solution theses, feedback records)
+- **Agency entity expansion** (client accounts, feedback records)
 
 ---
 
@@ -185,18 +188,19 @@ prism/
 │   ├── prism-checkpoint.sh # Session context persistence
 │   └── test-scripts.sh   # Test suite for all scripts
 ├── packages/             # Typed core — code-enforced lifecycle
-│   ├── core/             # Domain model (14 entities, branded types)
+│   ├── core/             # Domain model (branded types, lifecycle entities)
 │   ├── memory/           # Artifact repositories (.prism/ storage)
-│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI
+│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI, self-healing
 │   ├── guardian/         # Review matrix, release-state derivation
-│   └── execution/        # Intent policy, execution adapters
+│   ├── execution/        # Intent policy, execution adapters
+│   └── workspace/        # SQLite workspace, project registry, FTS5 search
 ├── references/           # Personality, spec format, skill catalog, product context
 └── templates/            # Spec templates
 ```
 
 ### Typed Core (packages/)
 
-The typed core runs alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
+The typed core runs alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The bridge CLI supports 18 commands including gate checks, artifact writes, ship, deploy, and session lifecycle. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
 
 ---
 
