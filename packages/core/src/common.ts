@@ -68,3 +68,11 @@ export interface NamedEntity {
   id: EntityId;
   title: string;
 }
+
+export type EvidenceConfidence = "high" | "medium" | "not_confirmed";
+export type EvidenceDirection = "present" | "absent";
+export type VerificationScenarioType = "happy_path" | "edge_case" | "stress" | "regression";
+export type TrendDirection = "improving" | "stable" | "degrading";
+export type PrescriptionSeverity = "low" | "medium" | "high" | "critical";
+export type PrescriptionStatus = "active" | "resolved" | "dismissed";
+export type ReportCardDimensionSource = "auto" | "manual_on_resume" | "crash_recovery";
