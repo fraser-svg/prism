@@ -11,11 +11,11 @@ All notable changes to Prism are documented here.
 - **Advisory Prescriptions** — auto-created from recurring patterns, auto-resolved after 3 consecutive high scores, dismissible by user
 - **HEALTH.md dashboard** — ASCII sparklines, session table, recurring issues, and active prescriptions in human-readable markdown
 - **Auto-Dogfood entries** — DOGFOOD.md auto-appends structured entries when recurring patterns are first detected, with dedup via index
-- **Crash recovery** — pending marker pattern enables idempotent recovery of interrupted report card generation
-- **CLI commands** — `session-end` (runs self-healing pipeline) and `session-report` (reads latest report card)
+- **Crash recovery** — if a session is interrupted mid-report, the next session picks up where it left off instead of losing the data
+- **CLI commands** — you can now run `session-end` to generate a report card and `session-report` to read the latest one
 - **Trust-First Lifecycle entities** — IntakeBrief, SolutionThesis, VerificationScenario, VerificationObservation types in @prism/core
 - **Evidence types** — EvidenceConfidence, EvidenceDirection for typed evidence backing on review findings
-- **Artifact event tracking** — `createEventLogWriteCallback()` factory wires ArtifactWriteCallback to EventLog with correct action types (created/deleted)
+- **Artifact event tracking** — artifact writes and deletes are now tracked in the workspace event log with correct action types
 
 ### Fixed
 - **Prescription dedup** — internal `readAllActivePrescriptions()` (uncapped) used for dedup guard; display function still caps at 3
