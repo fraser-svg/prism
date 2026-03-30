@@ -33,6 +33,15 @@ interface ShipReceiptInput {
   specSummary?: string;
   reviewVerdicts?: Record<string, string | null>;
   changelogUpdated?: boolean;
+  confidence?: {
+    level: 'high' | 'medium' | 'low' | 'unknown' | 'user-accepted-low';
+    method: string;
+    concerns: string[];
+    escalated: boolean;
+    escalationCount: number;
+    checksRun: string[];
+    checksSkipped: string[];
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +98,7 @@ export async function execRecordShip(args: string[], stdinData?: unknown): Promi
     reviewVerdicts: input.reviewVerdicts ?? {},
     changelogUpdated: input.changelogUpdated ?? false,
     shippedAt: ts,
+    ...(input.confidence ? { confidence: input.confidence } : {}),
     createdAt: ts,
     updatedAt: ts,
   };
