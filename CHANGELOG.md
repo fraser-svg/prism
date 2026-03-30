@@ -2,6 +2,26 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.13.0] - 2026-03-30
+
+### Added
+- **Trust-First Self-Healing Engine** — Session Report Cards, Learning Journal, Advisory Prescriptions, HEALTH.md dashboard, and auto-generated DOGFOOD.md entries
+- **Session Report Cards** — scores 4 dimensions (guided start, research proof, stress verification, evidence quality) with capability-aware null scoring for unwired prerequisites
+- **Learning Journal** — aggregates report cards into sliding-window patterns with recurring detection and trend analysis
+- **Advisory Prescriptions** — auto-created from recurring patterns, auto-resolved after 3 consecutive high scores, dismissible by user
+- **HEALTH.md dashboard** — ASCII sparklines, session table, recurring issues, and active prescriptions in human-readable markdown
+- **Auto-Dogfood entries** — DOGFOOD.md auto-appends structured entries when recurring patterns are first detected, with dedup via index
+- **Crash recovery** — pending marker pattern enables idempotent recovery of interrupted report card generation
+- **CLI commands** — `session-end` (runs self-healing pipeline) and `session-report` (reads latest report card)
+- **Trust-First Lifecycle entities** — IntakeBrief, SolutionThesis, VerificationScenario, VerificationObservation types in @prism/core
+- **Evidence types** — EvidenceConfidence, EvidenceDirection for typed evidence backing on review findings
+- **Artifact event tracking** — `createEventLogWriteCallback()` factory wires ArtifactWriteCallback to EventLog with correct action types (created/deleted)
+
+### Fixed
+- **Prescription dedup** — internal `readAllActivePrescriptions()` (uncapped) used for dedup guard; display function still caps at 3
+- **Event type accuracy** — `createEventLogWriteCallback` now emits `artifact:deleted` for delete events instead of always `artifact:created`
+- **Report card chronological ordering** — health dashboard sorts by parsed timestamp, not UUID filename
+
 ## [4.0.12.0] - 2026-03-30
 
 ### Changed
