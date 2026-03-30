@@ -26,6 +26,7 @@ import { recordReview, recordVerification } from "./services";
 import { execShip } from "./ship";
 import { execDeployDetect, execDeployTrigger } from "./deploy";
 import { execRecordShip } from "./ship-receipt";
+import { runSelfHealingPipeline, runCrashRecovery } from "./self-healing";
 import {
   skillSpecToCore,
   skillPlanToCore,
@@ -292,6 +293,92 @@ async function execReleaseState(args: string[]): Promise<unknown> {
   return await deriveReleaseState(specId, specTypeStr, projectRoot, { runId });
 }
 
+async function execSessionEnd(args: string[], stdinData?: unknown): Promise<unknown> {
+  const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
+  const projectId = requireArg(args, 1, "projectId") as EntityId;
+  const sessionId = requireArg(args, 2, "sessionId");
+
+  // Read events from stdin if provided, otherwise use empty array
+  let events: Array<{ eventType: string; metadata: Record<string, unknown> | null }> = [];
+  let availableCapabilities: string[] = [];
+  let sessionIncomplete = false;
+
+  if (stdinData && typeof stdinData === "object") {
+    const data = stdinData as Record<string, unknown>;
+    if (Array.isArray(data.events)) events = data.events;
+    if (Array.isArray(data.availableCapabilities)) availableCapabilities = data.availableCapabilities;
+    if (data.sessionIncomplete === true) sessionIncomplete = true;
+  } else {
+    try {
+      const raw = await readStdin();
+      if (raw.trim()) {
+        const data = JSON.parse(raw) as Record<string, unknown>;
+        if (Array.isArray(data.events)) events = data.events;
+        if (Array.isArray(data.availableCapabilities)) availableCapabilities = data.availableCapabilities;
+        if (data.sessionIncomplete === true) sessionIncomplete = true;
+      }
+    } catch {
+      // No stdin or invalid — proceed with empty events
+    }
+  }
+
+  // Run crash recovery first to handle any orphaned sessions
+  const recoveredSessions = await runCrashRecovery({
+    projectRoot,
+    projectId,
+    events,
+    availableCapabilities,
+  });
+
+  // Run the full self-healing pipeline
+  const result = await runSelfHealingPipeline({
+    projectRoot,
+    projectId,
+    sessionId,
+    events,
+    availableCapabilities,
+    sessionIncomplete,
+  });
+
+  result.recoveredSessions = recoveredSessions;
+  return result;
+}
+
+async function execSessionReport(args: string[]): Promise<unknown> {
+  const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
+  const projectId = args[1] as EntityId | undefined;
+
+  const { readdir, readFile } = await import("node:fs/promises");
+  const { dogfoodPaths } = await import("@prism/memory");
+  const paths = dogfoodPaths(projectRoot);
+
+  try {
+    const files = await readdir(paths.reportsDir);
+    const jsonFiles = files
+      .filter((f) => f.endsWith(".json"))
+      .sort()
+      .reverse();
+
+    if (jsonFiles.length === 0) {
+      return { found: false, message: "no report cards found" };
+    }
+
+    // If projectId specified, find matching report; otherwise return latest
+    for (const file of jsonFiles) {
+      const content = await readFile(`${paths.reportsDir}/${file}`, "utf-8");
+      const report = JSON.parse(content) as Record<string, unknown>;
+
+      if (!projectId || report.projectId === projectId) {
+        return { found: true, file, report };
+      }
+    }
+
+    return { found: false, message: `no report cards found for project ${projectId}` };
+  } catch {
+    return { found: false, message: "reports directory does not exist" };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // CLI wrapper layer — reads stdin, calls pure layer, calls output()/fail()
 // ---------------------------------------------------------------------------
@@ -336,6 +423,14 @@ async function cmdReleaseState(args: string[]): Promise<void> {
   output(await execReleaseState(args));
 }
 
+async function cmdSessionEnd(args: string[]): Promise<void> {
+  output(await execSessionEnd(args));
+}
+
+async function cmdSessionReport(args: string[]): Promise<void> {
+  output(await execSessionReport(args));
+}
+
 // ---------------------------------------------------------------------------
 // Batch command — executes multiple commands in a single Node.js process
 // ---------------------------------------------------------------------------
@@ -362,6 +457,8 @@ const EXEC_HANDLERS: Record<string, (args: string[], stdin?: unknown) => Promise
   "deploy-detect": execDeployDetect as (args: string[], stdin?: unknown) => Promise<unknown>,
   "deploy-trigger": execDeployTrigger as (args: string[], stdin?: unknown) => Promise<unknown>,
   "record-ship": execRecordShip,
+  "session-end": execSessionEnd,
+  "session-report": execSessionReport as (args: string[], stdin?: unknown) => Promise<unknown>,
 };
 
 async function cmdBatch(): Promise<void> {
@@ -410,6 +507,8 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   "deploy-detect": async (args) => output(await execDeployDetect(args)),
   "deploy-trigger": async (args) => output(await execDeployTrigger(args)),
   "record-ship": async (args) => output(await execRecordShip(args)),
+  "session-end": cmdSessionEnd,
+  "session-report": cmdSessionReport,
   batch: cmdBatch,
 };
 

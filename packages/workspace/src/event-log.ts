@@ -1,5 +1,14 @@
 import type Database from "better-sqlite3";
 
+/** Matches ArtifactWriteCallback from @prism/memory without circular dependency */
+type ArtifactWriteEvent = {
+  action: "write" | "delete";
+  entityType: string;
+  entityId: string;
+  projectId: string;
+  contentPreview?: string;
+};
+
 export interface EventRecord {
   id: number;
   projectId: string | null;
@@ -92,7 +101,7 @@ export class EventLog {
    */
   logSession(event: {
     projectId?: string | null;
-    action: "session:start" | "session:end" | "session:decision" | "session:error" | "session:gate" | "session:stage_transition";
+    action: "session:start" | "session:end" | "session:decision" | "session:error" | "session:gate" | "session:stage_transition" | "artifact:created" | "artifact:deleted";
     summary: string;
     metadata?: Record<string, unknown>;
   }): void {
@@ -113,7 +122,7 @@ export class EventLog {
       .prepare(
         `SELECT id, project_id, event_type, summary, metadata, timestamp
          FROM events
-         WHERE project_id = ? AND event_type LIKE 'session:%'
+         WHERE project_id = ? AND (event_type LIKE 'session:%' OR event_type LIKE 'artifact:%')
          ORDER BY timestamp ASC, id ASC
          LIMIT ?`,
       )
@@ -135,4 +144,31 @@ export class EventLog {
       timestamp: r.timestamp,
     }));
   }
+}
+
+/**
+ * Create an ArtifactWriteCallback that emits artifact:created events to EventLog.
+ * Eng review decision 1A: single source of truth for artifact tracking.
+ * Eng review decision 13A: try-catch to prevent EventLog errors from blocking writes.
+ */
+export function createEventLogWriteCallback(eventLog: EventLog): (event: ArtifactWriteEvent) => void {
+  return (event) => {
+    try {
+      const action = event.action === "delete" ? "artifact:deleted" as const : "artifact:created" as const;
+      eventLog.logSession({
+        projectId: event.projectId || null,
+        action,
+        summary: `${event.entityType} ${event.entityId} ${event.action}d`,
+        metadata: {
+          entityType: event.entityType,
+          entityId: event.entityId,
+          projectId: event.projectId,
+          contentPreview: event.contentPreview,
+        },
+      });
+    } catch (err) {
+      // Eng review 13A: callback failure is non-fatal, warn but don't block
+      console.warn(`EventLog write callback failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
 }

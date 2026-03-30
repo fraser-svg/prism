@@ -119,17 +119,9 @@ Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue
 
 **Depends on:** Graduate Bridge Gates to Blocking.
 
-## IntakeBrief Entity (P2 — Tier 1)
+## ~~IntakeBrief Entity (P2 — Tier 1)~~ — DONE in v4.0.13.0
 
-**What:** Add an `IntakeBrief` entity to `packages/core/src/entities.ts` and a basic repository in `packages/memory/`. Persists structured Socratic discovery output: client context, workflow described, pain/failure captured, assumptions, unresolved questions.
-
-**Why:** Currently, discovery output lives only in prompt history — it's not persisted as a structured artifact. For the agency workflow (intake → clarify → shape), this is the #1 artifact gap. Without it, the `clarify` stage has no durable output and sessions aren't resumable from discovery. Part of the 9-stage lifecycle vision (see `docs/designs/prism-os-roadmap.md`).
-
-**When:** After Patrick session validates the current flow works without it.
-
-**How:** Add `IntakeBrief` type to entities.ts (fields: projectId, clientContext, workflowDescription, painPoints, assumptions, unresolvedQuestions, operatorId). Add `IntakeBriefRepository` to memory package. Wire into Socratic discovery output path.
-
-**Depends on:** Nothing — additive entity.
+Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepository` to `packages/memory/`. Part of the Trust-First Self-Healing Engine. **Completed:** v4.0.13.0 (2026-03-30)
 
 ## Typed DeploymentEntity in packages/core (P2 — Tier 1)
 
@@ -202,3 +194,15 @@ Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue
 **How:** `prism-catalogue.sh export` → JSON file. `prism-catalogue.sh import` with dedup + conflict resolution. Community seed published as a starter catalogue. Confidence labels reset to "emerging" on import (trust must be earned locally).
 
 **Depends on:** Continuous Intelligence Layer stable + Skill Catalogue proven useful.
+
+## Graduate Advisory Prescriptions to Auto-Tightening Gates (P2)
+
+**What:** After 5+ consecutive sessions where a prescription's advice is followed (dimension scores >= 7), automatically tighten the corresponding gate to enforce the behavior instead of just advising it.
+
+**Why:** Self-healing v1 prescriptions are advisory-only (CEO review decision — safe starting point). Once prescription accuracy is proven across real sessions, the natural graduation is enforcing the behavior in gates. Without this, prescriptions become noise that operators learn to ignore.
+
+**When:** After 5+ sessions with accurate prescriptions (recentScores show the advice was followed and scores improved).
+
+**How:** Add a `prescription.promotable` flag computed from recentScores. When promotable, the gate evaluator reads active promotable prescriptions and adds the requirement as a blocker (e.g., "IntakeBrief required before plan stage"). Requires a confirmation prompt before first auto-tighten to build operator trust.
+
+**Depends on:** Self-healing system (Slices C-E) shipped + 5+ sessions with accurate prescription scoring.

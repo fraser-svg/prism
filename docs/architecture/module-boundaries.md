@@ -48,6 +48,7 @@ Owns:
 - ship command (squash, push, PR creation, tagging)
 - deploy detection and triggering
 - ship receipt persistence
+- self-healing engine (report card generation, learning journal, advisory prescriptions, health dashboard, dogfood generator)
 
 Does not own:
 - low-level shell execution

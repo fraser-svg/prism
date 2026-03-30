@@ -38,6 +38,9 @@ export interface PrismProjectPaths {
   problemsDir: AbsolutePath;
   shipsDir: AbsolutePath;
   researchDir: AbsolutePath;
+  intakeDir: AbsolutePath;
+  thesesDir: AbsolutePath;
+  dogfoodDir: AbsolutePath;
   telemetryFile: AbsolutePath;
   registryFile: AbsolutePath;
   taskGraphFile: AbsolutePath;
@@ -98,6 +101,26 @@ export interface ReleaseStateArtifactPaths {
 export interface ShipReceiptArtifactPaths {
   shipDir: AbsolutePath;
   receiptFile: AbsolutePath;
+}
+
+export interface DogfoodArtifactPaths {
+  dogfoodDir: AbsolutePath;
+  reportsDir: AbsolutePath;
+  prescriptionsDir: AbsolutePath;
+  journalFile: AbsolutePath;
+  healthFile: AbsolutePath;
+  dogfoodIndexFile: AbsolutePath;
+  exportFile: AbsolutePath;
+}
+
+export interface IntakeBriefArtifactPaths {
+  intakeDir: AbsolutePath;
+  metadataFile: AbsolutePath;
+}
+
+export interface SolutionThesisArtifactPaths {
+  thesisDir: AbsolutePath;
+  metadataFile: AbsolutePath;
 }
 
 export interface ProjectArtifactLocator {
