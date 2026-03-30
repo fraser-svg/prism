@@ -12,6 +12,9 @@ import type {
   RunArtifactPaths,
   ShipReceiptArtifactPaths,
   SpecArtifactPaths,
+  DogfoodArtifactPaths,
+  IntakeBriefArtifactPaths,
+  SolutionThesisArtifactPaths,
   WorkspacePaths,
 } from "./contracts";
 
@@ -52,6 +55,9 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     problemsDir: joinPath(prismDir, "problems"),
     shipsDir: joinPath(prismDir, "ships"),
     researchDir: joinPath(prismDir, "research"),
+    intakeDir: joinPath(prismDir, "intake"),
+    thesesDir: joinPath(prismDir, "theses"),
+    dogfoodDir: joinPath(prismDir, "dogfood"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),
@@ -159,6 +165,49 @@ export function shipReceiptPaths(
   return {
     shipDir,
     receiptFile: joinPath(shipDir, "receipt.json"),
+  };
+}
+
+export function dogfoodPaths(
+  projectRoot: AbsolutePath
+): DogfoodArtifactPaths {
+  const dogfoodDir = joinPath(projectPaths(projectRoot).dogfoodDir);
+  return {
+    dogfoodDir,
+    reportsDir: joinPath(dogfoodDir, "reports"),
+    prescriptionsDir: joinPath(dogfoodDir, "prescriptions"),
+    journalFile: joinPath(dogfoodDir, "learning-journal.json"),
+    healthFile: joinPath(dogfoodDir, "HEALTH.md"),
+    dogfoodIndexFile: joinPath(dogfoodDir, "dogfood-index.json"),
+    exportFile: joinPath(dogfoodDir, "export.json"),
+  };
+}
+
+export function intakeBriefPaths(
+  projectRoot: AbsolutePath,
+  briefId: EntityId
+): IntakeBriefArtifactPaths {
+  const intakeDir = joinPath(
+    projectPaths(projectRoot).intakeDir,
+    validateEntityId(briefId)
+  );
+  return {
+    intakeDir,
+    metadataFile: joinPath(intakeDir, "metadata.json"),
+  };
+}
+
+export function solutionThesisPaths(
+  projectRoot: AbsolutePath,
+  thesisId: EntityId
+): SolutionThesisArtifactPaths {
+  const thesisDir = joinPath(
+    projectPaths(projectRoot).thesesDir,
+    validateEntityId(thesisId)
+  );
+  return {
+    thesisDir,
+    metadataFile: joinPath(thesisDir, "metadata.json"),
   };
 }
 

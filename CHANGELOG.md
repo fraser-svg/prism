@@ -2,6 +2,38 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.13.0] - 2026-03-30
+
+### Added
+- **Red Team Challenge** — adversarial subagent dispatched at two decision points (Stage 2e after planning review, Stage 4.7 after Codex) to stress-test approach assumptions before committing to a build
+- **Failure-Class Taxonomy** — keyword-based checklist of known failure classes (`references/failure-taxonomy.json`) with 5 seed entries from real marketing verification failures; managed by `scripts/prism-taxonomy.sh` (check, add, list, grow)
+- **Confidence-Scored Outputs** — pipeline confidence enum (`high`/`medium`/`low`/`unknown`/`user-accepted-low`) replacing binary pass/fail, with escalation protocol (max 2 rounds) and user override path
+- **Confidence in ShipReceipt** — optional `confidence` field on `ShipReceipt` entity tracking level, method, concerns, escalation state, and which checks ran or were skipped
+- **Confidence in PR body** — `generatePrBody()` renders build confidence summary (HIGH/MEDIUM/LOW/UNKNOWN) with level-specific descriptions
+- **Red Team prompt template** — `references/reviews/red-team-challenge.md` challenges approach on 5 dimensions: assumption audit, failure-class coverage, architecture blind spots, confidence calibration, alternative challenge
+- **Taxonomy telemetry events** — `taxonomy_check`, `red_team_complete`, `red_team_vacuous`, `red_team_timeout`, `confidence_escalation`, `confidence_override`, `taxonomy_growth` added to valid event types
+- **3 deferred TODOs** — Auto-Tune Red Team Aggressiveness (P3), Cross-Build Confidence Trending (P2), Red Team Replay Eval (P1)
+- **Trust-First Self-Healing Engine** — Session Report Cards, Learning Journal, Advisory Prescriptions, HEALTH.md dashboard, and auto-generated DOGFOOD.md entries
+- **Session Report Cards** — scores 4 dimensions (guided start, research proof, stress verification, evidence quality) with capability-aware null scoring for unwired prerequisites
+- **Learning Journal** — aggregates report cards into sliding-window patterns with recurring detection and trend analysis
+- **Advisory Prescriptions** — auto-created from recurring patterns, auto-resolved after 3 consecutive high scores, dismissible by user
+- **HEALTH.md dashboard** — ASCII sparklines, session table, recurring issues, and active prescriptions in human-readable markdown
+- **Auto-Dogfood entries** — DOGFOOD.md auto-appends structured entries when recurring patterns are first detected, with dedup via index
+- **Crash recovery** — if a session is interrupted mid-report, the next session picks up where it left off instead of losing the data
+- **CLI commands** — you can now run `session-end` to generate a report card and `session-report` to read the latest one
+- **Trust-First Lifecycle entities** — IntakeBrief, SolutionThesis, VerificationScenario, VerificationObservation types in @prism/core
+- **Evidence types** — EvidenceConfidence, EvidenceDirection for typed evidence backing on review findings
+- **Artifact event tracking** — artifact writes and deletes are now tracked in the workspace event log with correct action types
+
+### Changed
+- **Stage routing updated** — Stage 2c planning review now routes to Stage 2d (Taxonomy Check) instead of directly to Stage 2.5/3; Codex (Stage 4.6) now routes to Stage 4.7 (Red Team Pre-Ship) instead of Stage 5
+- **Confidence downgrade rules** — skipped taxonomy caps at medium; skipped Red Team → unknown; both skipped → unknown
+
+### Fixed
+- **Prescription dedup** — internal `readAllActivePrescriptions()` (uncapped) used for dedup guard; display function still caps at 3
+- **Event type accuracy** — `createEventLogWriteCallback` now emits `artifact:deleted` for delete events instead of always `artifact:created`
+- **Report card chronological ordering** — health dashboard sorts by parsed timestamp, not UUID filename
+
 ## [4.0.12.0] - 2026-03-30
 
 ### Changed

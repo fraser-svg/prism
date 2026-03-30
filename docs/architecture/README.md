@@ -15,7 +15,7 @@ Its job is to help users discover the real problem and engineer the real solutio
 Prism Core exists as five cooperating layers, implemented across `packages/`:
 
 ### 1. Core Domain Layer (`packages/core`)
-- 14 typed entities with branded types
+- Typed entities with branded types (workspace, project, spec, plan, task graph, review, checkpoint, release state, ship receipt, intake brief, solution thesis, verification scenario, and more)
 - Workflow enums and artifact schemas
 - Shared contracts
 - Provider-agnostic domain model
@@ -29,8 +29,11 @@ Prism Core exists as five cooperating layers, implemented across `packages/`:
 ### 3. Orchestration Layer (`packages/orchestrator`)
 - Lifecycle engine with gate evaluator
 - Checkpoint history and resume engine
-- Bridge CLI (10 commands) connecting SKILL.md to typed core
+- Bridge CLI (18 commands) connecting SKILL.md to typed core
 - Approval boundary handling
+- Ship command (squash, push, PR creation, tagging)
+- Deploy detection and triggering
+- Self-healing engine (report cards, learning journal, prescriptions, health dashboard, dogfood generator) — see `docs/designs/trust-first-self-healing.md`
 
 ### 4. Execution Layer (`packages/execution`)
 - Intent policy

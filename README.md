@@ -34,6 +34,7 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Local-first workspace** with SQLite, FTS5 search, health badges, and multi-project resume
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
+- A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
@@ -42,7 +43,7 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 
 - **Electron desktop shell** on top of Prism Core (see `docs/designs/prism-os-roadmap.md`)
 - **9-stage lifecycle** (intake, clarify, shape, spec, plan, build, verify, deploy, observe)
-- **Agency entity expansion** (client accounts, solution theses, feedback records)
+- **Agency entity expansion** (client accounts, feedback records)
 
 ---
 
@@ -181,17 +182,17 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.12.0
+├── VERSION               # 4.0.13.0
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config
 ├── packages/             # Typed core — code-enforced lifecycle
-│   ├── core/             # Domain model (branded types, entities)
+│   ├── core/             # Domain model (branded types, lifecycle entities)
 │   ├── memory/           # Artifact repositories (.prism/ storage)
-│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI
+│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI, self-healing
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
-│   └── workspace/        # SQLite workspace, multi-project, FTS5 search
+│   └── workspace/        # SQLite workspace, project registry, FTS5 search
 ├── scripts/              # Deterministic bookkeeping (16 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
@@ -215,7 +216,7 @@ prism/
 
 ### Typed Core (packages/)
 
-Six TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, and health tracking. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
+Six TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The bridge CLI supports 18 commands including gate checks, artifact writes, ship, deploy, and session lifecycle. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, and health tracking. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
 
 ---
 

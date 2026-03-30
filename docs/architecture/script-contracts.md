@@ -784,7 +784,11 @@ bash scripts/prism-telemetry.sh failures <root> [--cluster]
 
 `build_start`, `build_complete`, `build_fail`, `worker_complete`, `worker_fail`,
 `guardian_retry`, `qa_pass`, `qa_fail`, `ship`, `user_intervention`, `stage_skip`,
-`discovery_complete`, `gemini_fallback`
+`discovery_complete`, `gemini_fallback`, `research_complete`, `approach_selected`,
+`catalogue_write`, `catalogue_query`, `package_verified`, `guardian_learning`,
+`research_degraded`, `deploy_start`, `deploy_complete`, `deploy_fail`,
+`taxonomy_check`, `red_team_complete`, `red_team_vacuous`, `red_team_timeout`,
+`confidence_escalation`, `confidence_override`, `taxonomy_growth`
 
 ### Subcommand: `record`
 
@@ -1157,10 +1161,71 @@ npx tsx packages/orchestrator/src/cli.ts record-ship <projectRoot> <specId> < re
   "deployUrl": "https://...",
   "deployPlatform": "vercel",
   "specSummary": "...",
-  "reviewVerdicts": { "engineering": "pass" }
+  "reviewVerdicts": { "engineering": "pass" },
+  "confidence": {
+    "level": "high | medium | low | unknown | user-accepted-low",
+    "method": "full-suite",
+    "concerns": [],
+    "escalated": false,
+    "escalationCount": 0,
+    "checksRun": ["taxonomy", "red_team"],
+    "checksSkipped": []
+  }
 }
 ```
 
 ### Output JSON
 
 Full `ShipReceipt` entity with `id`, `shippedAt`, and all input fields.
+
+---
+
+## prism-taxonomy.sh
+
+Failure-class taxonomy for known blind spots. Checks approaches against a curated list of failure patterns extracted from real build failures.
+
+### Usage
+
+```
+prism-taxonomy.sh check <root> <approach_text>
+prism-taxonomy.sh add   <root> <entry_json>
+prism-taxonomy.sh list  <root>
+prism-taxonomy.sh grow  <root> <failure_json>
+```
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `check`    | Match approach text against taxonomy keywords. Returns matched failure classes. |
+| `add`      | Add or update a taxonomy entry (pass JSON as arg or `-` for stdin). |
+| `list`     | List all taxonomy entries with hit counts. |
+| `grow`     | Extract new failure class from a Guardian failure event. |
+
+### Data file
+
+`references/failure-taxonomy.json` — array of entries with schema:
+
+```json
+{
+  "id": "js-rendering",
+  "category": "detection",
+  "description": "...",
+  "detection_keywords": ["javascript", "rendered", "dynamic"],
+  "mitigation": "Use headless browser",
+  "source": "marketing-verification-v1",
+  "added_at": "2026-03-30",
+  "hit_count": 0
+}
+```
+
+### Output
+
+Writes full JSON to temp file (`/tmp/prism-taxonomy-{PID}.json`), prints one-line summary to stdout.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0    | Completed (check temp file for details) |
+| 1    | Script error or missing dependency (jq) |

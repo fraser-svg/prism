@@ -10,3 +10,5 @@ export * from "./checkpoint-repository";
 export * from "./verification-repository";
 export * from "./release-state-repository";
 export * from "./problem-repository";
+export * from "./intake-brief-repository";
+export * from "./solution-thesis-repository";

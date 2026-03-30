@@ -23,6 +23,7 @@ What exists now:
 - M3 bridge CLI wiring review, gate-check, and release-state through SKILL.md (M3 complete)
 - M4 local-first workspace substrate with SQLite, FTS5, health badges, and resume (M4 complete)
 - Continuous Intelligence Layer: skill catalogue, research phase, approach comparison, Guardian learning, discovery nudges, targeted QA (v4.0.9.0)
+- Trust-First Self-Healing Engine: session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, auto-dogfood entries (v4.0.13.0)
 
 What is still missing:
 - graduating bridge gates from advisory to blocking (post-M3 TODO)
@@ -169,11 +170,11 @@ Exit criteria:
 - Graduate bridge gates from advisory to blocking (post-M3)
 - Deprecate OpenSpec for core spec storage
 - Implement 9-stage lifecycle migration (see docs/designs/prism-os-roadmap.md)
-- IntakeBrief and Deployment entities (Tier 1)
+- Deployment entity (Tier 1) — IntakeBrief shipped in v4.0.13.0
 
 ### Later
 
-- Agency entity expansion (ClientAccount, SolutionThesis, FeedbackRecord — Tier 2)
+- Agency entity expansion (ClientAccount, FeedbackRecord — Tier 2) — SolutionThesis shipped in v4.0.13.0
 - App-facing service layer (packages/ui AppService facade)
 - Electron desktop shell
 - Sync/cloud features

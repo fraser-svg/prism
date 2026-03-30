@@ -171,6 +171,125 @@ describe("record-ship", () => {
     expect(parsed.error).toMatch(/missing required argument/i);
   });
 
+  it("includes confidence field when present in input", async () => {
+    const specId = "spec-confidence";
+    const input = JSON.stringify({
+      commitSha: "conf123",
+      commitMessage: "feat: confident build",
+      branch: "feat/conf",
+      baseBranch: "main",
+      confidence: {
+        level: "high",
+        method: "full-suite",
+        concerns: [],
+        escalated: false,
+        escalationCount: 0,
+        checksRun: ["lint", "test", "typecheck"],
+        checksSkipped: [],
+      },
+    });
+
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["record-ship", tmpDir, specId],
+      input,
+    );
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as {
+      confidence: { level: string; checksRun: string[] };
+    };
+    expect(parsed.confidence).toBeDefined();
+    expect(parsed.confidence.level).toBe("high");
+    expect(parsed.confidence.checksRun).toEqual(["lint", "test", "typecheck"]);
+
+    // Verify on disk
+    const receiptPath = join(tmpDir, ".prism", "ships", specId, "receipt.json");
+    const onDisk = JSON.parse(await readFile(receiptPath, "utf-8"));
+    expect(onDisk.confidence.level).toBe("high");
+  });
+
+  it("omits confidence field when not present (backward compatible)", async () => {
+    const specId = "spec-no-confidence";
+    const input = JSON.stringify({
+      commitSha: "noconf123",
+      commitMessage: "feat: no confidence",
+      branch: "feat/noconf",
+      baseBranch: "main",
+    });
+
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["record-ship", tmpDir, specId],
+      input,
+    );
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as Record<string, unknown>;
+    expect(parsed.confidence).toBeUndefined();
+  });
+
+  it("serializes unknown confidence level correctly", async () => {
+    const specId = "spec-unknown-conf";
+    const input = JSON.stringify({
+      commitSha: "unk123",
+      commitMessage: "feat: unknown confidence",
+      branch: "feat/unk",
+      baseBranch: "main",
+      confidence: {
+        level: "unknown",
+        method: "none",
+        concerns: ["no validation ran"],
+        escalated: false,
+        escalationCount: 0,
+        checksRun: [],
+        checksSkipped: ["lint", "test"],
+      },
+    });
+
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["record-ship", tmpDir, specId],
+      input,
+    );
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as {
+      confidence: { level: string; checksSkipped: string[] };
+    };
+    expect(parsed.confidence.level).toBe("unknown");
+    expect(parsed.confidence.checksSkipped).toEqual(["lint", "test"]);
+  });
+
+  it("serializes user-accepted-low confidence level correctly", async () => {
+    const specId = "spec-accepted-low";
+    const input = JSON.stringify({
+      commitSha: "low123",
+      commitMessage: "feat: accepted low",
+      branch: "feat/low",
+      baseBranch: "main",
+      confidence: {
+        level: "user-accepted-low",
+        method: "partial",
+        concerns: ["test coverage below threshold"],
+        escalated: true,
+        escalationCount: 1,
+        checksRun: ["lint"],
+        checksSkipped: ["test"],
+      },
+    });
+
+    const { stdout, exitCode } = await runCliWithStdin(
+      ["record-ship", tmpDir, specId],
+      input,
+    );
+    expect(exitCode).toBe(0);
+
+    const parsed = parseJson(stdout) as {
+      confidence: { level: string; escalated: boolean; escalationCount: number };
+    };
+    expect(parsed.confidence.level).toBe("user-accepted-low");
+    expect(parsed.confidence.escalated).toBe(true);
+    expect(parsed.confidence.escalationCount).toBe(1);
+  });
+
   it("receipt via batch command works", async () => {
     const specId = "spec-batch-receipt";
     const commands = JSON.stringify([
