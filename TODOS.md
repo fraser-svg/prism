@@ -1,5 +1,17 @@
 # Prism TODOs
 
+## Doc Drift Lint (P2)
+
+**What:** A validation script or CI check that greps for stale references (deleted files, Tauri, Prismatic, hosted-web-app language) across all active docs.
+
+**Why:** Doc drift is what created the cleanup need addressed in the `first10-users-audit` branch. Without automated checks, the same drift will recur as new docs are added. The validation commands already exist — this makes them permanent.
+
+**When:** After the doc cleanup PR lands.
+
+**How:** Add a `scripts/lint-docs.sh` that runs the 5 grep-based validation commands from the cleanup plan. Wire into CI or pre-commit. Expect zero matches for: Tauri in active docs, Prismatic, deleted file references, creator-as-primary-ICP language. Allowlist: CHANGELOG.md (historical context), TODOS.md itself (describes what to grep for), references/ (external personality configs).
+
+**Depends on:** Doc cleanup PR (`fraser-svg/first10-users-audit`).
+
 ## ~~Reduce verbose logs to milestone-only~~ — DONE in v3
 Replaced by `prism-registry.sh` JSON events. Only significant actions are logged.
 

@@ -26,7 +26,7 @@ Its job is to judge Prism against the standards YC will care about:
 ## Canonical YC Standard For Prism
 
 Prism should become:
-- the product-engineering workspace for founder-operators and agency owners
+- the product-engineering workspace for agency operators
 - who need internal tools, portals, and workflow apps
 - and who cannot afford the dream team they would otherwise need
 
@@ -60,8 +60,6 @@ Always read:
 - `docs/VISION.md`
 - `docs/architecture/README.md`
 - `docs/quality/definition-of-done.md`
-- `docs/milestones/prism-core-rebuild.md`
-
 Read additional product and implementation files relevant to the current stage.
 
 ## What The Review Must Judge
@@ -74,7 +72,7 @@ Questions:
 - Is the wedge sharp enough?
 - Is the ICP still clear?
 - Are we solving a painful, repeated problem?
-- Are we building for founder-operators and agency owners first?
+- Are we building for agency operators first?
 
 ### 2. Demo
 

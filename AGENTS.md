@@ -187,7 +187,7 @@ Near-term focus:
 - strengthen artifacts and memory
 - strengthen orchestration boundaries
 - strengthen verification and review
-- prepare for future Tauri desktop evolution
+- prepare for future Electron desktop evolution
 
 Not the near-term focus:
 - polishing the final desktop shell

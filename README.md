@@ -1,40 +1,63 @@
-                                                                                                             
-    ██████╗ ██████╗ ██╗███████╗███╗   ███╗                           
-    ██╔══██╗██╔══██╗██║██╔════╝████╗ ████║                           
-    ██████╔╝██████╔╝██║███████╗██╔████╔██║                           
-    ██╔═══╝ ██╔══██╗██║╚════██║██║╚██╔╝██║                           
-    ██║     ██║  ██║██║███████║██║ ╚═╝ ██║                           
-    ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝ 
-    
-AI concierge for building software                      
+
+    ██████╗ ██████╗ ██╗███████╗███╗   ███╗
+    ██╔══██╗██╔══██╗██║██╔════╝████╗ ████║
+    ██████╔╝██████╔╝██║███████╗██╔████╔██║
+    ██╔═══╝ ██╔══██╗██║╚════██║██║╚██╔╝██║
+    ██║     ██║  ██║██║███████║██║ ╚═╝ ██║
+    ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝
+
+AI concierge for building software
 Describe what you want. I'll spec it, build it, ship it.
-    
----
-
-Prism is how I finally started shipping.
-
-If you’ve ever been excited about building something with AI and then completely lost halfway through, this is for you.
-
-I kept hitting the same wall:
-- Things started strong  
-- Then got messy  
-- The AI hallucinated, agreed with bad ideas, or broke things  
-- And somewhere around 80 percent, everything fell apart  
-
-I never shipped anything.
-
-Prism fixes that.
-
-It is an AI that does not just talk about building software. It actually handles the entire process for you.
-
-You bring the idea.  
-Prism does the rest.
-
-No engineering knowledge required.
 
 ---
 
-## What Prism Does
+## What Prism Is Today
+
+Prism is an **owned core runtime and orchestration system** that currently runs as a Claude Code skill. It gives agency operators and owner-operators a structured process for turning client briefs into delivered software — with spec-driven planning, invisible quality gates, and durable memory across sessions.
+
+This repo is **not** a finished desktop product. It is the core engine that will power one.
+
+### Who It Is For Today
+
+**Agency operators, freelancers, and studio owners** who use AI coding tools to deliver software for clients. People who hit the 80% wall — where AI-assisted builds start strong, then break down as complexity grows, context degrades, and nobody defined "done" before starting.
+
+Semi-technical creators are the expansion play. Agency operators are the beachhead.
+
+### What Exists Today
+
+- A **Socratic discovery flow** that finds the real problem before building starts
+- A **spec-driven lifecycle** (understand, identify problem, spec, plan, build, verify, ship) with artifact gating
+- **Typed core packages** for domain model, memory, orchestration, guardian, and execution
+- A **dual-write bridge** connecting the Claude Code skill to typed core artifacts
+- **Local-first workspace** with SQLite, FTS5 search, health badges, and multi-project resume
+- A **continuous intelligence layer** with skill catalogue, research, and learning
+- **Deploy detection and triggering** via Vercel CLI
+
+### What Is Future Direction
+
+- **Electron desktop shell** on top of Prism Core (see `docs/designs/prism-os-roadmap.md`)
+- **9-stage lifecycle** (intake, clarify, shape, spec, plan, build, verify, deploy, observe)
+- **Agency entity expansion** (client accounts, solution theses, feedback records)
+
+---
+
+## The Problem
+
+Every AI coding tool today gives you power without confidence. You can generate code in seconds — but who's checking it? You can build a prototype overnight — but is it the right thing? You can ship fast — but things keep breaking at 80%.
+
+Prism fixes that by adding structure, memory, and discipline. It behaves like an unaffordable dream team:
+- product thinker
+- technical architect
+- senior engineer
+- designer
+- QA lead
+- engineering manager
+
+You bring the idea. Prism does the rest.
+
+---
+
+## How It Works
 
 You describe what you want in plain English.
 
@@ -50,42 +73,8 @@ Prism turns that into real, working software by guiding it through a structured 
 | **5. Ship** | Finalises everything and prepares it to go live |
 
 If you are building something visual like a website, it also:
-- Designs it first  
-- Reviews the design before shipping  
-
-So you do not just get something functional. You get something that actually looks right.
-
----
-
-## Why This Exists
-
-Most AI coding tools feel magical until they do not.
-
-They:
-- Agree with everything you say  
-- Do not catch bad ideas  
-- Lose track of the bigger picture  
-- Break when things get complex  
-
-Prism was built to solve that.
-
-It adds structure, memory, and discipline to the process so you can actually finish what you start.
-
----
-
-## How It Works (Simple Version)
-
-Prism acts like a small team:
-
-- Something that understands your idea  
-- Something that plans it properly  
-- Something that builds it  
-- Something that tests it  
-
-All coordinated together.
-
-You just talk to it normally.  
-Everything else happens behind the scenes.
+- Designs it first
+- Reviews the design before shipping
 
 ---
 
@@ -98,33 +87,15 @@ It slows down just enough to actually understand and plan first.
 It keeps a living memory of your product. What it is, what has been built, and what comes next.
 
 ### It does not fall apart halfway through
-Most AI tools break at around 80 percent.
-
-Prism is designed specifically to get past that point.
+Most AI tools break at around 80%. Prism is designed specifically to get past that point.
 
 ### It fixes its own mistakes
 If something fails, it:
-- Figures out why  
-- Rewrites the task  
-- Tries again  
+- Figures out why
+- Rewrites the task
+- Tries again
 
 Like a real team would.
-
----
-
-## Under the Hood (Light Explanation)
-
-You do not need to understand this to use Prism, but here is the idea:
-
-Prism separates:
-- The brain (SKILL.md), which handles judgment, understanding, and decisions
-- The body (bash scripts), which handles all the bookkeeping like saving, verifying, and tracking progress
-
-There is an Operator that holds the full vision, and Workers that handle small, focused tasks. Independent tasks run simultaneously. Dependent tasks wait for what they need.
-
-This prevents the chaos that usually happens when one AI tries to do everything at once.
-
-There is also a retry system called the Guardian pattern. If something goes wrong, Prism researches the issue, diagnoses it, rewrites the task, and tries again instead of failing outright.
 
 ---
 
@@ -132,9 +103,9 @@ There is also a retry system called the Guardian pattern. If something goes wron
 
 ### Prerequisites
 
-- Claude Code  
-- OpenSpec  
-- gstack  
+- Claude Code
+- OpenSpec
+- gstack
 
 ```bash
 npm install -g @fission-ai/openspec@latest
@@ -191,7 +162,7 @@ Add dark mode to my app.
 
 You can always say:
 
-* Let’s rethink this
+* Let's rethink this
 * Change the plan
 * Fix this part
 
@@ -226,26 +197,6 @@ prism/
 ### Typed Core (packages/)
 
 The typed core runs alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
-
----
-
-## The Point
-
-Prism exists so that you do not need to be an engineer to build things anymore.
-
-You do not need to understand:
-
-* Architecture
-* Frameworks
-* Tooling
-
-You just need ideas.
-
----
-
-## One Line
-
-Prism turns your ideas into real software without you needing to know how to build it.
 
 ---
 

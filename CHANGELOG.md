@@ -2,6 +2,26 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.12.0] - 2026-03-30
+
+### Changed
+- **Doc cleanup: agency-first ICP alignment** — removed all Tauri references (→ Electron), Prismatic branding, hosted-web-app language, and creator-first ICP framing from active docs
+- **README.md full rewrite** — replaced marketing language with truthful "What Prism Is Today" framing; accurate lifecycle stages; agency operators as primary ICP
+- **docs/VISION.md rewrite** — cut premature revenue model and duplicate roadmap sections; rewrote for agency operators throughout
+- **docs/architecture/README.md rewrite** — replaced stale "Architecture Truth Report" with current 5-layer status; added Workspace Layer and Stage Lifecycle sections
+- **YC Brain ICP update** — `.claude/commands/yc-brain.md` and `docs/yc/OVERSIGHT.md` aligned to "agency operators" ICP
+- **SCORECARD.md and AGENTS.md** — targeted line edits for ICP and Electron alignment
+
+### Removed
+- **docs/ROADMAP.md** — described a hosted web app (Next.js, Supabase, Clerk); completely wrong product direction
+- **docs/milestones/m4-m5-plan.md** — Tauri desktop shell plan; stale
+- **docs/milestones/prism-core-rebuild.md** — duplicated milestone tracking in PLANS.md
+- **docs/yc/CHATGPT_OVERSIGHT_PROMPT.md** — superseded by `/yc-brain` skill
+- **docs/brand-brief-for-logo.md** — used "Prismatic" naming and old creator-first positioning
+
+### Added
+- **Doc Drift Lint TODO** — validation script spec in TODOS.md to prevent this drift from recurring
+
 ## [4.0.11.0] - 2026-03-30
 
 ### Added
