@@ -564,7 +564,7 @@ If SKILL_MISSING: Skip directly to native fallback (no Skill tool invocation).
   via Agent tool using the prompt from [references/reviews/planning-review.md](references/reviews/planning-review.md).
   Never tell the user to run a command.
 - **Passed:** Update spec status to `planned`. If architecture changes, update PRODUCT.md.
-  Check: UI product + no DESIGN.md? → Stage 2.5. Otherwise → Stage 3.
+  → Stage 2d (Taxonomy Check).
 - **Problems found:** "The review flagged some issues — let's adjust." → Stage 1 Part B.
 
 Auto-save: `"planning complete for {change}"`
@@ -578,6 +578,101 @@ BATCH_RESULT=$(echo '[
   {"command":"write-task-graph","args":["'"$PROJECT_ROOT"'","{plan-id}"],"stdin":{task_graph_json}}
 ]' | $BRIDGE batch 2>/dev/null) || true
 ```
+
+#### Stage 2d: Taxonomy Check (after planning review)
+
+Run the failure-class taxonomy against the selected approach to flag known blind spots.
+
+```bash
+TAXONOMY_RESULT=$(bash "$SKILL_DIR/scripts/prism-taxonomy.sh" check "$PROJECT_ROOT" "{approach_description} {plan_summary}" 2>/dev/null) || true
+```
+
+Read the temp file for structured JSON. Extract `matched` array (known failure classes
+this approach may be vulnerable to) and `skipped` flag.
+
+**If skipped** (taxonomy file missing/malformed): Set `TAXONOMY_STATUS=skipped`. This
+will cap confidence at "medium" later (taxonomy skipped but Red Team can still validate).
+
+**If matches found:** Inject matched failure classes into the Red Team context (Stage 2e).
+Log telemetry:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" taxonomy_check \
+  '{"matches":{N},"gaps":{M},"total_classes":{T},"skipped":{false}}'
+```
+
+**If no matches:** Taxonomy check passed. Proceed with empty gaps context for Red Team.
+
+#### Stage 2e: Red Team Challenge (after taxonomy check)
+
+Dispatch an adversarial subagent to stress-test the approach's assumptions.
+
+Agent tool subagent using the prompt from
+[references/reviews/red-team-challenge.md](references/reviews/red-team-challenge.md).
+Pass:
+- Approach description (from Stage 2b decision)
+- Plan summary (from Stage 2c planning review)
+- Taxonomy gaps (matched failure classes from Stage 2d, may be empty)
+- Checkpoint: `"approach"`
+
+**Parse Red Team output:**
+- If `concerns` array has 1+ entries: extract concerns, log telemetry.
+- If `concerns` array is empty (zero concerns): re-dispatch ONCE with harder framing:
+
+  > "You returned no concerns. Name at least one assumption this approach makes
+  > that could be wrong. If you genuinely find zero blind spots, explain why — that
+  > explanation is itself the concern."
+
+  If second attempt also returns zero concerns: log `red_team_vacuous` telemetry
+  and proceed. Do NOT re-dispatch again.
+
+- If subagent times out or fails: log `red_team_timeout`, set `RED_TEAM_STATUS=skipped`.
+
+**Telemetry:**
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" red_team_complete \
+  '{"concerns_count":{N},"confidence_level":"{level}","checkpoint":"approach","re_dispatched":{bool}}'
+```
+
+#### Stage 2f: Confidence Score (after Red Team)
+
+Calculate the pipeline confidence score based on taxonomy and Red Team results.
+
+**Confidence calculation rules:**
+- All checks ran + Red Team recommendation is "proceed" → `high`
+- Taxonomy skipped + Red Team passed → capped at `medium`
+- Red Team returned "investigate" recommendation → `low`
+- Red Team returned "reconsider" recommendation → `low`
+- Red Team skipped/failed/timeout → `unknown`
+- Both taxonomy and Red Team skipped → `unknown`
+
+**If confidence is `low`:** Trigger escalation protocol.
+1. Research deeper: dispatch research subagent with specific focus on the Red Team's
+   concerns. Look for alternative approaches that address the identified blind spots.
+2. If alternative found: present to user. "The Red Team flagged [concern]. An alternative
+   approach using [alternative] would address this. Want to switch?"
+3. If no alternative found or user declines: present all concerns transparently.
+   "I've tried two approaches and I'm not confident either catches everything.
+   Here's what each misses: [list]. Which do you want to proceed with?"
+4. **Max 2 escalation rounds.** After 2 rounds: user decides.
+5. If user says "just build it" at any point: log `confidence_override` telemetry,
+   set confidence to `user-accepted-low`, proceed without further escalation.
+
+**Telemetry:**
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" confidence_escalation \
+  '{"level":"{level}","round":{N},"action":"{proceed|escalate|override}"}'
+```
+
+Store confidence in checkpoint JSON for propagation to later stages:
+```bash
+echo '{"stage":2,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"approach validated","confidence":{"level":"{level}","concerns":[...],"checksRun":["taxonomy","red_team"],"checksSkipped":[...]}}' | \
+  bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+```
+
+**Routing after confidence:**
+- If `high` or `medium`: UI product + no DESIGN.md? → Stage 2.5. Otherwise → Stage 3.
+- If `low` or `unknown`: escalation protocol (above) resolves to proceed or user decides.
+- If `user-accepted-low`: proceed as normal.
 
 ### Stage 2.5: Design (UI products only)
 
@@ -858,20 +953,20 @@ If codex CLI found:
   - If /review was already run, produces cross-model comparison
 
   If Codex finds P1 issues Claude missed → Stage 3 for fixes (first cycle only).
-  If Codex passes → Stage 5.
+  If Codex passes → Stage 4.7 (Red Team Pre-Ship).
   If Codex errors or times out → record verdict as "hold", tell user "Codex was
-  unavailable — proceeding with single-model review." → Stage 5.
+  unavailable — proceeding with single-model review." → Stage 4.7.
 
 If codex CLI NOT found:
   Tell user: "I'd normally get a second AI opinion on this code, but Codex CLI isn't
   installed. You can install it with `npm install -g @openai/codex` for future builds.
   Proceeding to ship."
-  → Stage 5.
+  → Stage 4.7 (Red Team Pre-Ship).
 
 - **No skip option.** Mandatory when Codex CLI is available. Advisory when not installed
   (graceful degradation — Prism works without Codex, but is better with it).
 - **Once-per-cycle guard:** Codex review runs at most once per build cycle to prevent
-  infinite loops. If already ran this cycle, skip → Stage 5.
+  infinite loops. If already ran this cycle, skip → Stage 4.7.
 - **Fallback:** Graceful degradation only. No Prism-native fallback.
 
 Auto-save after Codex fixes: `"Codex-flagged fixes for {change}"`
@@ -888,6 +983,43 @@ Where `{actual_verdict}` is derived from the /codex skill output:
 - If GATE: PASS → verdict = "pass"
 - If GATE: FAIL → verdict = "fail"
 - If Codex errored/timed out → verdict = "hold"
+
+### Stage 4.7: Red Team Pre-Ship (after Codex, before ship)
+
+Dispatch the Red Team for a final challenge: does the built output actually cover what
+the approach claimed?
+
+Agent tool subagent using the prompt from
+[references/reviews/red-team-challenge.md](references/reviews/red-team-challenge.md).
+Pass:
+- Approach description (from Stage 2b decision)
+- Plan summary (from Stage 2c)
+- Taxonomy gaps (from Stage 2d, if any)
+- Checkpoint: `"pre-ship"`
+- Build output summary: list of files built, QA results, Codex results
+
+**Same rules as Stage 2e:** at least 1 concern required, re-dispatch once on zero,
+timeout → skip.
+
+**Confidence update:** Merge Stage 2f confidence with Stage 4.7 Red Team results.
+The final confidence level is the LOWER of the two checkpoints. If Stage 4.7 Red Team
+skipped: inherit Stage 2f confidence but note the skip in `checksSkipped`.
+
+**Update confidence in checkpoint for Stage 5:**
+```bash
+echo '{"stage":4,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"pre-ship validation","confidence":{"level":"{final_level}","concerns":[...],"checksRun":[...],"checksSkipped":[...]}}' | \
+  bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+```
+
+**Telemetry:**
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" red_team_complete \
+  '{"concerns_count":{N},"confidence_level":"{level}","checkpoint":"pre-ship","re_dispatched":{bool}}'
+```
+
+**Routing:** Always → Stage 5. The pre-ship Red Team is advisory — it updates confidence
+but never blocks shipping. Critical concerns are surfaced to the user as warnings in the
+ship receipt and PR body.
 
 ### Stage 5: Ship
 
@@ -906,7 +1038,7 @@ Tell user: "Everything looks good — committing and creating a pull request."
 
 **5b. Ship (bridge command):**
 ```bash
-SHIP_RESULT=$($BRIDGE ship "$PROJECT_ROOT" "{change}" --base main 2>/dev/null) || true
+SHIP_RESULT=$($BRIDGE ship "$PROJECT_ROOT" "{change}" --base main --confidence-level "{final_confidence_level}" 2>/dev/null) || true
 ```
 Parse JSON result:
 - If `status` is `"shipped"` or `"partial"`, continue to 5c.
@@ -933,7 +1065,7 @@ If `platform` is `"none"` → say nothing about deploy.
 echo "Last shipped: {change} on $(date +%Y-%m-%d). PR: {pr_url}" | \
   bash "$SKILL_DIR/scripts/prism-state.sh" update "$PROJECT_ROOT" state.md "Last Shipped"
 ```
-4. Record ship receipt:
+4. Record ship receipt (include confidence from Stage 4.7 checkpoint):
 ```bash
 echo '{
   "commitSha":"{commit}","commitMessage":"{message}",
@@ -941,7 +1073,8 @@ echo '{
   "prUrl":"{pr_url}","tagName":"{tag_name}",
   "deployUrl":"{deploy_url}","deployPlatform":"{platform}",
   "specSummary":"{spec_summary}",
-  "reviewVerdicts":{review_verdicts_json}
+  "reviewVerdicts":{review_verdicts_json},
+  "confidence":{"level":"{final_level}","method":"{method}","concerns":[{concerns}],"escalated":{bool},"escalationCount":{N},"checksRun":[{checks}],"checksSkipped":[{skipped}]}
 }' | $BRIDGE record-ship "$PROJECT_ROOT" "{change}" 2>/dev/null || true
 ```
 
@@ -951,6 +1084,7 @@ Present structured receipt to user:
 What was built: {spec_summary}
 Requirements: {acceptanceCriteria count} verified
 Reviews: Engineering {verdict}, QA {verdict} ({score}), Design {verdict or N/A}
+Build confidence: {HIGH|MEDIUM|LOW|UNKNOWN} — {confidence_summary}
 PR: {pr_url}
 Branch: {branch} → main
 Commit: {commit_sha}
