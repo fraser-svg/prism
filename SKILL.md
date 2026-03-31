@@ -190,39 +190,17 @@ On every invocation, check if the macOS Keychain is available:
 [ "$(uname)" = "Darwin" ] && command -v security >/dev/null 2>&1 && echo "KEYCHAIN_AVAILABLE" || echo "KEYCHAIN_UNAVAILABLE"
 ```
 
-If KEYCHAIN_AVAILABLE, check connected providers with caching (1-hour TTL):
+If KEYCHAIN_AVAILABLE, probe connected providers using the shared helper:
 
 ```bash
-# Portable timeout function (macOS has no GNU timeout)
-_prism_timeout() {
-  local secs=$1; shift
-  "$@" &
-  local pid=$!
-  ( sleep "$secs" && kill "$pid" 2>/dev/null ) &
-  local watchdog=$!
-  wait "$pid" 2>/dev/null
-  local rc=$?
-  kill "$watchdog" 2>/dev/null 2>&1; wait "$watchdog" 2>/dev/null
-  return $rc
-}
-
-KEYCHAIN_CACHE="/tmp/prism-keychain-${UID:-0}-cache"
-if [ -f "$KEYCHAIN_CACHE" ] && [ "$(( $(date +%s) - $(stat -f%m "$KEYCHAIN_CACHE") ))" -lt 3600 ]; then
-  # Cache hit — read via grep (NOT source, for security)
-  for p in anthropic openai google vercel stripe; do
-    eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
-  done
-else
-  # Cache miss — probe each provider (2s timeout per probe)
-  for p in anthropic openai google vercel stripe; do
-    _prism_timeout 2 security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null \
-      && echo "PRISM_KEY_$p=connected" || echo "PRISM_KEY_$p=disconnected"
-  done > "$KEYCHAIN_CACHE"
-  for p in anthropic openai google vercel stripe; do
-    eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
-  done
-fi
+source "$SKILL_DIR/scripts/prism-helpers.sh"
+_prism_keychain_probe
 ```
+
+This uses `_prism_keychain_probe` from `scripts/prism-helpers.sh` which handles caching
+(1-hour TTL at `/tmp/prism-keychain-{UID}-cache`) and 2-second timeouts per provider.
+After the call, `PRISM_KEY_<provider>` is set to `connected` or `disconnected` for each
+provider in `scripts/prism-providers.txt`.
 
 Store the result. If any providers are connected, auto-inject at the start of every
 project. See [references/key-management.md](references/key-management.md) for the
@@ -344,6 +322,22 @@ product type, update the route if needed. This is the one exception to "never re
 ```bash
 bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
 ```
+
+**Auto-inject API keys (after pipeline visualizer):**
+```bash
+bash "$SKILL_DIR/scripts/prism-inject.sh" "$PROJECT_ROOT" 2>/dev/null || true
+```
+
+Read the inject JSON output. Behavior rules:
+- **`status: "ok"`** — Silent. Internal context only.
+- **`status: "ok"` with non-empty `conflicts`** — Surface: "Note: {VAR} is already set
+  outside the prism block, skipping injection for that provider."
+- **`status: "skip", reason: "no_keys"` + NONE scan status** — First-session tip:
+  "Run `prism: connect <provider>` to link your API keys once — they'll auto-inject
+  in every project."
+- **`status: "skip", reason: "keychain_locked"`** — Surface warning.
+- **`status: "error"`** — Surface warning with reason.
+- All other skips — Silent.
 
 ### Stage 1: Understand
 
