@@ -72,7 +72,7 @@ Confirm: "Disconnected {provider}. Key removed from keychain."
 First check if the keychain is accessible:
 
 ```bash
-security show-keychain-info login.keychain 2>&1 | grep -q "locked" && echo "KEYCHAIN_LOCKED" || echo "KEYCHAIN_OK"
+security show-keychain-info login.keychain 2>&1 | grep -v "unlocked" | grep -q "locked" && echo "KEYCHAIN_LOCKED" || echo "KEYCHAIN_OK"
 ```
 
 If KEYCHAIN_LOCKED: "Your keychain is locked. Unlock it and try again."
@@ -96,80 +96,32 @@ Display as a clean list:
 ### prism: inject
 
 Writes connected keys to `.env.local` in the project directory. Secrets never enter
-the LLM context window. The entire inject runs as ONE Bash command.
+the LLM context window.
 
-**Step 0: Detect target directory**
+**Auto-injection at Stage 0:** Inject now runs automatically at session start via
+`scripts/prism-inject.sh`. The agent reads the JSON output and surfaces warnings
+only when needed (conflicts, errors, or first-session tip for new users).
 
-The agent determines where `.env.local` should go. For monorepos or projects where
-the app lives in a subdirectory (e.g., `app/`), inject into the app subdirectory
-where the framework reads env files. Default: project root.
+**Manual re-injection:** `prism: inject` is still available for manual use. For
+monorepo projects where `.env.local` should go in a subdirectory, run manually:
+`bash scripts/prism-inject.sh <target_dir>`.
 
-**Step 1: Verify .gitignore BEFORE any secret touches disk**
+**Reference implementation:** See `scripts/prism-inject.sh` for the live version.
+The script handles:
+- .gitignore verification before any secret touches disk
+- Conflict detection (project-local values win, conflicting providers are skipped)
+- Corrupt block detection (start marker without end marker)
+- Idempotency (skips write if .env.local content is unchanged)
+- Atomic write (original .env.local preserved on failure)
+- JSON output to temp file, one-line summary to stdout
 
-```bash
-TARGET_DIR="${TARGET_DIR:-.}"
-grep -qxF '.env.local' "$TARGET_DIR/.gitignore" 2>/dev/null || echo '.env.local' >> "$TARGET_DIR/.gitignore"
-```
+**Conflict behavior:** If an env var (e.g., `ANTHROPIC_API_KEY`) already exists in
+`.env.local` outside the prism-managed block, that provider is skipped. Project-local
+values always win. The JSON output includes a `conflicts` array listing skipped vars.
 
-**Step 2: Build and write via single pipeline**
-
-```bash
-# Map provider to env var (bash 3.2 compatible — no associative arrays)
-env_var_for() {
-  case "$1" in
-    anthropic) echo "ANTHROPIC_API_KEY" ;;
-    openai)    echo "OPENAI_API_KEY" ;;
-    google)    echo "GOOGLE_API_KEY" ;;
-    vercel)    echo "VERCEL_TOKEN" ;;
-    stripe)    echo "STRIPE_SECRET_KEY" ;;
-  esac
-}
-
-# Trap to clean up temp files on any exit
-TMPFILE=$(mktemp /tmp/prism-env-XXXXXX)
-MERGED=$(mktemp /tmp/prism-merged-XXXXXX)
-trap 'rm -f "$TMPFILE" "$MERGED"' EXIT
-
-# Build the prism-managed block
-INJECTED=0
-echo "# --- prism-managed:start ---" > "$TMPFILE"
-for provider in anthropic openai google vercel stripe; do
-  KEY=$(security find-generic-password -s "prism-$provider" -a "prism" -w 2>/dev/null) && {
-    printf '%s=%s\n' "$(env_var_for "$provider")" "$KEY" >> "$TMPFILE"
-    INJECTED=$((INJECTED + 1))
-  }
-done
-echo "# --- prism-managed:end ---" >> "$TMPFILE"
-
-if [ "$INJECTED" -eq 0 ]; then
-  echo "NO_KEYS_FOUND"
-  exit 0
-fi
-
-# Merge: strip old prism block from .env.local, append new block, atomic mv
-ENV_FILE="$TARGET_DIR/.env.local"
-if [ -f "$ENV_FILE" ]; then
-  # Validate end marker exists before sed (prevents deleting to EOF)
-  if grep -q '# --- prism-managed:start ---' "$ENV_FILE" && ! grep -q '# --- prism-managed:end ---' "$ENV_FILE"; then
-    echo "CORRUPT_BLOCK"
-    exit 1
-  fi
-  sed '/# --- prism-managed:start ---/,/# --- prism-managed:end ---/d' "$ENV_FILE" > "$MERGED"
-else
-  touch "$MERGED"
-fi
-cat "$TMPFILE" >> "$MERGED"
-mv "$MERGED" "$ENV_FILE"
-echo "INJECT_COMPLETE: $INJECTED keys"
-```
-
-**IMPORTANT:** This entire block runs as ONE Bash command via the Bash tool. The agent
-sees only "INJECT_COMPLETE: N keys", "NO_KEYS_FOUND", or "CORRUPT_BLOCK". Keys are
-never in the LLM context.
-
-If INJECT_COMPLETE: "Keys injected to .env.local ({N} providers)."
-If NO_KEYS_FOUND: "No connected providers found. Run `prism: connect <provider>` first."
-If CORRUPT_BLOCK: "The prism-managed block in .env.local is corrupted (missing end marker). Fix manually or delete the block and re-inject."
+If `status: "ok"`: "Keys injected to .env.local ({N} providers)."
+If `status: "skip", reason: "no_keys"`: "No connected providers found. Run `prism: connect <provider>` first."
+If `status: "error", reason: "corrupt_block"`: "The prism-managed block in .env.local is corrupted (missing end marker). Fix manually or delete the block and re-inject."
 If error: Surface the error in plain English.
 
 ## Error Handling

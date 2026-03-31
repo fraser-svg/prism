@@ -1,5 +1,29 @@
 # Prism TODOs
 
+## Monorepo Target Directory Resolution (P2)
+
+**What:** Add framework detection to `scripts/prism-inject.sh` for monorepo projects where `.env.local` needs to go in a subdirectory (e.g., `app/`, `packages/web/`).
+
+**Why:** Auto-inject uses `$PROJECT_ROOT` which is correct for single-app projects. Monorepo users would get `.env.local` in the wrong directory where their framework won't read it.
+
+**When:** When an internal user reports inject targeting the wrong directory.
+
+**How:** Look for `next.config.*`, `vite.config.*`, or `package.json` with framework deps in subdirectories. `scripts/prism-deploy.sh` already has app-root detection logic (line 119) that could be extracted into `prism-helpers.sh`. Fall back to `$PROJECT_ROOT` if no framework detected. Manual `prism: inject <dir>` override remains available.
+
+**Depends on:** Auto-inject PR (fraser-svg/api-key-vault).
+
+## Per-Project Key Scoping (P3)
+
+**What:** Allow projects to specify which providers they need, so inject only writes relevant keys instead of all connected keys.
+
+**Why:** Currently all connected keys are injected into every project (e.g., `STRIPE_SECRET_KEY` in projects that don't use Stripe). Accepted for M1 (internal users, gitignored file, known threat model) but violates least-privilege principle.
+
+**When:** When internal users report wanting per-project control, or when expanding beyond 2-5 internal users.
+
+**How:** Options: (a) `prism: inject --only anthropic openai` flag, (b) `.prism/config.json` in project root specifying required providers, (c) auto-detect by grepping source for env var references. Option (c) is cleanest UX but most complex to implement.
+
+**Depends on:** Auto-inject PR (fraser-svg/api-key-vault) + evidence from internal users.
+
 ## Doc Drift Lint (P2)
 
 **What:** A validation script or CI check that greps for stale references (deleted files, Tauri, Prismatic, hosted-web-app language) across all active docs.
@@ -242,6 +266,42 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Add a `prescription.promotable` flag computed from recentScores. When promotable, the gate evaluator reads active promotable prescriptions and adds the requirement as a blocker (e.g., "IntakeBrief required before plan stage"). Requires a confirmation prompt before first auto-tighten to build operator trust.
 
 **Depends on:** Self-healing system (Slices C-E) shipped + 5+ sessions with accurate prescription scoring.
+
+## Autoresearch Level 2: Workflow Experiments (P2)
+
+**What:** Extend the experiment system beyond prompt variants to test workflow changes (gate thresholds, stage ordering, retry strategies).
+
+**Why:** Level 1 (Prompt Evolution) only covers one dimension of Prism's behavior. Workflow experiments would let Prism self-optimize its own pipeline structure, not just its prompts. Deferred from autoresearch v1 to keep scope tight for the first implementation.
+
+**When:** After Level 1 has run 20+ experiments with at least 3 promotions, proving the infrastructure works.
+
+**How:** Add `workflow` to ExperimentLevel. Define workflow variant templates targeting gate thresholds and stage transitions. Requires careful rollback semantics since workflow changes affect multiple stages.
+
+**Depends on:** Autoresearch Level 1 (Prompt Evolution) shipped and proven reliable.
+
+## Reduce Experiment Decision Threshold (P3)
+
+**What:** Lower the >10% improvement threshold after collecting real data on score variance across sessions.
+
+**Why:** The 10% threshold is conservative for launch. Real session score variance may be much tighter, meaning 5% improvement could be statistically meaningful. Need data first to calibrate properly.
+
+**When:** After 50+ experiment metrics are recorded from real sessions.
+
+**How:** Analyze metric variance from `.prism/experiments/` data. If the standard deviation of dimension scores is <3%, a 5% threshold would be appropriate. Consider making the threshold configurable per experiment.
+
+**Depends on:** Autoresearch Level 1 running in production with real session data.
+
+## Experiment Dashboard in Pipeline Visualizer (P3)
+
+**What:** Add an experiment status panel to PIPELINE.html showing active experiments, their metrics, and decisions.
+
+**Why:** Currently experiment state is only visible via JSON files. A visual panel would let operators see at a glance which experiments are running, how they're trending, and what was recently promoted or discarded.
+
+**When:** After pipeline visualizer sparklines TODO is complete (builds on the same rendering infrastructure).
+
+**How:** Add `activeExperiments` field to `PipelineSnapshot`. Read experiment registry + active experiments, include metric summaries. Render as a table in the HTML with baseline vs test averages and session counts.
+
+**Depends on:** Autoresearch Level 1 shipped + Pipeline Visualizer Session History Sparklines.
 
 ## Pipeline Visualizer: Session History Sparklines (P2)
 

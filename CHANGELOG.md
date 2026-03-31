@@ -2,6 +2,42 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.19.0] - 2026-03-31
+
+### Added
+- **API Key Vault — Auto-Inject** — connect API keys once to macOS Keychain, every project gets them automatically at session start. Zero copy-paste after initial setup.
+- **`scripts/prism-inject.sh`** — auto-injects connected Keychain keys into `.env.local` with conflict detection (project-local values always win), corrupt block detection, idempotency checks, and atomic writes.
+- **`scripts/prism-helpers.sh`** — shared functions extracted from across Prism scripts: provider list, env var mapping, portable timeout, and Keychain probe with 1-hour cache.
+- **`scripts/prism-providers.txt`** — single source of truth for supported providers (anthropic, openai, google, vercel, stripe).
+- **33 new tests** covering inject happy path, error handling, conflict semantics, corrupt block detection, idempotency, keychain lock, platform guard, timeout behavior, and provider mapping.
+
+### Changed
+- `scripts/prism-deploy.sh` now sources `prism-helpers.sh` instead of duplicating timeout and env var mapping functions.
+- SKILL.md wires auto-inject at Stage 0 (session start) and surfaces warnings only when needed.
+- `references/key-management.md` simplified to point at `prism-inject.sh` as the reference implementation.
+
+### Fixed
+- Eval injection vector in Keychain cache probe — values are now validated via case statement before eval.
+- Conflict detection now catches `export VAR=` syntax in addition to bare `VAR=`.
+- Temp files containing secrets are created with `umask 077` (owner-only permissions).
+
+### Removed
+- Dead code in test suite: unused variable assignments, intermediate files, and unnecessary sleep.
+
+## [4.0.18.0] - 2026-03-31
+
+### Added
+- **Autoresearch Layer (Level 1: Prompt Evolution)** — experiment system that A/B tests prompt variants against Prism's self-healing report card. Session ID parity assigns baseline vs test, metrics accumulate over 10 sessions, and a >10% improvement threshold decides promotion or discard. Variants are deterministic templates, no LLM calls.
+- **Experiment types** (`packages/core/src/experiments.ts`) — foundation types for experiment lifecycle: levels, status, variants, metrics, decisions.
+- **Experiment paths** (`packages/memory/src/paths.ts`) — registry, active-variant, and per-level experiment file paths.
+- **Self-healing Step 7** — evaluates active experiments with each session's report card, proposes new experiments from degrading journal patterns, and writes the active variant file for the next session. Incomplete sessions are filtered out to prevent polluted samples.
+- **35 tests** covering registry CRUD, variant assignment (SHA-256 parity), metric recording with dedup, decision engine (test wins, baseline wins, inconclusive, insufficient data), promote/discard lifecycle, atomic variant file writes, and full evaluate integration.
+
+### Changed
+- Corrupt registry files are renamed with timestamp suffix for forensic debugging instead of being silently overwritten.
+- Experiment IDs include a random UUID suffix to prevent collisions on same-day same-dimension experiments.
+- Path segments are validated against a safe character pattern to prevent path traversal.
+
 ## [4.0.17.1] - 2026-03-31
 
 ### Added
