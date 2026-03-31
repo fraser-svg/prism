@@ -33,7 +33,7 @@ What is still missing:
 
 ## Architecture Direction
 
-This repo becomes the owned Prism Core first.
+This repo becomes the owned Prism Core first. See `docs/DOCTRINE.md` for the strategic doctrine (4 layers, 3 horizons, Decision Rubric) that governs architecture choices.
 
 Primary ICP: agency operators and owners delivering software outcomes for clients. Semi-technical creators are the expansion play post-traction.
 
