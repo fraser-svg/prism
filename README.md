@@ -34,6 +34,8 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Local-first workspace** with SQLite, FTS5 search, health badges, and multi-project resume
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
+- **Runtime verification** — test suite runs before QA dispatch, results feed honest confidence scoring; workers write 1-3 unit tests per requirement
+- **QA gate enforcement** — QA skip friction (Quick QA or Full QA), full re-verification after fixes, confidence floor at `low` when QA skipped
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
@@ -182,7 +184,7 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.13.0
+├── VERSION               # 4.0.15.0
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config
