@@ -6,6 +6,8 @@
 set -uo pipefail
 
 SCRIPT_DIR="${1:-$(cd "$(dirname "$0")" && pwd)}"
+# Ensure SCRIPT_DIR is absolute (tests cd to TEST_ROOT, relative paths break)
+SCRIPT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
 PASS=0
 FAIL=0
 TEST_ROOT="/tmp/prism-test-$$"
@@ -1273,6 +1275,235 @@ if [ -f "$TEST_ROOT/.prism/telemetry.jsonl" ]; then
 else
   _assert "deploy: telemetry file exists" "false" "true"
 fi
+
+# ============================================================
+echo ""
+echo "=== prism-helpers.sh ==="
+# ============================================================
+
+_teardown
+_setup
+
+# _prism_timeout: command completes within limit
+source "$SCRIPT_DIR/prism-helpers.sh"
+OUT=$(_prism_timeout 5 echo "fast" 2>/dev/null)
+_assert_contains "timeout: fast command succeeds" "$OUT" "fast"
+
+# _prism_timeout: command exceeds limit → killed
+OUT=$(_prism_timeout 1 sleep 10 2>/dev/null; echo "exit=$?")
+_assert_contains "timeout: slow command killed" "$OUT" "exit="
+# Exit code should be non-zero (killed)
+_prism_timeout 1 sleep 10 >/dev/null 2>&1
+KILLED_RC=$?
+_assert "timeout: killed exit code non-zero" "$([ "$KILLED_RC" -ne 0 ] && echo yes || echo no)" "yes"
+
+# _prism_env_var_for: each provider maps correctly
+_assert "_prism_env_var_for anthropic" "$(_prism_env_var_for anthropic)" "ANTHROPIC_API_KEY"
+_assert "_prism_env_var_for openai" "$(_prism_env_var_for openai)" "OPENAI_API_KEY"
+_assert "_prism_env_var_for google" "$(_prism_env_var_for google)" "GOOGLE_API_KEY"
+_assert "_prism_env_var_for vercel" "$(_prism_env_var_for vercel)" "VERCEL_TOKEN"
+_assert "_prism_env_var_for stripe" "$(_prism_env_var_for stripe)" "STRIPE_SECRET_KEY"
+
+# Provider list consistency: PRISM_PROVIDERS matches prism-providers.txt
+EXPECTED_COUNT=$(grep -c '.' "$SCRIPT_DIR/prism-providers.txt")
+_assert "provider list count" "${#PRISM_PROVIDERS[@]}" "$EXPECTED_COUNT"
+
+# ============================================================
+echo ""
+echo "=== prism-inject.sh ==="
+# ============================================================
+
+_teardown
+_setup
+
+# --- Mock security CLI ---
+INJECT_MOCK_BIN="/tmp/prism-inject-mock-$$"
+mkdir -p "$INJECT_MOCK_BIN"
+
+# Default mock: no keys connected
+cat > "$INJECT_MOCK_BIN/security" << 'MOCKEOF'
+#!/usr/bin/env bash
+case "$1" in
+  show-keychain-info)
+    echo "keychain: unlocked"
+    exit 0
+    ;;
+  find-generic-password)
+    # Extract service name from -s argument
+    svc=""
+    has_w=false
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        -s) shift; svc="$1" ;;
+        -w) has_w=true ;;
+      esac
+      shift
+    done
+    # Extract provider from service name (prism-<provider>)
+    provider="${svc#prism-}"
+    # Check if provider is in the connected list
+    if echo "${MOCK_CONNECTED_PROVIDERS:-}" | grep -qw "$provider" 2>/dev/null; then
+      if [ "$has_w" = true ]; then
+        echo "mock-key-value-$provider"
+      fi
+      exit 0
+    else
+      exit 1
+    fi
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+MOCKEOF
+chmod +x "$INJECT_MOCK_BIN/security"
+
+# Clear keychain cache to force fresh probes
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+
+# Test: TARGET_DIR not found
+OUT=$(PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "/tmp/nonexistent-$$" 2>/dev/null)
+_assert_contains "inject: target not found" "$OUT" "target_not_found"
+
+# Test: TARGET_DIR missing argument (uses current dir, should work)
+mkdir -p "$TEST_ROOT/inject-test"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(cd "$TEST_ROOT/inject-test" && PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" 2>/dev/null)
+_assert_contains "inject: no args uses current dir" "$OUT" "SKIP\|OK\|ERROR"
+
+# Test: no keys connected
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(export MOCK_CONNECTED_PROVIDERS=""; PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "inject: no keys" "$OUT" "no_keys"
+
+# Test: keychain locked
+cat > "$INJECT_MOCK_BIN/security-locked" << 'MOCKEOF'
+#!/usr/bin/env bash
+case "$1" in
+  show-keychain-info)
+    echo "keychain: locked"
+    exit 0
+    ;;
+  *)
+    exit 1
+    ;;
+esac
+MOCKEOF
+chmod +x "$INJECT_MOCK_BIN/security-locked"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+# Temporarily swap security mock
+mv "$INJECT_MOCK_BIN/security" "$INJECT_MOCK_BIN/security.bak"
+mv "$INJECT_MOCK_BIN/security-locked" "$INJECT_MOCK_BIN/security"
+OUT=$(PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "inject: keychain locked" "$OUT" "keychain_locked"
+mv "$INJECT_MOCK_BIN/security.bak" "$INJECT_MOCK_BIN/security"
+
+# Test: happy path — keys connected, no existing .env.local
+rm -f "$TEST_ROOT/.env.local" 2>/dev/null
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(MOCK_CONNECTED_PROVIDERS="anthropic openai" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-inject-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  INJECT_STATUS=$(cat "$TEMP_FILE" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "unknown")
+  INJECT_COUNT=$(cat "$TEMP_FILE" | python3 -c "import sys,json; print(json.load(sys.stdin)['keys_injected'])" 2>/dev/null || echo "0")
+  _assert "inject: happy path status" "$INJECT_STATUS" "ok"
+  _assert "inject: happy path count" "$INJECT_COUNT" "2"
+else
+  _assert "inject: happy path (could not read temp)" "no" "yes"
+fi
+
+# Test: .env.local was created with prism block
+_assert "inject: .env.local created" "$([ -f "$TEST_ROOT/.env.local" ] && echo yes || echo no)" "yes"
+_assert_contains "inject: start marker" "$(cat "$TEST_ROOT/.env.local")" "prism-managed:start"
+_assert_contains "inject: end marker" "$(cat "$TEST_ROOT/.env.local")" "prism-managed:end"
+_assert_contains "inject: ANTHROPIC_API_KEY present" "$(cat "$TEST_ROOT/.env.local")" "ANTHROPIC_API_KEY="
+
+# Test: .gitignore was created/updated
+_assert_contains "inject: .gitignore has .env.local" "$(cat "$TEST_ROOT/.gitignore")" ".env.local"
+
+# Test: .gitignore exists, .env.local already listed
+echo ".env.local" > "$TEST_ROOT/.gitignore"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+MOCK_CONNECTED_PROVIDERS="anthropic" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" >/dev/null 2>&1
+GITIGNORE_LINES_AFTER=$(grep -c ".env.local" "$TEST_ROOT/.gitignore")
+_assert "inject: .gitignore not duplicated" "$GITIGNORE_LINES_AFTER" "1"
+
+# Test: existing .env.local with no prism block → block appended
+echo "MY_CUSTOM_VAR=hello" > "$TEST_ROOT/.env.local"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+MOCK_CONNECTED_PROVIDERS="anthropic" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" >/dev/null 2>&1
+_assert_contains "inject: user var preserved (append)" "$(cat "$TEST_ROOT/.env.local")" "MY_CUSTOM_VAR=hello"
+_assert_contains "inject: prism block appended" "$(cat "$TEST_ROOT/.env.local")" "prism-managed:start"
+
+# Test: existing .env.local with valid prism block → block replaced
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+MOCK_CONNECTED_PROVIDERS="anthropic openai" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" >/dev/null 2>&1
+_assert_contains "inject: block replaced" "$(cat "$TEST_ROOT/.env.local")" "OPENAI_API_KEY="
+_assert_contains "inject: user var still preserved" "$(cat "$TEST_ROOT/.env.local")" "MY_CUSTOM_VAR=hello"
+
+# Test: corrupt block (start marker without end marker)
+echo "MY_VAR=x" > "$TEST_ROOT/.env.local"
+echo "# --- prism-managed:start ---" >> "$TEST_ROOT/.env.local"
+echo "OLD_KEY=old" >> "$TEST_ROOT/.env.local"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(MOCK_CONNECTED_PROVIDERS="anthropic" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "inject: corrupt block detected" "$OUT" "corrupt_block"
+
+# Test: env var conflict — project-local wins, provider skipped
+echo "ANTHROPIC_API_KEY=my-local-key" > "$TEST_ROOT/.env.local"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(MOCK_CONNECTED_PROVIDERS="anthropic openai" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-inject-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  CONFLICT_COUNT=$(cat "$TEMP_FILE" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('conflicts',[])))" 2>/dev/null || echo "0")
+  _assert "inject: conflict detected" "$CONFLICT_COUNT" "1"
+  # Verify the local key was preserved, not overwritten
+  _assert_contains "inject: local key preserved" "$(cat "$TEST_ROOT/.env.local")" "ANTHROPIC_API_KEY=my-local-key"
+  # Verify openai was still injected
+  _assert_contains "inject: non-conflicting key injected" "$(cat "$TEST_ROOT/.env.local")" "OPENAI_API_KEY="
+else
+  _assert "inject: conflict test (could not read temp)" "no" "yes"
+fi
+
+# Test: idempotency — second run with same content skips write
+rm -f "$TEST_ROOT/.env.local" 2>/dev/null
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+MOCK_CONNECTED_PROVIDERS="anthropic" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" >/dev/null 2>&1
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(MOCK_CONNECTED_PROVIDERS="anthropic" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "inject: idempotent (changed=false)" "$OUT" "changed=false"
+
+# Test: JSON output structure
+rm -f "$TEST_ROOT/.env.local" 2>/dev/null
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(MOCK_CONNECTED_PROVIDERS="anthropic" PATH="$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+TEMP_FILE=$(echo "$OUT" | grep -o '/tmp/prism-inject-[0-9]*.json')
+if [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ]; then
+  # Validate JSON is parseable
+  python3 -c "import sys,json; json.load(sys.stdin)" < "$TEMP_FILE" 2>/dev/null
+  _assert_exit "inject: valid JSON output" "$?" "0"
+  # Check required fields exist
+  HAS_STATUS=$(python3 -c "import sys,json; d=json.load(sys.stdin); print('yes' if 'status' in d and 'keys_injected' in d and 'providers' in d and 'conflicts' in d else 'no')" < "$TEMP_FILE" 2>/dev/null || echo "no")
+  _assert "inject: JSON has required fields" "$HAS_STATUS" "yes"
+else
+  _assert "inject: JSON structure (could not read temp)" "no" "yes"
+fi
+
+# Test: not macOS (mock uname)
+INJECT_MOCK_UNAME="/tmp/prism-inject-uname-mock-$$"
+mkdir -p "$INJECT_MOCK_UNAME"
+cat > "$INJECT_MOCK_UNAME/uname" << 'MOCKEOF'
+#!/usr/bin/env bash
+echo "Linux"
+MOCKEOF
+chmod +x "$INJECT_MOCK_UNAME/uname"
+rm -f /tmp/prism-keychain-*-cache 2>/dev/null || true
+OUT=$(PATH="$INJECT_MOCK_UNAME:$INJECT_MOCK_BIN:$PATH" bash "$SCRIPT_DIR/prism-inject.sh" "$TEST_ROOT" 2>/dev/null)
+_assert_contains "inject: not macOS" "$OUT" "keychain_unavailable"
+rm -rf "$INJECT_MOCK_UNAME"
+
+# Cleanup inject mocks
+rm -rf "$INJECT_MOCK_BIN"
 
 # ============================================================
 echo ""

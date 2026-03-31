@@ -26,6 +26,9 @@ It answers four questions for each asset:
 | `scripts/prism-catalogue.sh` | Skill catalogue CRUD (query, record, promote, demote, list, evict) | `packages/guardian` or shared infra | Canonical behavior, likely wrapped | Continuous Intelligence Layer; atomic writes, corruption recovery, eviction at 500 entries |
 | `scripts/prism-research.sh` | Research orchestration with catalogue queries and history persistence | `packages/orchestrator` or `packages/guardian` | Canonical behavior, likely wrapped | Continuous Intelligence Layer; research-gate.sh compatible, complexity-gated tiers |
 | `scripts/prism-eval.sh` | Eval suite | `packages/guardian` | Canonical behavior, likely wrapped | Core for safe self-improvement |
+| `scripts/prism-helpers.sh` | Shared functions (timeout, env var mapping, keychain probe) | Shared infra | Canonical behavior | Sources `prism-providers.txt`; used by inject and deploy scripts |
+| `scripts/prism-inject.sh` | Auto-inject API keys from Keychain to `.env.local` | `packages/execution` or shared infra | Canonical behavior, likely wrapped | Stage 0 session start; conflict detection, atomic writes |
+| `scripts/prism-deploy.sh` | Vercel deploy trigger | `packages/execution` | Canonical behavior, likely wrapped | Sources `prism-helpers.sh` for DRY |
 | `scripts/prism-improve.sh` | Improvement proposals and promotion | `packages/guardian` + `packages/orchestrator` | Transitional canonical | Good pattern, but should align with formal change/release state |
 
 ## Compiler And Prompt Assets
