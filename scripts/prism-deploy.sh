@@ -10,6 +10,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/prism-helpers.sh"
 
 # --- Dependency check ---
 if ! command -v jq >/dev/null 2>&1; then
@@ -43,29 +44,7 @@ _fail() {
   _write_output "FAIL: reason=$reason" "$json"
 }
 
-_env_var_for() {
-  case "$1" in
-    anthropic) echo "ANTHROPIC_API_KEY" ;;
-    openai)    echo "OPENAI_API_KEY" ;;
-    google)    echo "GOOGLE_API_KEY" ;;
-    vercel)    echo "VERCEL_TOKEN" ;;
-    stripe)    echo "STRIPE_SECRET_KEY" ;;
-  esac
-}
-
-# Portable timeout (macOS has no GNU timeout)
-_prism_timeout() {
-  local secs=$1; shift
-  "$@" &
-  local cmd_pid=$!
-  ( sleep "$secs" && kill "$cmd_pid" 2>/dev/null ) &
-  local timer_pid=$!
-  wait "$cmd_pid" 2>/dev/null
-  local exit_code=$?
-  kill "$timer_pid" 2>/dev/null 2>&1
-  wait "$timer_pid" 2>/dev/null 2>&1
-  return $exit_code
-}
+# _prism_env_var_for and _prism_timeout are provided by prism-helpers.sh
 
 # --- Main ---
 PROJECT_ROOT="${1:-}"
@@ -140,7 +119,7 @@ ENV_SYNCED=0
 for provider in anthropic openai google stripe; do
   KEY=$(security find-generic-password -s "prism-$provider" -a "prism" -w 2>/dev/null || true)
   if [ -n "$KEY" ]; then
-    VAR_NAME=$(_env_var_for "$provider")
+    VAR_NAME=$(_prism_env_var_for "$provider")
     # Push to Vercel (stdin pipe — key never in CLI args)
     printf '%s' "$KEY" | VERCEL_TOKEN="$TOKEN" vercel env add "$VAR_NAME" production preview --force --cwd "$DEPLOY_DIR" >/dev/null 2>&1 && {
       ENV_SYNCED=$((ENV_SYNCED + 1))
