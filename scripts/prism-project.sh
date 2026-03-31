@@ -7,7 +7,7 @@
 # Generates .prism/dogfood/PROJECT.html and opens it in the default browser
 # unless --no-open is passed.
 # Exit: 0 = success, non-zero = error
-set -uo pipefail
+set -euo pipefail
 
 NO_OPEN=false
 if [ "${1:-}" = "--no-open" ]; then

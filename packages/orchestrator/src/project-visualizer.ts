@@ -184,8 +184,10 @@ function renderTaskProgress(taskProgress: TaskProgress | null): string {
       .map(([wave, tasks]) => {
         const items = tasks.map(t => {
           const icon = t.status === "done" || t.status === "completed" ? "✓"
-            : t.status === "in_progress" ? "●" : "○";
-          return `<li class="task-item task-${t.status}">${icon} ${escapeHtml(t.title)}</li>`;
+            : t.status === "in_progress" || t.status === "running" ? "●"
+            : t.status === "failed" || t.status === "abandoned" ? "✗"
+            : t.status === "blocked" ? "⊘" : "○";
+          return `<li class="task-item task-${escapeHtml(t.status)}">${icon} ${escapeHtml(t.title)}</li>`;
         }).join("");
         return `<div class="wave-group"><h4>Wave ${wave}</h4><ul>${items}</ul></div>`;
       }).join("");
@@ -193,7 +195,7 @@ function renderTaskProgress(taskProgress: TaskProgress | null): string {
     const items = taskProgress.tasks.map(t => {
       const icon = t.status === "done" || t.status === "completed" ? "✓"
         : t.status === "in_progress" ? "●" : "○";
-      return `<li class="task-item task-${t.status}">${icon} ${escapeHtml(t.title)}</li>`;
+      return `<li class="task-item task-${escapeHtml(t.status)}">${icon} ${escapeHtml(t.title)}</li>`;
     }).join("");
     tasksHtml = `<ul>${items}</ul>`;
   }
@@ -256,8 +258,17 @@ function renderTimeline(snapshot: ProjectSnapshot): string {
   return `<div class="sidebars">${decisionsCol}${shipsCol}</div>`;
 }
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function renderShipEntry(entry: ShipStatusEntry): string {
-  const prLink = entry.prUrl
+  const prLink = entry.prUrl && isSafeUrl(entry.prUrl)
     ? ` <a href="${escapeHtml(entry.prUrl)}" class="pr-link">PR</a>`
     : "";
   const confidence = entry.confidence

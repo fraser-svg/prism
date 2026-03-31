@@ -168,7 +168,7 @@ describe("extractProjectSnapshot", () => {
 
     await writeFile(
       join(releaseDir, "state.json"),
-      JSON.stringify({ decision: "go", decidedAt: now() }),
+      JSON.stringify({ decision: "shipped", decidedAt: now() }),
     );
 
     const snapshot = await extractProjectSnapshot(abs(testDir));
@@ -303,6 +303,32 @@ describe("extractProjectSnapshot", () => {
     expect(snapshot.taskProgress).not.toBeNull();
     expect(snapshot.taskProgress!.total).toBe(2);
     expect(snapshot.taskProgress!.completed).toBe(1);
+  });
+
+  it("reads supervisor task-graph format (task field instead of title)", async () => {
+    const prismDir = join(testDir, ".prism");
+    await mkdir(prismDir, { recursive: true });
+
+    await writeFile(
+      join(prismDir, "task-graph.json"),
+      JSON.stringify({
+        version: 1,
+        change: "test",
+        tasks: [
+          { id: "w1", task: "Implement auth flow", depends_on: [], status: "completed" },
+          { id: "w2", task: "Write tests", depends_on: ["w1"], status: "running" },
+          { id: "w3", task: "Deploy", depends_on: ["w2"], status: "pending" },
+        ],
+      }),
+    );
+
+    const snapshot = await extractProjectSnapshot(abs(testDir));
+
+    expect(snapshot.taskProgress).not.toBeNull();
+    expect(snapshot.taskProgress!.total).toBe(3);
+    expect(snapshot.taskProgress!.completed).toBe(1);
+    expect(snapshot.taskProgress!.tasks[0]!.title).toBe("Implement auth flow");
+    expect(snapshot.taskProgress!.tasks[1]!.title).toBe("Write tests");
   });
 
   it("adds warning for corrupt task-graph.json", async () => {

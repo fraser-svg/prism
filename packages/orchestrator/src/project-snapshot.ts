@@ -242,7 +242,7 @@ async function resolveFeatureStatus(
     if (await pathExists(rsPath.stateFile)) {
       const raw = await readFile(rsPath.stateFile, "utf-8");
       const rs = JSON.parse(raw) as ReleaseState;
-      if (rs.decision === "go") return "shipped";
+      if (rs.decision === "shipped") return "shipped";
     }
   } catch {
     // Fall through to other heuristics
@@ -358,7 +358,7 @@ function parseTaskGraph(graph: unknown): TaskProgress | null {
     if (!item || typeof item !== "object") continue;
     const t = item as Record<string, unknown>;
     const id = String(t.id ?? t.name ?? `task-${tasks.length}`);
-    const title = String(t.title ?? t.name ?? t.description ?? id);
+    const title = String(t.title ?? t.task ?? t.name ?? t.description ?? id);
     const status = String(t.status ?? "pending");
     const wave = typeof t.wave === "number" ? t.wave : undefined;
 

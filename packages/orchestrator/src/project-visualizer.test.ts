@@ -222,6 +222,23 @@ describe("generateProjectHtml", () => {
     expect(html).not.toContain("/Users/secret/project");
   });
 
+  it("sanitizes javascript: URLs in ship status PR links", () => {
+    const html = generateProjectHtml(makeSnapshot({
+      shipStatus: [
+        {
+          specId: "spec-evil",
+          specTitle: "Evil Feature",
+          prUrl: "javascript:alert(1)",
+          shippedAt: "2026-03-30T12:00:00.000Z",
+          confidence: "high",
+        },
+      ],
+    }));
+
+    // The javascript: URL should not appear as an href
+    expect(html).not.toContain('href="javascript:');
+  });
+
   it("renders acceptance criteria progress bar", () => {
     const html = generateProjectHtml(makeSnapshot());
 
