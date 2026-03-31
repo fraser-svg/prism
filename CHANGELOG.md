@@ -2,6 +2,20 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.14.0] - 2026-03-31
+
+### Added
+- **Build Doctrine** — `docs/DOCTRINE.md` merging two strategic source documents into a single 233-line strategic authority with temporal markers (`[NOW]`/`[MIGRATION]`/`[TARGET]`), Current Reality section, Decision Rubric (Layer Test + Wrapper Test + Survival Test), and entity-per-horizon mapping
+- **Doctrinal Check in /yc-brain** — Gate Mode Step 3b reads the Decision Rubric from DOCTRINE.md and applies all three tests as additive context alongside 6-dimension scoring; graceful degradation if file missing
+- **DOCTRINE.md in Review Mode** — added to required inputs for full YC readiness audits
+
+### Fixed
+- **ICP wording alignment** — corrected yc-brain Gate Mode from "semi-technical builders" to "agency operators" matching the locked ICP decision in CLAUDE.md and DOCTRINE.md
+
+### Changed
+- **CLAUDE.md** — added Strategic Authority section pointing to `docs/DOCTRINE.md`
+- **PLANS.md** — Architecture Direction references the doctrine
+
 ## [4.0.13.0] - 2026-03-30
 
 ### Added
