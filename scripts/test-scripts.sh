@@ -258,9 +258,13 @@ echo "content" > "$TEST_ROOT/exists.ts"
 OUT=$("$SCRIPT_DIR/prism-verify.sh" "$TEST_ROOT" --files "exists.ts" 2>/dev/null)
 _assert_contains "existing file passes" "$OUT" "OK: all checks passed"
 
-# File missing
+# File missing — fails by default
 OUT=$("$SCRIPT_DIR/prism-verify.sh" "$TEST_ROOT" --files "missing.ts" 2>/dev/null)
 _assert_contains "missing file fails" "$OUT" "FAIL"
+
+# File missing — skipped with --tolerant (stale file guard for post-QA re-verify)
+OUT=$("$SCRIPT_DIR/prism-verify.sh" "$TEST_ROOT" --files "missing.ts" --tolerant 2>&1)
+_assert_contains "missing file skipped with tolerant" "$OUT" "WARN: skipping missing file"
 
 # Empty file
 touch "$TEST_ROOT/empty.ts"

@@ -28,6 +28,7 @@ ROOT=""
 FILES=""
 DO_LINT=false
 DO_COMPILE=false
+DO_TOLERANT=false
 CWD=""
 
 while [ $# -gt 0 ]; do
@@ -35,6 +36,7 @@ while [ $# -gt 0 ]; do
     --files)   FILES="$2"; shift 2 ;;
     --lint)    DO_LINT=true; shift ;;
     --compile) DO_COMPILE=true; shift ;;
+    --tolerant) DO_TOLERANT=true; shift ;;
     --cwd)     CWD="$2"; shift 2 ;;
     *)
       if [ -z "$ROOT" ]; then
@@ -70,16 +72,25 @@ command -v jq >/dev/null 2>&1 && HAS_JQ=true
 # --- 1. File existence check ---
 if [ -n "$FILES" ]; then
   FILE_CHECK="passed"
+  SKIP_COUNT=0
+  FILE_COUNT=0
   IFS=',' read -ra FILE_LIST <<< "$FILES"
   for file in "${FILE_LIST[@]}"; do
     file=$(printf '%s' "$file" | xargs)  # trim whitespace
     [ -z "$file" ] && continue
+    FILE_COUNT=$((FILE_COUNT + 1))
 
     # Resolve relative to root
     local_path="$file"
     [ ! -f "$local_path" ] && local_path="$ROOT/$file"
 
     if [ ! -f "$local_path" ]; then
+      if [ "$DO_TOLERANT" = true ]; then
+        # Skip missing files with warning (file may have been deleted during QA fixes)
+        printf 'WARN: skipping missing file: %s\n' "$file" >&2
+        SKIP_COUNT=$((SKIP_COUNT + 1))
+        continue
+      fi
       FILE_CHECK="failed"
       PASSED=false
       if [ "$HAS_JQ" = true ]; then
@@ -93,6 +104,10 @@ if [ -n "$FILES" ]; then
       fi
     fi
   done
+  # If all files were missing, report accurately instead of false "passed"
+  if [ "$FILE_COUNT" -gt 0 ] && [ "$SKIP_COUNT" -eq "$FILE_COUNT" ]; then
+    FILE_CHECK="skipped_all_missing"
+  fi
 fi
 
 # --- 2. Lint check ---
