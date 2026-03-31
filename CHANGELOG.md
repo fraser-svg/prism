@@ -2,6 +2,17 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.16.0] - 2026-03-31
+
+### Added
+- **Pipeline Visualizer** — static HTML generator (`PIPELINE.html`) that renders Prism's 7-stage workflow pipeline as a visual, interactive diagram. Composes resume-engine, gate-evaluator, prescription-manager, and learning journal into a single `PipelineSnapshot` JSON contract (future Electron IPC interface).
+- **PipelineSnapshot JSON contract** — `extractPipelineSnapshot()` produces structured state: stages with status/gates/artifacts, recommendations from prescriptions and checkpoints, weaknesses from learning journal, health score and trend.
+- **Pipeline HTML features** — dark/light theme toggle with localStorage persistence, artifact lineage graph, gate requirement tooltips, print stylesheet for demo screenshots, XSS-safe JSON embedding with absolute path stripping.
+- **CLI `pipeline` command** — `execPipeline`/`cmdPipeline` following existing exec*/cmd* pattern, writes `PIPELINE.html` to `.prism/dogfood/`.
+- **Shell wrapper** — `scripts/prism-pipeline.sh` runs CLI and opens HTML in browser.
+- **Sparkline export** — `sparkline()` from health-dashboard.ts now exported for reuse in pipeline visualizer sparklines (P2 follow-up).
+- **Sparklines TODO** — added "Pipeline Visualizer: Session History Sparklines (P2)" to TODOS.md.
+
 ## [4.0.15.0] - 2026-03-31
 
 ### Added
