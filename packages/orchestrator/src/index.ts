@@ -4,3 +4,5 @@ export * from "./gate-evaluator";
 export * from "./resume-engine";
 export * from "./services";
 export * from "./workflow";
+export * from "./pipeline-snapshot";
+export * from "./pipeline-visualizer";
