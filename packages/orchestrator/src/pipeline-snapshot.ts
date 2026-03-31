@@ -18,8 +18,8 @@ import type {
   LearningJournal,
   WorkflowPhase,
 } from "@prism/core";
-import { dogfoodPaths, projectPaths } from "@prism/memory";
-import { readFile, access } from "node:fs/promises";
+import { dogfoodPaths, projectPaths, pathExists } from "@prism/memory";
+import { readFile } from "node:fs/promises";
 
 import { resumeFromArtifacts } from "./resume-engine";
 import { evaluateTransition } from "./gate-evaluator";
@@ -260,15 +260,6 @@ export async function extractPipelineSnapshot(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function getStageArtifacts(
   projectRoot: AbsolutePath,

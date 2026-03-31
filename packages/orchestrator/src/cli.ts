@@ -29,6 +29,8 @@ import { execRecordShip } from "./ship-receipt";
 import { runSelfHealingPipeline, runCrashRecovery } from "./self-healing";
 import { extractPipelineSnapshot } from "./pipeline-snapshot";
 import { generatePipelineHtml } from "./pipeline-visualizer";
+import { extractProjectSnapshot } from "./project-snapshot";
+import { generateProjectHtml } from "./project-visualizer";
 import {
   skillSpecToCore,
   skillPlanToCore,
@@ -361,6 +363,26 @@ async function execPipeline(args: string[]): Promise<unknown> {
   return snapshot;
 }
 
+async function execProject(args: string[]): Promise<unknown> {
+  const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
+
+  const snapshot = await extractProjectSnapshot(projectRoot);
+  const html = generateProjectHtml(snapshot);
+
+  try {
+    const { writeFile, mkdir } = await import("node:fs/promises");
+    const { dogfoodPaths } = await import("@prism/memory");
+    const paths = dogfoodPaths(projectRoot);
+    await mkdir(paths.dogfoodDir, { recursive: true });
+    await writeFile(`${paths.dogfoodDir}/PROJECT.html`, html);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ...snapshot, writeError: message };
+  }
+
+  return snapshot;
+}
+
 async function execSessionReport(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const projectId = args[1] as EntityId | undefined;
@@ -452,6 +474,10 @@ async function cmdSessionReport(args: string[]): Promise<void> {
   output(await execSessionReport(args));
 }
 
+async function cmdProject(args: string[]): Promise<void> {
+  output(await execProject(args));
+}
+
 // ---------------------------------------------------------------------------
 // Batch command — executes multiple commands in a single Node.js process
 // ---------------------------------------------------------------------------
@@ -481,6 +507,7 @@ const EXEC_HANDLERS: Record<string, (args: string[], stdin?: unknown) => Promise
   "session-end": execSessionEnd,
   "session-report": execSessionReport as (args: string[], stdin?: unknown) => Promise<unknown>,
   pipeline: execPipeline as (args: string[], stdin?: unknown) => Promise<unknown>,
+  project: execProject as (args: string[], stdin?: unknown) => Promise<unknown>,
 };
 
 async function cmdBatch(): Promise<void> {
@@ -532,6 +559,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   "session-end": cmdSessionEnd,
   "session-report": cmdSessionReport,
   pipeline: cmdPipeline,
+  project: cmdProject,
   batch: cmdBatch,
 };
 
