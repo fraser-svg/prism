@@ -2,6 +2,28 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.19.0] - 2026-03-31
+
+### Added
+- **API Key Vault — Auto-Inject** — connect API keys once to macOS Keychain, every project gets them automatically at session start. Zero copy-paste after initial setup.
+- **`scripts/prism-inject.sh`** — auto-injects connected Keychain keys into `.env.local` with conflict detection (project-local values always win), corrupt block detection, idempotency checks, and atomic writes.
+- **`scripts/prism-helpers.sh`** — shared functions extracted from across Prism scripts: provider list, env var mapping, portable timeout, and Keychain probe with 1-hour cache.
+- **`scripts/prism-providers.txt`** — single source of truth for supported providers (anthropic, openai, google, vercel, stripe).
+- **33 new tests** covering inject happy path, error handling, conflict semantics, corrupt block detection, idempotency, keychain lock, platform guard, timeout behavior, and provider mapping.
+
+### Changed
+- `scripts/prism-deploy.sh` now sources `prism-helpers.sh` instead of duplicating timeout and env var mapping functions.
+- SKILL.md wires auto-inject at Stage 0 (session start) and surfaces warnings only when needed.
+- `references/key-management.md` simplified to point at `prism-inject.sh` as the reference implementation.
+
+### Fixed
+- Eval injection vector in Keychain cache probe — values are now validated via case statement before eval.
+- Conflict detection now catches `export VAR=` syntax in addition to bare `VAR=`.
+- Temp files containing secrets are created with `umask 077` (owner-only permissions).
+
+### Removed
+- Dead code in test suite: unused variable assignments, intermediate files, and unnecessary sleep.
+
 ## [4.0.18.0] - 2026-03-31
 
 ### Added

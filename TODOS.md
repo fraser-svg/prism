@@ -1,5 +1,29 @@
 # Prism TODOs
 
+## Monorepo Target Directory Resolution (P2)
+
+**What:** Add framework detection to `scripts/prism-inject.sh` for monorepo projects where `.env.local` needs to go in a subdirectory (e.g., `app/`, `packages/web/`).
+
+**Why:** Auto-inject uses `$PROJECT_ROOT` which is correct for single-app projects. Monorepo users would get `.env.local` in the wrong directory where their framework won't read it.
+
+**When:** When an internal user reports inject targeting the wrong directory.
+
+**How:** Look for `next.config.*`, `vite.config.*`, or `package.json` with framework deps in subdirectories. `scripts/prism-deploy.sh` already has app-root detection logic (line 119) that could be extracted into `prism-helpers.sh`. Fall back to `$PROJECT_ROOT` if no framework detected. Manual `prism: inject <dir>` override remains available.
+
+**Depends on:** Auto-inject PR (fraser-svg/api-key-vault).
+
+## Per-Project Key Scoping (P3)
+
+**What:** Allow projects to specify which providers they need, so inject only writes relevant keys instead of all connected keys.
+
+**Why:** Currently all connected keys are injected into every project (e.g., `STRIPE_SECRET_KEY` in projects that don't use Stripe). Accepted for M1 (internal users, gitignored file, known threat model) but violates least-privilege principle.
+
+**When:** When internal users report wanting per-project control, or when expanding beyond 2-5 internal users.
+
+**How:** Options: (a) `prism: inject --only anthropic openai` flag, (b) `.prism/config.json` in project root specifying required providers, (c) auto-detect by grepping source for env var references. Option (c) is cleanest UX but most complex to implement.
+
+**Depends on:** Auto-inject PR (fraser-svg/api-key-vault) + evidence from internal users.
+
 ## Doc Drift Lint (P2)
 
 **What:** A validation script or CI check that greps for stale references (deleted files, Tauri, Prismatic, hosted-web-app language) across all active docs.
