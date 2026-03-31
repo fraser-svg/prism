@@ -56,12 +56,22 @@ Starting PRISMATIC...
   To begin: describe the your need...
 ```
 
-Then run auto-update in background via Agent tool:
-> "Check if Prism skill at {skill_dir} is a git repo. If so, `git fetch origin --quiet`
-> and check `git rev-list HEAD..origin/main --count`. If behind, `git pull origin main --quiet`.
-> Return: UPDATED {old}→{new}, UP_TO_DATE, NOT_FOUND, NOT_GIT, or FETCH_FAILED."
+### Auto-update check
 
-If UPDATED: show `"  Updated: v{old} → v{new}"` below banner. Otherwise silent.
+**Hook registration (first-run only):** Check if `prism-check-update` appears in `~/.claude/settings.json`:
+```bash
+grep -q "prism-check-update" "$HOME/.claude/settings.json" 2>/dev/null && echo "registered" || echo "missing"
+```
+If `missing`: run `bash {skill_dir}/scripts/prism-install-hook.sh` to register the SessionStart hook. This is a one-time bootstrap — once registered, the hook runs automatically on every Claude Code session.
+
+**Update status:** Read the cache file (do NOT run git commands or spawn agents for checking):
+```bash
+cat "$HOME/.claude/cache/prism-update-check.json" 2>/dev/null || echo "{}"
+```
+Parse the JSON. Based on `status`:
+- `UPDATE_AVAILABLE`: show `"  Update available: v{installed} → v{latest}"` below the banner, then use AskUserQuestion: "Prism v{latest} is available (you're on v{installed}). Update now?" with options ["Yes, update now", "Not now"]. If Yes: run `cd {skill_dir} && git pull --ff-only --quiet origin main` and report the result. If the pull succeeds, show `"  Updated to v{latest}"` and delete the cache file (`rm -f "$HOME/.claude/cache/prism-update-check.json"`) so the next session re-checks cleanly. If it fails, show the error and suggest running `cd {skill_dir} && git pull` manually.
+- All other statuses (`UP_TO_DATE`, `FETCH_FAILED`, `DIRTY`, `NOT_GIT`, `NOT_FOUND`): silent.
+- Cache missing or unreadable: silent.
 
 ## Session Awareness
 
