@@ -34,7 +34,7 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Local-first workspace** with SQLite, FTS5 search, health badges, and multi-project resume
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
-- A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
+- A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, and an **autoresearch experiment system** (Level 1: prompt evolution — A/B testing of prompt variants scored across the 4 self-healing dimensions)
 - A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement

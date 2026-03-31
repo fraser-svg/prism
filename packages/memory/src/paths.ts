@@ -3,6 +3,7 @@ import { validateEntityId } from "@prism/core";
 import { homedir } from "node:os";
 import type {
   CheckpointArtifactPaths,
+  ExperimentArtifactPaths,
   PlanArtifactPaths,
   PrismProjectPaths,
   ProblemArtifactPaths,
@@ -58,6 +59,7 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     intakeDir: joinPath(prismDir, "intake"),
     thesesDir: joinPath(prismDir, "theses"),
     dogfoodDir: joinPath(prismDir, "dogfood"),
+    experimentsDir: joinPath(prismDir, "experiments"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),
@@ -180,6 +182,20 @@ export function dogfoodPaths(
     healthFile: joinPath(dogfoodDir, "HEALTH.md"),
     dogfoodIndexFile: joinPath(dogfoodDir, "dogfood-index.json"),
     exportFile: joinPath(dogfoodDir, "export.json"),
+  };
+}
+
+export function experimentPaths(
+  projectRoot: AbsolutePath
+): ExperimentArtifactPaths {
+  const experimentsDir = projectPaths(projectRoot).experimentsDir;
+  return {
+    experimentsDir,
+    registryFile: joinPath(experimentsDir, "registry.json"),
+    activeVariantFile: joinPath(experimentsDir, "active-variant.md"),
+    levelDir: (level: string) => joinPath(experimentsDir, level) as AbsolutePath,
+    experimentFile: (level: string, id: string) =>
+      joinPath(experimentsDir, level, `${id}.json`) as AbsolutePath,
   };
 }
 

@@ -49,6 +49,7 @@ Owns:
 - deploy detection and triggering
 - ship receipt persistence
 - self-healing engine (report card generation, learning journal, advisory prescriptions, health dashboard, dogfood generator)
+- autoresearch experiment system (prompt variant A/B experiments, metric recording, promote/discard lifecycle)
 
 Does not own:
 - low-level shell execution

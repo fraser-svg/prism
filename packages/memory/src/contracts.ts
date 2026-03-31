@@ -41,6 +41,7 @@ export interface PrismProjectPaths {
   intakeDir: AbsolutePath;
   thesesDir: AbsolutePath;
   dogfoodDir: AbsolutePath;
+  experimentsDir: AbsolutePath;
   telemetryFile: AbsolutePath;
   registryFile: AbsolutePath;
   taskGraphFile: AbsolutePath;
@@ -111,6 +112,14 @@ export interface DogfoodArtifactPaths {
   healthFile: AbsolutePath;
   dogfoodIndexFile: AbsolutePath;
   exportFile: AbsolutePath;
+}
+
+export interface ExperimentArtifactPaths {
+  experimentsDir: AbsolutePath;
+  registryFile: AbsolutePath;
+  activeVariantFile: AbsolutePath;
+  levelDir: (level: string) => AbsolutePath;
+  experimentFile: (level: string, id: string) => AbsolutePath;
 }
 
 export interface IntakeBriefArtifactPaths {

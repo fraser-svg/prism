@@ -11,6 +11,7 @@ import { updateLearningJournal } from "./learning-journal";
 import { createPrescription, checkPrescriptionResolution, readActivePrescriptions } from "./prescription-manager";
 import { generateHealthDashboard } from "./health-dashboard";
 import { generateDogfoodEntries } from "./dogfood-generator";
+import { evaluateExperiments, proposeExperiments, writeVariantFile } from "./experiments";
 
 export interface SelfHealingResult {
   reportCardGenerated: boolean;
@@ -23,6 +24,10 @@ export interface SelfHealingResult {
   dogfoodEntriesAdded: number;
   healthDashboardUpdated: boolean;
   recoveredSessions: string[];
+  experimentsEvaluated: string[];
+  experimentsProposed: string[];
+  experimentsPromoted: string[];
+  experimentsDiscarded: string[];
 }
 
 /**
@@ -50,6 +55,10 @@ export async function runSelfHealingPipeline(opts: {
     dogfoodEntriesAdded: 0,
     healthDashboardUpdated: false,
     recoveredSessions: [],
+    experimentsEvaluated: [],
+    experimentsProposed: [],
+    experimentsPromoted: [],
+    experimentsDiscarded: [],
   };
 
   // Eng review 13A: completeness check for bridge session-end called mid-session
@@ -101,6 +110,28 @@ export async function runSelfHealingPipeline(opts: {
     // Step 6: Generate health dashboard
     await generateHealthDashboard(opts.projectRoot);
     result.healthDashboardUpdated = true;
+
+    // Step 7: Experiment evaluation and proposal
+    // Skip experiment metrics for incomplete sessions (polluted samples)
+    if (!opts.sessionIncomplete) {
+      try {
+        // Evaluate active experiments with this session's report card
+        const evalResult = await evaluateExperiments(opts.projectRoot, reportCard);
+        result.experimentsEvaluated = evalResult.metricsRecorded;
+        result.experimentsPromoted = evalResult.promoted;
+        result.experimentsDiscarded = evalResult.discarded;
+
+        // Propose new experiments from degrading journal patterns
+        const proposed = await proposeExperiments(opts.projectRoot, journal);
+        result.experimentsProposed = proposed;
+
+        // Write variant file for next session
+        await writeVariantFile(opts.projectRoot, opts.sessionId);
+      } catch (expErr) {
+        const expMessage = expErr instanceof Error ? expErr.message : String(expErr);
+        console.warn(`Self-healing: experiment step error (non-blocking): ${expMessage}`);
+      }
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`Self-healing pipeline error: ${message}`);
