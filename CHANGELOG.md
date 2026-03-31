@@ -2,6 +2,26 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.15.0] - 2026-03-31
+
+### Added
+- **Runtime Verification in QA** — test suite execution before QA dispatch (Stage 4), with results passed as runtime evidence to the QA review prompt. Supports npm/vitest/jest, pytest, and go test with 120s timeout. Includes npm install with 60s timeout for missing dependencies.
+- **Worker Test Generation** — workers now write 1-3 unit tests per requirement (no network calls, no database, <10s total). Test runner detection rules consolidated into single reference block to prevent drift.
+- **Guardian Dispatch Telemetry** — new `guardian_dispatch` event logged at every Guardian intervention, scoped by change name. Used for honest confidence scoring.
+- **QA Regression Telemetry** — new `qa_regression` event logged when QA finds issues and regresses to Stage 3. Used for honest confidence scoring.
+- **Full Re-Verification After QA Fixes** — after QA-driven fixes, `prism-verify.sh` runs on ALL worker output files (not just the fix) with `--tolerant` flag to skip deleted files gracefully. Stage 4 re-enters from the top on regression return.
+- **Quick QA Mode** — acceptance-criteria-only QA (functional correctness only, skip edge cases/error states/perf/a11y) offered as alternative when user attempts to skip QA.
+- **Stale File Guard** — `prism-verify.sh --tolerant` flag skips missing files with warning instead of failing. Used in post-QA re-verification. Default behavior unchanged (missing files still fail).
+
+### Changed
+- **Honest Confidence Scoring** — confidence now incorporates build-time signals (Guardian recovery count, QA fix cycles, test suite results) alongside pre-build assessment and post-build Red Team. Tier scale: high > medium > low (floor). Signals scoped to current change via telemetry grep.
+- **QA Skip Friction** — QA can no longer be skipped with zero friction. First attempt gets a choice between Quick QA and Full QA. Only on second insistence: skip with `qa_skipped` telemetry and confidence capped at `low`.
+- **Runtime Evidence in QA** — qa-review.md accepts optional runtime evidence input. New-build test failures are P1 input; pre-existing failures are noted but not blocking.
+
+### Fixed
+- **Confidence grep double-zero bug** — replaced `grep -c ... || echo 0` (which appended duplicate zero on zero-match exit) with `|| true` pattern
+- **Confidence scoping** — grep now filters telemetry by change name, preventing past builds from bleeding into current confidence
+
 ## [4.0.14.0] - 2026-03-31
 
 ### Added

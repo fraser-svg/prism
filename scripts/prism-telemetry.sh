@@ -17,7 +17,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # --- Valid event types ---
-VALID_EVENTS="build_start build_complete build_fail worker_complete worker_fail guardian_retry qa_pass qa_fail ship user_intervention stage_skip discovery_complete gemini_fallback research_complete approach_selected catalogue_write catalogue_query package_verified guardian_learning research_degraded deploy_start deploy_complete deploy_fail taxonomy_check red_team_complete red_team_vacuous red_team_timeout confidence_escalation confidence_override taxonomy_growth"
+VALID_EVENTS="build_start build_complete build_fail worker_complete worker_fail guardian_retry guardian_dispatch qa_pass qa_fail qa_skipped qa_regression ship user_intervention stage_skip discovery_complete gemini_fallback research_complete approach_selected catalogue_write catalogue_query package_verified guardian_learning research_degraded deploy_start deploy_complete deploy_fail taxonomy_check red_team_complete red_team_vacuous red_team_timeout confidence_escalation confidence_override taxonomy_growth test_execution"
 
 # --- Helpers ---
 _sanitize_arg() {
