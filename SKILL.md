@@ -140,6 +140,25 @@ Read the temp file path from the summary line for structured data.
 | `prism-telemetry.sh {cmd} {root} [args]` | Build telemetry (record, summary, failures) | After every stage transition |
 | `prism-improve.sh {cmd} {root} [args]` | Safe self-improvement (propose, eval, promote, reject) | Post-build analysis |
 | `prism-eval.sh {cmd} {root} [args]` | Eval suite (run, baseline, compare) | Before promoting improvements |
+| `prism-pipeline.sh [--no-open] {root}` | Pipeline visualization (regenerate HTML, optionally open) | After stage transitions |
+
+### Pipeline Visualizer
+
+Generates `.prism/dogfood/PIPELINE.html` — an interactive HTML snapshot of all pipeline
+stages, gate results, artifacts, and confidence. Helps the user see where they are.
+
+**Calling patterns (always advisory):**
+```bash
+# Regenerate only (mid-stage transitions — no browser open, avoids stealing focus)
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
+
+# Regenerate + open in browser (Stage 0 initial view and Stage 5 ship receipt only)
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
+```
+
+**When to regenerate:** After Stage 0 scan (open), after each stage transition checkpoint
+(regenerate only, `--no-open`), and in the Stage 5 ship receipt (open). Never mid-stage.
+Failures are silent — never block or report.
 
 **Auto-save milestones:** After spec generation, spec approval, planning, design,
 each worker completion, QA fixes, and before shipping. Failures are silent — never
@@ -311,6 +330,11 @@ checkpoint JSON (`stage_route`, `stage_total`). Include route in all subsequent 
 Default to Route A (total = 5). After Stage 1 Part 0 (Product context) determines the
 product type, update the route if needed. This is the one exception to "never recompute."
 
+**Pipeline visualizer (after scan):**
+```bash
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
+```
+
 ### Stage 1: Understand
 
 **Part 0 — Product context:**
@@ -466,6 +490,7 @@ BATCH_RESULT=$(echo '[
   {"command":"write-spec","args":["'"$PROJECT_ROOT"'","{change}"],"stdin":{"title":"{feature}","type":"change","status":"approved","acceptanceCriteria":["{req1}","{req2}"]}},
   {"command":"gate-check","args":["'"$PROJECT_ROOT"'","spec","plan","--spec-id","{change}"]}
 ]' | $BRIDGE batch 2>/dev/null) || true
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 ### Stage 2: Plan (Auto-invoked via gstack)
@@ -671,6 +696,7 @@ Store confidence in checkpoint JSON for propagation to later stages:
 ```bash
 echo '{"stage":2,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"approach validated","confidence":{"level":"{level}","concerns":[...],"checksRun":["taxonomy","red_team"],"checksSkipped":[...]}}' | \
   bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 **Routing after confidence:**
@@ -887,6 +913,7 @@ BATCH_RESULT=$(echo '[
   {"command":"record-verification","args":["'"$PROJECT_ROOT"'","build-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift"]}},
   {"command":"gate-check","args":["'"$PROJECT_ROOT"'","execute","verify"]}
 ]' | $BRIDGE batch 2>/dev/null) || true
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 ### Stage 4: Verify (Auto-invoked via gstack)
@@ -1129,6 +1156,7 @@ Display to user:
 ```bash
 echo '{"stage":4,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"pre-ship validation","confidence":{"level":"{final_level}","pre_build":"{stage2f_level}","guardian_recoveries":{GUARDIAN_COUNT},"qa_fix_cycles":{QA_CYCLES},"test_failures":{N},"post_build_red_team":"{level}","signals_applied":[...],"concerns":[...],"checksRun":[...],"checksSkipped":[...]}}' | \
   bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 **Telemetry:**
@@ -1196,6 +1224,7 @@ echo '{
   "reviewVerdicts":{review_verdicts_json},
   "confidence":{"level":"{final_level}","method":"{method}","concerns":[{concerns}],"escalated":{bool},"escalationCount":{N},"checksRun":[{checks}],"checksSkipped":[{skipped}]}
 }' | $BRIDGE record-ship "$PROJECT_ROOT" "{change}" 2>/dev/null || true
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 **5e. Ship receipt + cleanup:**
@@ -1210,6 +1239,7 @@ Branch: {branch} → main
 Commit: {commit_sha}
 Tag: {tag_name}
 Deploy: {deploy_url or "auto on merge" or "not configured"}
+Pipeline: {.prism/dogfood/PIPELINE.html if file exists, omit this line if not}
 What's next: {next_phase from roadmap}
 ```
 
