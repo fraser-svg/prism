@@ -6,10 +6,9 @@ All notable changes to Prism are documented here.
 
 ### Added
 - **Autoresearch Layer (Level 1: Prompt Evolution)** — experiment system that A/B tests prompt variants against Prism's self-healing report card. Session ID parity assigns baseline vs test, metrics accumulate over 10 sessions, and a >10% improvement threshold decides promotion or discard. Variants are deterministic templates, no LLM calls.
-- **Experiment types** (`packages/core/src/experiments.ts`) — foundation types for experiment lifecycle: levels, status, variants, metrics, decisions.
-- **Experiment paths** (`packages/memory/src/paths.ts`) — registry, active-variant, and per-level experiment file paths.
-- **Self-healing Step 7** — evaluates active experiments with each session's report card, proposes new experiments from degrading journal patterns, and writes the active variant file for the next session. Incomplete sessions are filtered out to prevent polluted samples.
-- **35 tests** covering registry CRUD, variant assignment (SHA-256 parity), metric recording with dedup, decision engine (test wins, baseline wins, inconclusive, insufficient data), promote/discard lifecycle, atomic variant file writes, and full evaluate integration.
+- **Typed experiment infrastructure** — experiment types, artifact paths, and registry contracts across `packages/core` and `packages/memory`.
+- **Self-healing Step 7** — after each session, Prism now evaluates active experiments against the report card, proposes new experiments from degrading patterns, and queues the next session's variant. Incomplete sessions are automatically filtered to prevent polluted samples.
+- **35 tests** covering the full experiment lifecycle: registry CRUD, variant assignment, metric recording with dedup, decision engine, promote/discard, and end-to-end evaluation.
 
 ### Changed
 - Corrupt registry files are renamed with timestamp suffix for forensic debugging instead of being silently overwritten.
