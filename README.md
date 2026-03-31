@@ -35,6 +35,7 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
+- A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
@@ -182,14 +183,14 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.13.0
+├── VERSION               # 4.0.16.0
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config
 ├── packages/             # Typed core — code-enforced lifecycle
 │   ├── core/             # Domain model (branded types, lifecycle entities)
 │   ├── memory/           # Artifact repositories (.prism/ storage)
-│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI, self-healing
+│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI, self-healing, pipeline visualizer
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
