@@ -36,7 +36,8 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, and HEALTH.md dashboard
 - A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
-- **Hook integrations** for Claude Code event-driven automation
+- **Reliable auto-update** via `SessionStart` hook — check-and-notify with 1-hour TTL, never auto-pulls
+- **Hook integrations** for Claude Code event-driven automation (operator boundary, verification gate, research gate, auto-update)
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
 
@@ -194,7 +195,13 @@ prism/
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
-├── scripts/              # Deterministic bookkeeping (16 scripts)
+├── hooks/                # Claude Code hook integrations
+│   ├── prism-check-update.js  # SessionStart auto-update checker
+│   ├── operator-boundary.sh   # Operator approval gate
+│   ├── verification-gate.sh   # Build verification gate
+│   ├── research-gate.sh       # Research requirement gate
+│   └── test-*.sh              # Hook test suites
+├── scripts/              # Deterministic bookkeeping (17 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
@@ -203,9 +210,11 @@ prism/
 │   ├── prism-deploy.sh   # Vercel deploy detection and triggering
 │   ├── prism-research.sh # Solution research before building
 │   ├── prism-catalogue.sh # Skill catalogue CRUD
+│   ├── prism-install-hook.sh # One-time hook registration
+│   ├── prism-pipeline.sh # Pipeline visualizer launcher
+│   ├── prism-taxonomy.sh # Failure-class taxonomy CRUD
 │   └── ...               # eval, improve, supervisor, telemetry, state, gemini-worker
 ├── compiler/             # Spec compilation pipeline
-├── hooks/                # Claude Code hook integrations
 ├── evals/                # Evaluation harnesses
 ├── openspec/             # OpenSpec integration
 ├── references/           # Personality, spec format, skill catalog, product context
@@ -217,7 +226,7 @@ prism/
 
 ### Typed Core (packages/)
 
-Six TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The bridge CLI supports 18 commands including gate checks, artifact writes, ship, deploy, and session lifecycle. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, and health tracking. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
+Six TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The bridge CLI supports 17 commands including gate checks, artifact writes, ship, deploy, pipeline, and session lifecycle. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, and health tracking. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
 
 ---
 

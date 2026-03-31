@@ -5,14 +5,12 @@ All notable changes to Prism are documented here.
 ## [4.0.17.0] - 2026-03-31
 
 ### Added
-- **Reliable auto-update** — replaces broken prompt-based update with a real `SessionStart` hook (`hooks/prism-check-update.js`) that runs `git fetch` in a detached background process. Writes cache to `~/.claude/cache/prism-update-check.json` with 1-hour TTL. Check-and-notify only — never auto-pulls.
-- **Update prompt in SKILL.md** — reads cache on `/prism` invocation, shows "Update available: v{old} → v{new}" banner with Yes/No prompt. Cache cleared after successful pull to prevent repeat prompts.
-- **Hook auto-registration** — first `/prism` run detects missing hook and runs `scripts/prism-install-hook.sh` to register in `~/.claude/settings.json`. One-time bootstrap, then permanent.
-- **Install hook script** (`scripts/prism-install-hook.sh`) — idempotent JSON injection into settings.json using python3. Handles missing keys gracefully.
-- **Update hook tests** (`hooks/test-update-hook.sh`) — 15 automated tests covering all 6 git states (NOT_FOUND, NOT_GIT, DIRTY, FETCH_FAILED, UP_TO_DATE, UPDATE_AVAILABLE), TTL guard, and install script idempotency.
+- **Reliable auto-update** — Prism now checks for updates automatically on every Claude Code session. You'll see a banner when a new version is available and can update with one click. No more falling behind silently. Uses a `SessionStart` hook with 1-hour TTL cache — check-and-notify only, never auto-pulls.
+- **One-time setup, then hands-off** — first `/prism` run auto-registers the update hook in `~/.claude/settings.json`. No manual setup required.
+- **15 automated tests** for the update hook covering all 6 git states (NOT_FOUND, NOT_GIT, DIRTY, FETCH_FAILED, UP_TO_DATE, UPDATE_AVAILABLE), TTL guard, and install script idempotency.
 
 ### Fixed
-- Auto-update actually works now. Previously the prompt-based Agent approach was unreliable and the installed skill could fall behind indefinitely.
+- Auto-update actually works now. Previously, the installed skill could fall behind indefinitely because the prompt-based approach was unreliable.
 
 ## [4.0.16.0] - 2026-03-31
 
