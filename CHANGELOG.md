@@ -2,6 +2,15 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.16.1] - 2026-03-31
+
+### Added
+- **Pipeline Visualizer Awareness** — SKILL.md now references the pipeline visualizer with calling patterns at every stage transition. Prism automatically regenerates `PIPELINE.html` after scan and each checkpoint, and opens it at Stage 0 (initial view) and Stage 5 (ship receipt).
+- **`--no-open` flag** for `prism-pipeline.sh` — regenerate-only mode that skips browser open, used at mid-stage transitions to avoid stealing focus.
+
+### Changed
+- Ship receipt conditionally includes `Pipeline:` line only when `PIPELINE.html` exists on disk.
+
 ## [4.0.16.0] - 2026-03-31
 
 ### Added
