@@ -242,3 +242,15 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Add a `prescription.promotable` flag computed from recentScores. When promotable, the gate evaluator reads active promotable prescriptions and adds the requirement as a blocker (e.g., "IntakeBrief required before plan stage"). Requires a confirmation prompt before first auto-tighten to build operator trust.
 
 **Depends on:** Self-healing system (Slices C-E) shipped + 5+ sessions with accurate prescription scoring.
+
+## Pipeline Visualizer: Session History Sparklines (P2)
+
+**What:** Embed the last 5 session report card scores as mini sparklines per dimension directly in the pipeline HTML, so you can see health trends without opening HEALTH.md.
+
+**Why:** Fraser is dyslexic — switching between HEALTH.md (markdown) and PIPELINE.html (visual) to see trends is friction. Sparklines in the pipeline view create a single-pane-of-glass for pipeline state + health trends. Also useful for demos.
+
+**When:** After pipeline visualizer is shipped and proven useful in daily use.
+
+**How:** Add report card reading to `extractPipelineSnapshot()` (same pattern as `health-dashboard.ts` — readdir reports dir, parse JSON, sort by timestamp, take last 5). Add a `recentReportCards` field to `PipelineSnapshot`. Render sparklines per dimension in the HTML stage detail panel. The `sparkline()` function is already exported from `health-dashboard.ts`.
+
+**Depends on:** Pipeline visualizer shipped (pipeline-snapshot.ts + pipeline-visualizer.ts).

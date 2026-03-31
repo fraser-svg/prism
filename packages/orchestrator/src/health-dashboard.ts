@@ -15,7 +15,7 @@ import { dogfoodPaths } from "@prism/memory";
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { readActivePrescriptions } from "./prescription-manager";
 
-function sparkline(scores: (number | null)[]): string {
+export function sparkline(scores: (number | null)[]): string {
   const blocks = " \u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588";
   return scores
     .map((s) => {
