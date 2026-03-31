@@ -194,13 +194,16 @@ prism/
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
-├── scripts/              # Deterministic bookkeeping (16 scripts)
+├── scripts/              # Deterministic bookkeeping (19 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
 │   ├── prism-verify.sh   # Syntax/lint/compile verification
 │   ├── prism-checkpoint.sh # Session context persistence
 │   ├── prism-deploy.sh   # Vercel deploy detection and triggering
+│   ├── prism-helpers.sh  # Shared functions (timeout, env var mapping, keychain probe)
+│   ├── prism-inject.sh   # Auto-inject API keys from Keychain to .env.local
+│   ├── prism-providers.txt # Supported providers (single source of truth)
 │   ├── prism-research.sh # Solution research before building
 │   ├── prism-catalogue.sh # Skill catalogue CRUD
 │   └── ...               # eval, improve, supervisor, telemetry, state, gemini-worker

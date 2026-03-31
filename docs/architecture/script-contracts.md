@@ -1232,3 +1232,85 @@ Writes full JSON to temp file (`/tmp/prism-taxonomy-{PID}.json`), prints one-lin
 |------|---------|
 | 0    | Completed (check temp file for details) |
 | 1    | Script error or missing dependency (jq) |
+
+---
+
+## prism-helpers.sh
+
+Shared functions sourced by other scripts. Not invoked directly.
+
+### Usage
+
+```
+source scripts/prism-helpers.sh
+```
+
+### Provides
+
+| Symbol | Type | Description |
+|--------|------|-------------|
+| `PRISM_PROVIDERS` | array | Provider names loaded from `prism-providers.txt` |
+| `_prism_env_var_for <provider>` | function | Maps provider name to env var (e.g., `anthropic` → `ANTHROPIC_API_KEY`) |
+| `_prism_timeout <secs> <cmd...>` | function | Portable timeout (macOS-compatible, no GNU timeout) |
+| `_prism_keychain_probe` | function | Sets `PRISM_KEY_<provider>=connected\|disconnected` for each provider. 1-hour cache at `/tmp/prism-keychain-{UID}-cache` |
+
+### Dependencies
+
+- `scripts/prism-providers.txt` (provider list)
+- macOS `security` CLI (for keychain probe)
+
+---
+
+## prism-inject.sh
+
+Auto-inject API keys from macOS Keychain into `.env.local`. Runs at Stage 0 (session start).
+
+### Usage
+
+```
+bash scripts/prism-inject.sh [target_dir]
+```
+
+| Arg | Required | Description |
+|-----|----------|-------------|
+| `target_dir` | no | Directory for `.env.local` (defaults to `.`) |
+
+### Stdout
+
+```
+OK: keys=2 → /tmp/prism-inject-{PID}.json
+```
+
+### JSON Output
+
+```json
+{
+  "status": "ok|skip|error",
+  "reason": "no_keys|keychain_unavailable|keychain_locked|target_not_found|corrupt_block|write_failed",
+  "keys_injected": 2,
+  "changed": true,
+  "providers": ["anthropic", "openai"],
+  "conflicts": ["STRIPE_SECRET_KEY"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `ok` = keys written, `skip` = nothing to do, `error` = failure |
+| `reason` | string | Why skip/error occurred (absent on `ok`) |
+| `keys_injected` | number | Count of keys written to `.env.local` |
+| `changed` | boolean | Whether `.env.local` was modified (false if idempotent) |
+| `providers` | array | Provider names that were injected |
+| `conflicts` | array | Env var names skipped due to project-local values |
+
+### Conflict Semantics
+
+If an env var (e.g., `ANTHROPIC_API_KEY`) already exists in `.env.local` outside the
+prism-managed block, that provider is skipped. Project-local values always win.
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0    | Completed (check JSON for logical status) |
+| 1    | Target not found, corrupt block, or write failure |
