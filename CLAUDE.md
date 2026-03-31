@@ -26,6 +26,10 @@ Do not work on these until the priority stack is resolved:
 - Broad integrations
 - Enterprise governance
 
+## Strategic Authority
+
+`docs/DOCTRINE.md` is the strategic compass for all Prism work. It defines the 4 non-negotiable layers, temporal markers (`[NOW]`/`[MIGRATION]`/`[TARGET]`), the Decision Rubric (Layer Test + Wrapper Test + Survival Test), and the entity-per-horizon mapping. When in doubt about whether to build something, check the doctrine before the priority stack.
+
 ## YC Readiness Framework
 
 See `docs/yc/OVERSIGHT.md` for the full scoring framework.

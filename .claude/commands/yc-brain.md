@@ -43,6 +43,27 @@ Evaluate the proposed work against the 6 canonical YC dimensions:
 5. **Category story strength** — Does this sharpen the narrative? Prism should sound like a product-building control plane, not "multiple agents in one app." Would a YC partner instantly understand what Prism does from this work?
 6. **Spec-driven discipline** — Does this maintain Prism's spec-driven, verification-heavy culture? Prism decides if outputs are acceptable — models generate, Prism judges. Does this strengthen that moat?
 
+### Step 3b: Doctrinal Check
+
+Read the "Decision Rubric" section (section 8) from `docs/DOCTRINE.md`. If the file or section is missing, skip this step and note "Doctrinal Check: skipped (DOCTRINE.md not found)" in the output.
+
+Apply the three rubric tests to the proposed work:
+
+1. **Layer Test** — Does this strengthen Product Truth, Memory, Verification, or Outcome Loop? Score +1 per layer. If none: WARNING.
+2. **Wrapper Test** — Is this a SKILL.md-only change when typed core could exist? If so: WARNING. For `[NOW]`-phase work, SKILL.md-only is acceptable if no typed core equivalent exists yet.
+3. **Survival Test** — If models get 10x better: BUILD (more powerful), DEFER (stays same), or STOP (irrelevant)?
+
+Include the Doctrinal Check as a sub-section in the output, between the dimension evaluation and the verdict:
+
+```
+### Doctrinal Check
+- Layer Test: {layers strengthened, or WARNING}
+- Wrapper Test: {PASS or WARNING with reason}
+- Survival Test: {BUILD / DEFER / STOP with reason}
+```
+
+The Doctrinal Check informs but does not override the verdict. It is additive context alongside the 6-dimension scoring.
+
 ### Step 4: Return verdict
 
 **BUILD** — This work directly advances at least one YC dimension, especially the weakest ones (user proof, magical workflow). State which dimensions it advances and why.
@@ -89,6 +110,7 @@ Required inputs:
 - `docs/VISION.md`
 - `docs/architecture/README.md`
 - `docs/quality/definition-of-done.md`
+- `docs/DOCTRINE.md`
 - `docs/yc/OVERSIGHT.md`
 - `docs/yc/SCORECARD.md`
 - `DOGFOOD.md` (if it exists — captures real usage sessions and evidence)

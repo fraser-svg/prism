@@ -774,6 +774,20 @@ bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" gemini_fallb
 
 Forward `provider` and `model` from the adapter result into the existing `worker_complete` telemetry event.
 
+#### Test runner detection rules
+
+These rules are used by both worker test generation (Stage 3) and runtime verification
+(Stage 4). Defined once here to avoid drift.
+
+| Signal | Runner | Command |
+|--------|--------|---------|
+| `package.json` has `scripts.test` | npm/node | `npm test` (or `npx vitest run` / `npx jest --ci` based on devDependencies) |
+| `pytest.ini` or `pyproject.toml` with `[tool.pytest]` | pytest | `pytest` |
+| `go.mod` present | go | `go test ./...` |
+| None of the above | — | Skip runtime verification, note "no test suite detected" |
+
+Default for new JS/TS projects with no framework: `vitest`.
+
 #### Worker dispatch (Claude — default)
 
 Each worker via Agent tool:
@@ -783,6 +797,11 @@ Each worker via Agent tool:
 > RESEARCH CONTEXT: {recommended packages, catalogue matches, approach constraints from .prism/research/{change}/decision.md}.
 > Prefer the recommended libraries/patterns unless they don't fit. If you discover
 > a better approach, note why.
+> TESTING: Write 1-3 unit tests per requirement you implement (no network calls, no
+> database, no external services — tests must complete in under 10 seconds total).
+> Check package.json/pyproject.toml for existing test framework before writing tests
+> (see test runner detection rules above). If no framework exists, use vitest for JS/TS.
+> List test files in your output file list.
 > Build this task. Write working code.
 > When done, list ALL files you created or modified (one per line, relative paths)."
 
@@ -818,6 +837,13 @@ Extract the file list from the worker's response. Store in registry:
 #### Guardian (on worker failure)
 
 NOT a retry — each dispatch is smarter. In the Operator context (full build awareness):
+
+**Log every Guardian intervention** (counts toward confidence scoring in Stage 4.7):
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" guardian_dispatch \
+  '{"change":"{change}","worker":"{id}","task":"{task}","attempt":{N}}'
+```
+
 1. Read worker's error output
 2. Diagnose: what went wrong?
 3. **Research before retrying:** Search docs, check packages, look for alternative patterns.
@@ -867,6 +893,40 @@ BATCH_RESULT=$(echo '[
 
 Tell user: "Build looks complete — running QA to make sure everything works."
 
+**Runtime verification (before QA dispatch):**
+
+This block runs every time Stage 4 is entered, including on regression return from
+QA fixes. This ensures QA always has fresh test results.
+
+1. Detect test runner using the test runner detection rules (see Stage 3).
+2. If test runner detected, install deps if needed and execute:
+   ```bash
+   # Install deps if missing (bounded at 60s)
+   if [ -f "$PROJECT_ROOT/package.json" ] && [ ! -d "$PROJECT_ROOT/node_modules" ]; then
+     echo "Installing test dependencies (up to 60s)..."
+     timeout 60 bash -c "cd '$PROJECT_ROOT' && npm install" 2>&1 | tail -5
+     INSTALL_EXIT=${PIPESTATUS[0]}
+     # If timeout (exit 124): skip runtime verification, note in QA context
+   fi
+   cd "$PROJECT_ROOT" && timeout 120 npm test 2>&1 > /tmp/prism-test-output.txt; TEST_EXIT=$?
+   head -200 /tmp/prism-test-output.txt
+   ```
+   Capture `TEST_EXIT` (not pipe status): exit code, stdout/stderr (truncated to 200 lines), pass/fail count.
+3. Pass results to QA review as additional context:
+   - Tests passed → "Existing test suite: X/Y passed"
+   - Tests failed → "Existing test suite: X/Y passed, Z FAILED: {failure output}"
+   - No tests → "No test suite detected"
+   - Timeout → "Test suite timed out after 120s"
+   - 0 tests found (runner exits 0 but ran nothing) → treat as "No tests detected" (not "all passed")
+   - Deps install timed out → "Dependency install timed out, skipping runtime verification"
+4. If ANY tests fail, QA review MUST address the failures. Failed tests are
+   treated as P1 input to the QA prompt (not auto-P1, but QA must evaluate).
+5. Telemetry:
+   ```bash
+   bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" test_execution \
+     '{"change":"{change}","runner":"{npm|pytest|go}","exit_code":{N},"tests_passed":{N},"tests_failed":{N},"timeout":false}'
+   ```
+
 **Catalogue failure pattern query (before QA):** Query catalogue for failure data on
 libraries/patterns used in this build. Inject known failure patterns into the QA prompt.
 ```bash
@@ -883,12 +943,40 @@ Check skill availability: `[ -f "$HOME/.claude/skills/gstack/qa/SKILL.md" ]`
 If available: `Skill tool: skill="qa", args="Test at {URL}"`
 If missing: skip directly to native QA fallback.
 
-- **Skip:** User can say "skip QA".
+- **Skip:** QA cannot be skipped by default. If user explicitly says "skip QA" or
+  "I'll test myself," respond: "QA is what catches the bugs that look invisible in
+  code. I can run a quick version (2 min) or the full version. Which do you prefer?"
+  Options: **Quick QA** (acceptance criteria only) or **Full QA** (current).
+  Only if user insists a SECOND time after seeing the options: skip with a logged
+  `qa_skipped` telemetry event and confidence capped at `low`.
+  ```bash
+  bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" qa_skipped \
+    '{"change":"{change}","reason":"user_insisted"}'
+  ```
+  **Quick QA definition:** Run qa-review.md but ONLY test Functional Correctness
+  (happy path pass/fail per acceptance criterion). Skip Error States, Edge Cases,
+  Performance, and Accessibility sections. Output format is the same but those
+  sections are omitted. Quick QA still produces a PASS/HOLD verdict.
 - **Fallback:** If Skill tool errors OR skill is missing, run Prism-native QA review via
   Agent tool using the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
-  Pass known failure patterns as additional input.
+  Pass known failure patterns and runtime evidence as additional input.
 - **Passed:** UI product → Stage 4.5. Otherwise → Stage 4.6.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
+  Log regression:
+  ```bash
+  bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" qa_regression \
+    '{"change":"{change}","issues_count":{N},"p1_count":{N}}'
+  ```
+  After fixes complete, run FULL verification across all worker output files:
+  ```bash
+  # Collect ALL output files from ALL workers (not just the fixed ones)
+  ALL_FILES=$(bash "$SKILL_DIR/scripts/prism-registry.sh" log "$PROJECT_ROOT" "{change}" | \
+    jq -r '.[].output_files[]?' 2>/dev/null | sort -u | paste -sd, -)
+  bash "$SKILL_DIR/scripts/prism-verify.sh" "$PROJECT_ROOT" --files "$ALL_FILES" --lint --compile --tolerant
+  ```
+  If full verification finds NEW errors (not present before the fix): fix those too
+  before returning to Stage 4. Then **re-enter Stage 4 from the top** (runtime
+  verification runs again, QA gets fresh test results).
 
 Auto-save after fixes: `"QA fixes for {change}"`
 
@@ -1005,13 +1093,41 @@ Pass:
 **Same rules as Stage 2e:** at least 1 concern required, re-dispatch once on zero,
 timeout → skip.
 
-**Confidence update:** Merge Stage 2f confidence with Stage 4.7 Red Team results.
-The final confidence level is the LOWER of the two checkpoints. If Stage 4.7 Red Team
-skipped: inherit Stage 2f confidence but note the skip in `checksSkipped`.
+**Confidence update:** Merge Stage 2f confidence with build-time signals and Stage 4.7
+Red Team results. The final confidence incorporates:
+
+1. **Pre-build confidence** (Stage 2f): taxonomy + Red Team assessment
+2. **Build-time signals:**
+   - Guardian recovery count: 0 = neutral, 1 = -1 tier, 2+ = -2 tiers
+   - QA fix cycles: 0 = neutral, 1 = -1 tier, 2+ = -2 tiers
+   - Test suite results: all pass = neutral, any fail = -1 tier, no tests = neutral
+3. **Post-build Red Team** (Stage 4.7): concern severity
+
+Tier scale: high > medium > low > unknown
+Each negative signal drops confidence one tier. Floor is `low` (not `unknown` —
+unknown means "couldn't assess," low means "assessed and concerning").
+
+Example: Pre-build `high` + 1 Guardian recovery + 1 QA fix cycle = `high` - 1 - 1 = `low`.
+
+Count build-time signals from telemetry (scoped to current change):
+```bash
+GUARDIAN_COUNT=$(grep '"guardian_dispatch"' "$PROJECT_ROOT/.prism/telemetry.jsonl" 2>/dev/null | grep -c '"change":"{change}"' || true)
+QA_CYCLES=$(grep '"qa_regression"' "$PROJECT_ROOT/.prism/telemetry.jsonl" 2>/dev/null | grep -c '"change":"{change}"' || true)
+```
+Note: `grep -c` exits 1 on zero matches but still prints `0`. Use `|| true`
+(not `|| echo 0`) to avoid appending a duplicate zero.
+
+If Stage 4.7 Red Team skipped: inherit pre-build confidence (adjusted by build signals)
+but note the skip in `checksSkipped`.
+
+Display to user:
+- high: "Confidence: high. Build went clean — no Guardian recoveries, QA passed first time."
+- medium: "Confidence: medium. Build needed some fixes but resolved cleanly."
+- low: "Confidence: low. Build had significant issues — {N} Guardian recoveries and {N} QA cycles. Review carefully before shipping."
 
 **Update confidence in checkpoint for Stage 5:**
 ```bash
-echo '{"stage":4,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"pre-ship validation","confidence":{"level":"{final_level}","concerns":[...],"checksRun":[...],"checksSkipped":[...]}}' | \
+echo '{"stage":4,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"pre-ship validation","confidence":{"level":"{final_level}","pre_build":"{stage2f_level}","guardian_recoveries":{GUARDIAN_COUNT},"qa_fix_cycles":{QA_CYCLES},"test_failures":{N},"post_build_red_team":"{level}","signals_applied":[...],"concerns":[...],"checksRun":[...],"checksSkipped":[...]}}' | \
   bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
 ```
 

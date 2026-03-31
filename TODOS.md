@@ -227,9 +227,9 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **When:** After Better Solution Finding is shipped + seed taxonomy is populated.
 
-**How:** Add to `evals/` directory. Script that simulates the marketing verification task inputs and asserts Red Team + taxonomy outputs.
+**How:** Add to `evals/` directory. Script that simulates the marketing verification task inputs and asserts Red Team + taxonomy outputs. **Note (from 80% wall hardening review):** Also verify that confidence scoring incorporates build-time signals (guardian_dispatch count, qa_regression count, test failures) — not just pre-build assessment.
 
-**Depends on:** Better Solution Finding feature shipped + seed taxonomy entries.
+**Depends on:** Better Solution Finding feature shipped + seed taxonomy entries + 80% Wall Hardening (confidence scoring changes).
 
 ## Graduate Advisory Prescriptions to Auto-Tightening Gates (P2)
 
