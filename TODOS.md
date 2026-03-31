@@ -314,3 +314,15 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Add report card reading to `extractPipelineSnapshot()` (same pattern as `health-dashboard.ts` — readdir reports dir, parse JSON, sort by timestamp, take last 5). Add a `recentReportCards` field to `PipelineSnapshot`. Render sparklines per dimension in the HTML stage detail panel. The `sparkline()` function is already exported from `health-dashboard.ts`.
 
 **Depends on:** Pipeline visualizer shipped (pipeline-snapshot.ts + pipeline-visualizer.ts).
+
+## Proof-Check Gate Accuracy Tracking (P2)
+
+**What:** After 10+ sessions with proof_check_pass/fix telemetry, analyse the fix rate and false positive rate to determine if the gate is effective.
+
+**Why:** The Proof-Check Gate (added in the Consultant Communication update) asks the Operator to self-review build output before advancing to QA. Without tracking accuracy, you cannot tell if the gate is catching real issues or rubber-stamping. If fix rate is <5%, the gate may not be adding value. If >50%, it may indicate systemic build quality issues.
+
+**When:** After 10+ Prism sessions with proof-check telemetry recorded in `.prism/telemetry.jsonl`.
+
+**How:** Read `proof_check_pass` and `proof_check_fix` events from telemetry. Compute: total runs, fix count, fix rate (fixes/total), category breakdown (coherence vs ux vs fidelity). If fix rate is very low, consider simplifying the gate. If high, investigate whether the gate is catching genuine issues or being overly cautious.
+
+**Depends on:** Consultant Communication + Self-Review shipped + 10 sessions with telemetry data.
