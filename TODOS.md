@@ -243,6 +243,42 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Self-healing system (Slices C-E) shipped + 5+ sessions with accurate prescription scoring.
 
+## Autoresearch Level 2: Workflow Experiments (P2)
+
+**What:** Extend the experiment system beyond prompt variants to test workflow changes (gate thresholds, stage ordering, retry strategies).
+
+**Why:** Level 1 (Prompt Evolution) only covers one dimension of Prism's behavior. Workflow experiments would let Prism self-optimize its own pipeline structure, not just its prompts. Deferred from autoresearch v1 to keep scope tight for the first implementation.
+
+**When:** After Level 1 has run 20+ experiments with at least 3 promotions, proving the infrastructure works.
+
+**How:** Add `workflow` to ExperimentLevel. Define workflow variant templates targeting gate thresholds and stage transitions. Requires careful rollback semantics since workflow changes affect multiple stages.
+
+**Depends on:** Autoresearch Level 1 (Prompt Evolution) shipped and proven reliable.
+
+## Reduce Experiment Decision Threshold (P3)
+
+**What:** Lower the >10% improvement threshold after collecting real data on score variance across sessions.
+
+**Why:** The 10% threshold is conservative for launch. Real session score variance may be much tighter, meaning 5% improvement could be statistically meaningful. Need data first to calibrate properly.
+
+**When:** After 50+ experiment metrics are recorded from real sessions.
+
+**How:** Analyze metric variance from `.prism/experiments/` data. If the standard deviation of dimension scores is <3%, a 5% threshold would be appropriate. Consider making the threshold configurable per experiment.
+
+**Depends on:** Autoresearch Level 1 running in production with real session data.
+
+## Experiment Dashboard in Pipeline Visualizer (P3)
+
+**What:** Add an experiment status panel to PIPELINE.html showing active experiments, their metrics, and decisions.
+
+**Why:** Currently experiment state is only visible via JSON files. A visual panel would let operators see at a glance which experiments are running, how they're trending, and what was recently promoted or discarded.
+
+**When:** After pipeline visualizer sparklines TODO is complete (builds on the same rendering infrastructure).
+
+**How:** Add `activeExperiments` field to `PipelineSnapshot`. Read experiment registry + active experiments, include metric summaries. Render as a table in the HTML with baseline vs test averages and session counts.
+
+**Depends on:** Autoresearch Level 1 shipped + Pipeline Visualizer Session History Sparklines.
+
 ## Pipeline Visualizer: Session History Sparklines (P2)
 
 **What:** Embed the last 5 session report card scores as mini sparklines per dimension directly in the pipeline HTML, so you can see health trends without opening HEALTH.md.
