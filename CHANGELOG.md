@@ -2,6 +2,33 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.20.1] - 2026-03-31
+
+### Added
+- **Consultant Communication Protocol** — Prism now explains what it is doing, why, and what to expect at every stage transition. Three mandatory patterns: Stage Entry Briefing, Decision Surfacing, and Stage Exit Summary.
+- **Proof-Check Gate** — after all workers complete and before QA, the Operator holistically reviews build output for logical coherence, user-facing sense, and spec fidelity. Issues are fixed inline before advancing.
+- **Rule 11: Never deliver unreviewed output** — Prism re-reads key artifacts and confirms coherence before presenting any result to the user.
+- `proof_check_pass` and `proof_check_fix` telemetry events for tracking gate effectiveness.
+
+### Changed
+- All 9 "Tell user:" lines upgraded from thin summaries to structured Entry Briefings with context on what is happening, why, and what to expect.
+- Rule 5 amended to reference the Proof-Check Gate for logical coherence verification.
+- Bridge batch call now runs after the Proof-Check Gate (not before), so verification records reflect the post-check state.
+
+## [4.0.20.0] - 2026-03-31
+
+### Added
+- **Project Visualizer** — self-contained PROJECT.html showing features (kanban board), task progress (wave-grouped with status icons), architecture/state/roadmap memory sections, ship status timeline, and current phase from checkpoint data.
+- **`project-snapshot.ts`** — extracts structured project state from `.prism/` directory: product identity from `product.md`, feature map from specs (type=product only), task graphs (root + plan-level fallback + supervisor format), memory markdown files, ship receipts with ReleaseState resolution, and checkpoint phase/blockers.
+- **`visualizer-common.ts`** — shared infrastructure for both PIPELINE.html and PROJECT.html: `escapeHtml`, `safeJsonEmbed` (path-stripping), `renderNavBar` (cross-links between views), `renderMarkdown` (headings, lists, code fences, bold/italic), `relativeTimeScript`, and `COMMON_CSS` design tokens.
+- **`scripts/prism-project.sh`** — shell wrapper that generates and opens PROJECT.html.
+- **Nav bar** linking PIPELINE.html and PROJECT.html in both visualizers.
+- **64 new tests** across 4 test files covering snapshot extraction, HTML generation, shared utilities, and security (XSS prevention, javascript: URL sanitization).
+
+### Changed
+- `pipeline-visualizer.ts` refactored to use shared `visualizer-common.ts` utilities, removing ~170 lines of duplicated code.
+- `pipeline-snapshot.ts` now imports `pathExists` from `@prism/memory` instead of local implementation.
+
 ## [4.0.19.0] - 2026-03-31
 
 ### Added

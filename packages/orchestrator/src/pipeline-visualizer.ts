@@ -11,35 +11,10 @@
 
 import type { PipelineSnapshot, StageDescriptor } from "./pipeline-snapshot";
 import { sparkline } from "./health-dashboard";
+import { escapeHtml, safeJsonEmbed, renderNavBar, COMMON_CSS } from "./visualizer-common";
 
-// ---------------------------------------------------------------------------
-// HTML escaping — defense-in-depth for embedded strings
-// ---------------------------------------------------------------------------
-
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-/** Safe JSON embed that prevents </script> injection and strips absolute paths */
-function safeJsonEmbed(snapshot: PipelineSnapshot): string {
-  const sanitized = {
-    ...snapshot,
-    projectRoot: undefined,
-    stages: snapshot.stages.map(s => ({
-      ...s,
-      artifacts: s.artifacts.map(a => ({
-        ...a,
-        path: a.path.replace(snapshot.projectRoot, "."),
-      })),
-    })),
-  };
-  return JSON.stringify(sanitized).replace(/<\//g, "<\\/");
-}
+// Re-export for backwards compatibility
+export { escapeHtml } from "./visualizer-common";
 
 // ---------------------------------------------------------------------------
 // HTML generation
@@ -59,11 +34,14 @@ export function generatePipelineHtml(snapshot: PipelineSnapshot): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prism Pipeline — ${escapeHtml(snapshot.currentPhase)}</title>
 <style>
-${CSS_STYLES}
+${COMMON_CSS}
+${PIPELINE_CSS}
 </style>
 </head>
 <body>
 <div class="container">
+  ${renderNavBar("pipeline")}
+
   <header>
     <h1>Prism Pipeline</h1>
     <div class="header-meta">
@@ -104,7 +82,7 @@ ${CSS_STYLES}
 </div>
 
 <script>
-const SNAPSHOT = ${safeJsonEmbed(snapshot)};
+const SNAPSHOT = ${safeJsonEmbed(snapshot, snapshot.projectRoot)};
 
 function selectStage(idx) {
   const stage = SNAPSHOT.stages[idx];
@@ -261,97 +239,10 @@ function renderArtifactLineage(snapshot: PipelineSnapshot): string {
 }
 
 // ---------------------------------------------------------------------------
-// CSS
+// Pipeline-specific CSS
 // ---------------------------------------------------------------------------
 
-const CSS_STYLES = `
-:root {
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-hover: #334155;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --green: #22c55e;
-  --blue: #3b82f6;
-  --red: #ef4444;
-  --orange: #f97316;
-  --gray: #6b7280;
-  --border: #334155;
-}
-
-.light-theme {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-hover: #f1f5f9;
-  --text: #1e293b;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  font-size: 16px;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-header h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.header-meta {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.phase-badge, .source-badge, .health-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.phase-badge { background: var(--blue); color: white; }
-.source-badge { background: var(--surface); border: 1px solid var(--border); }
-.health-badge { background: var(--green); color: white; }
-
-.theme-toggle {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 1.25rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.theme-toggle:hover { background: var(--surface-hover); }
-
+const PIPELINE_CSS = `
 /* Pipeline flow */
 .pipeline { margin-bottom: 2rem; }
 
@@ -465,32 +356,6 @@ header h1 {
 .lineage-missing { background: var(--surface-hover); color: var(--text-muted); border: 1px dashed var(--gray); }
 .lineage-arrow { color: var(--text-muted); font-size: 1rem; }
 
-/* Sidebars */
-.sidebars {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-  .sidebars { grid-template-columns: 1fr; }
-}
-
-.sidebar {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-}
-
-.sidebar h2 { font-size: 1.1rem; margin-bottom: 1rem; }
-.sidebar ul { list-style: none; padding: 0; }
-.sidebar li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
-.sidebar li:last-child { border-bottom: none; }
-
-.empty-state { color: var(--text-muted); font-style: italic; }
-
 .rec-source {
   display: inline-block;
   font-size: 0.7rem;
@@ -520,24 +385,14 @@ header h1 {
   vertical-align: middle;
 }
 
-footer {
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-/* Print stylesheet */
+/* Pipeline print extras */
 @media print {
-  body { background: white; color: black; }
-  .theme-toggle, .detail-placeholder { display: none; }
+  .detail-placeholder { display: none; }
   .stage { border: 1px solid #ccc !important; color: black !important; }
   .stage-completed { background: #e8f5e9 !important; }
   .stage-current { background: #e3f2fd !important; animation: none !important; }
   .stage-blocked { background: #ffebee !important; }
   .stage-upcoming { background: #f5f5f5 !important; }
-  .sidebar, .detail-panel, .artifact-lineage { border: 1px solid #ccc; }
-  @page { margin: 1.5cm; }
+  .detail-panel, .artifact-lineage { border: 1px solid #ccc; }
 }
 `;

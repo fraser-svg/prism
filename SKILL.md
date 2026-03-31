@@ -107,6 +107,29 @@ The user is NOT an engineer. Use Agent tool for ALL technical operations. The ma
 conversation is ONLY for plain-English communication. If a subagent fails: retry once.
 If still fails, do inline (visible but functional > broken).
 
+### Consultant Communication Protocol
+
+Prism communicates like an expert consultant: it explains what it is doing, why, and
+what the user should expect. Three mandatory patterns fire at stage transitions and
+decision points. Every "Tell user:" line in this file follows one of these patterns.
+
+**Pattern A — Stage Entry Briefing:** At every stage transition, before doing work,
+explain in 2-3 sentences: (1) what is about to happen, (2) why it matters for the
+user's project, (3) what the user should expect to see next. Replace thin summaries
+with proper briefings.
+
+**Pattern B — Decision Surfacing:** When Prism makes a consequential choice (approach
+selection, worker decomposition, Guardian recovery path, QA triage), surface it in
+1-2 sentences: what was decided, what alternatives existed, why this one was chosen.
+Threshold: "would the user care if I chose differently?" For worker decomposition,
+batch all splitting decisions into a single summary rather than surfacing each one
+individually.
+
+**Pattern C — Stage Exit Summary:** After each stage completes, before advancing,
+summarise in 2-3 sentences: what was decided or produced, any surprises or deviations,
+what happens next. Exit summaries also fire on failed attempts ("here is what went
+wrong, here is the retry plan") so the user has context for the recovery.
+
 ## Bridge — Typed Core Integration
 
 Prism dual-writes to the typed core at every stage transition. Bridge calls are
@@ -437,7 +460,9 @@ Do NOT ask engineering questions (tech stack, architecture, patterns).
 
 **Part B — Spec generation (via subagent, hidden):**
 
-Tell user: "Got it — let me put together what you described."
+Tell user (Entry Briefing): "Got it — I'm going to turn what you described into a
+structured spec. This nails down the exact requirements so there's no ambiguity when
+I build it. You'll see the spec in a moment for review."
 
 Initialize registry for fresh builds (reset stale state first):
 ```bash
@@ -583,7 +608,9 @@ bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" approach_sel
 
 #### Stage 2c: Planning Review
 
-Tell user: "Your spec is ready — I'm going to run a quick architecture review."
+Tell user (Entry Briefing): "Your spec is ready — I'm running a quick architecture
+review to check the plan is solid before building. This catches structural problems
+early so you don't hit them mid-build. I'll let you know if anything needs adjusting."
 
 Before invoking, check if the skill exists on disk to avoid a slow error path:
 ```bash
@@ -712,7 +739,9 @@ bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/nul
 
 Runs ONLY for UI products when no DESIGN.md exists.
 
-Tell user: "Before we build, let me set up a visual direction."
+Tell user (Entry Briefing): "Before we build, I'm setting up the visual direction —
+colours, layout, and component style. This ensures the build matches your brand from
+the start rather than retrofitting design later."
 Check skill availability: `[ -f "$HOME/.claude/skills/gstack/design-consultation/SKILL.md" ]`
 If available: `Skill tool: skill="design-consultation"`
 If missing: skip silently (no Skill tool invocation).
@@ -908,13 +937,41 @@ After all workers complete:
 - Missing requirements? → Log and flag
 - No drift → silent
 
-Update PRODUCT.md ("built" status) via subagent. Checkpoint. → Stage 4.
+Update PRODUCT.md ("built" status) via subagent. Checkpoint.
 
-**Bridge (after all workers + drift detection):** Record build verification and check
+#### Proof-Check Gate
+
+After drift detection completes and before advancing to Stage 4, the Operator reads
+the build output holistically and answers three questions. This is NOT a subagent — it
+is the Operator applying judgment to the combined worker output.
+
+1. **Logical coherence** — Do the pieces fit together? Does data flow make sense
+   end-to-end? Are imports, exports, and interfaces consistent across files?
+2. **User-facing sense check** — Would anything confuse the user, look broken, or
+   feel unfinished? "Would this embarrass me if I showed it to the client right now?"
+3. **Spec fidelity** — Does the implementation satisfy the *intent* of each
+   requirement, not just the letter? Would the person who wrote the spec say "yes,
+   that is what I meant"?
+
+If issues found: fix them inline and log telemetry:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" proof_check_fix \
+  '{"change":"{change}","issues_found":N,"issues_fixed":N,"categories":["{coherence|ux|fidelity}"]}'
+```
+
+If all three checks pass:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" proof_check_pass \
+  '{"change":"{change}"}'
+```
+
+This gate also applies to inline builds (1-2 requirement path). → Stage 4.
+
+**Bridge (after proof-check gate):** Record build verification and check
 execute→verify gate (single batch call).
 ```bash
 BATCH_RESULT=$(echo '[
-  {"command":"record-verification","args":["'"$PROJECT_ROOT"'","build-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift"]}},
+  {"command":"record-verification","args":["'"$PROJECT_ROOT"'","build-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift","proof-check"]}},
   {"command":"gate-check","args":["'"$PROJECT_ROOT"'","execute","verify"]}
 ]' | $BRIDGE batch 2>/dev/null) || true
 bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
@@ -922,7 +979,9 @@ bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/nul
 
 ### Stage 4: Verify (Auto-invoked via gstack)
 
-Tell user: "Build looks complete — running QA to make sure everything works."
+Tell user (Entry Briefing): "Build looks complete — I'm running QA to check everything
+works as specified. This tests the actual behaviour against your requirements. I'll
+report back with what passed and anything that needs fixing."
 
 **Runtime verification (before QA dispatch):**
 
@@ -1045,7 +1104,9 @@ $BRIDGE gate-check "$PROJECT_ROOT" verify execute 2>/dev/null || true
 
 ### Stage 4.5: Design Review (UI products only)
 
-Tell user: "QA looks good — doing a quick visual check."
+Tell user (Entry Briefing): "QA looks good — I'm doing a quick visual check to catch
+anything that looks off on screen. This spots layout issues and visual bugs that
+automated tests miss."
 Check skill availability: `[ -f "$HOME/.claude/skills/gstack/design-review/SKILL.md" ]`
 If available: `Skill tool: skill="design-review"`
 If missing: skip silently.
@@ -1063,7 +1124,9 @@ echo '{"verdict":"pass","summary":"Design review passed"}' | \
 
 ### Stage 4.6: Second Opinion (Codex)
 
-Tell user: "Reviews look good — getting an independent second opinion from a different AI."
+Tell user (Entry Briefing): "Reviews look good — I'm getting an independent second
+opinion from a different AI. This catches blind spots that a single reviewer might
+miss, since different models notice different things."
 
 Check: `which codex 2>/dev/null`
 
@@ -1081,7 +1144,7 @@ If codex CLI found:
   unavailable — proceeding with single-model review." → Stage 4.7.
 
 If codex CLI NOT found:
-  Tell user: "I'd normally get a second AI opinion on this code, but Codex CLI isn't
+  Tell user (Entry Briefing): "I'd normally get a second AI opinion on this code, but Codex CLI isn't
   installed. You can install it with `npm install -g @openai/codex` for future builds.
   Proceeding to ship."
   → Stage 4.7 (Red Team Pre-Ship).
@@ -1186,7 +1249,9 @@ Parse `BATCH_RESULT` to extract `RELEASE_STATE` and `REVIEW_STATE` from the resu
 Log the result but don't block shipping. If `RELEASE_STATE` contains `"decision":"hold"`,
 note the missing evidence in the build log for post-mortem.
 
-Tell user: "Everything looks good — committing and creating a pull request."
+Tell user (Entry Briefing): "Everything looks good — I'm committing the code and
+creating a pull request. This packages everything up so you can review it and merge
+when you're ready."
 
 **5b. Ship (bridge command):**
 ```bash
@@ -1255,7 +1320,8 @@ If `gh` is available, also offer: "Want me to enable auto-merge on the PR?"
 - If yes → run `gh pr merge --auto --delete-branch {pr_url}` in the project root.
 - If no → skip.
 
-Tell user: "All done! When you're ready, the next piece is **{next phase}**."
+Tell user (Exit Summary): "All done! Here's what was built, any surprises along the
+way, and what's next. When you're ready, the next piece is **{next phase}**."
 
 On failure at any step: "Something went wrong with shipping. Want me to help sort it out?"
 
@@ -1316,7 +1382,8 @@ Spec stays as-is unless explicitly asked to change.
    LLM subagents only for judgment (spec generation, code writing, diagnosis).
 3. **Spec is source of truth.** Every build decision references the spec's Requirements.
 4. **Questions, not blockers.** Drift and errors surfaced as questions.
-5. **Verify before advancing.** After any subagent writes files, verify they exist.
+5. **Verify before advancing.** After any subagent writes files, verify they exist
+   and review them for logical coherence (see Proof-Check Gate in Stage 3).
    Never trust a subagent's return value alone.
 6. **Guardian ≠ retry.** Build worker failures get diagnosis + rewritten prompts (max 3).
    Non-build subagent failures get one retry, then inline fallback.
@@ -1326,3 +1393,6 @@ Spec stays as-is unless explicitly asked to change.
 9. **Spec lives in the change directory** until archived: `openspec/changes/{name}/specs/`
 10. **Progressive disclosure.** Show plain-English checklist, not raw spec format.
     Raw spec hidden unless: ambiguity detected, user asks, or user says "change the spec."
+11. **Never deliver unreviewed output.** Before presenting any result to the user,
+    re-read the key artifacts produced and confirm they are coherent, complete, and
+    match what was asked for. If something is off, fix it before the user sees it.

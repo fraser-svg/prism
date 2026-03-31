@@ -211,6 +211,14 @@ describe("generatePipelineHtml", () => {
     const html = generatePipelineHtml(snapshot);
     expect(html).toContain("stage-blocked");
   });
+
+  it("includes nav bar with pipeline active", () => {
+    const html = generatePipelineHtml(makeSnapshot());
+
+    expect(html).toContain('href="PIPELINE.html"');
+    expect(html).toContain('href="PROJECT.html"');
+    expect(html).toMatch(/PIPELINE\.html.*nav-active/);
+  });
 });
 
 describe("escapeHtml", () => {

@@ -1,5 +1,6 @@
 import type { AbsolutePath, EntityId } from "@prism/core";
 import { validateEntityId } from "@prism/core";
+import { access } from "node:fs/promises";
 import { homedir } from "node:os";
 import type {
   CheckpointArtifactPaths,
@@ -235,6 +236,15 @@ export function workspacePaths(home?: AbsolutePath): WorkspacePaths {
     settingsPath: joinPath(workspaceHome, "settings.json"),
     templatesDir: joinPath(workspaceHome, "templates"),
   };
+}
+
+export async function pathExists(p: string): Promise<boolean> {
+  try {
+    await access(p);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const prismArtifactLocator: ProjectArtifactLocator = {
