@@ -24,6 +24,7 @@ What exists now:
 - M4 local-first workspace substrate with SQLite, FTS5, health badges, and resume (M4 complete)
 - Continuous Intelligence Layer: skill catalogue, research phase, approach comparison, Guardian learning, discovery nudges, targeted QA (v4.0.9.0)
 - Trust-First Self-Healing Engine: session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, auto-dogfood entries (v4.0.13.0)
+- Pipeline Visualizer: interactive HTML dashboard of 7-stage workflow, PipelineSnapshot JSON contract for future Electron IPC (v4.0.16.0)
 
 What is still missing:
 - graduating bridge gates from advisory to blocking (post-M3 TODO)

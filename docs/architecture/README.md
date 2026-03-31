@@ -34,6 +34,7 @@ Prism Core exists as five cooperating layers, implemented across `packages/`:
 - Ship command (squash, push, PR creation, tagging)
 - Deploy detection and triggering
 - Self-healing engine (report cards, learning journal, prescriptions, health dashboard, dogfood generator) — see `docs/designs/trust-first-self-healing.md`
+- Pipeline visualizer (PipelineSnapshot JSON extraction → interactive HTML dashboard)
 
 ### 4. Execution Layer (`packages/execution`)
 - Intent policy

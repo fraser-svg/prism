@@ -194,7 +194,7 @@ prism/
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
-├── scripts/              # Deterministic bookkeeping (16 scripts)
+├── scripts/              # Deterministic bookkeeping (18 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)

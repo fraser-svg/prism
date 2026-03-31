@@ -5,13 +5,12 @@ All notable changes to Prism are documented here.
 ## [4.0.16.0] - 2026-03-31
 
 ### Added
-- **Pipeline Visualizer** — static HTML generator (`PIPELINE.html`) that renders Prism's 7-stage workflow pipeline as a visual, interactive diagram. Composes resume-engine, gate-evaluator, prescription-manager, and learning journal into a single `PipelineSnapshot` JSON contract (future Electron IPC interface).
-- **PipelineSnapshot JSON contract** — `extractPipelineSnapshot()` produces structured state: stages with status/gates/artifacts, recommendations from prescriptions and checkpoints, weaknesses from learning journal, health score and trend.
-- **Pipeline HTML features** — dark/light theme toggle with localStorage persistence, artifact lineage graph, gate requirement tooltips, print stylesheet for demo screenshots, XSS-safe JSON embedding with absolute path stripping.
-- **CLI `pipeline` command** — `execPipeline`/`cmdPipeline` following existing exec*/cmd* pattern, writes `PIPELINE.html` to `.prism/dogfood/`.
-- **Shell wrapper** — `scripts/prism-pipeline.sh` runs CLI and opens HTML in browser.
-- **Sparkline export** — `sparkline()` from health-dashboard.ts now exported for reuse in pipeline visualizer sparklines (P2 follow-up).
-- **Sparklines TODO** — added "Pipeline Visualizer: Session History Sparklines (P2)" to TODOS.md.
+- **Pipeline Visualizer** — you can now see your entire 7-stage pipeline as an interactive HTML dashboard (`PIPELINE.html`). Shows where you are, what's blocking you, gate requirements, artifact lineage, health score, and recommendations — all in one visual page instead of reading markdown files.
+- **PipelineSnapshot JSON contract** — structured JSON payload combining resume state, gate evaluations, prescriptions, and learning journal data. This becomes the Electron IPC interface when the desktop shell ships.
+- **Pipeline HTML features** — dark/light theme toggle, artifact lineage graph, gate tooltips, print stylesheet for demo screenshots, and XSS-safe JSON embedding.
+- **CLI `pipeline` command** — run via bridge CLI to generate `PIPELINE.html` in `.prism/dogfood/`.
+- **Shell wrapper** — `scripts/prism-pipeline.sh` generates the dashboard and opens it in your browser.
+- **Sparkline export** — `sparkline()` from health-dashboard now available for reuse (P2 follow-up: session history sparklines in pipeline view).
 
 ## [4.0.15.0] - 2026-03-31
 
