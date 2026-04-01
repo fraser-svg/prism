@@ -1303,6 +1303,7 @@ _assert "_prism_env_var_for openai" "$(_prism_env_var_for openai)" "OPENAI_API_K
 _assert "_prism_env_var_for google" "$(_prism_env_var_for google)" "GOOGLE_API_KEY"
 _assert "_prism_env_var_for vercel" "$(_prism_env_var_for vercel)" "VERCEL_TOKEN"
 _assert "_prism_env_var_for stripe" "$(_prism_env_var_for stripe)" "STRIPE_SECRET_KEY"
+_assert "_prism_env_var_for stitch" "$(_prism_env_var_for stitch)" "STITCH_API_KEY"
 
 # Provider list consistency: PRISM_PROVIDERS matches prism-providers.txt
 EXPECTED_COUNT=$(grep -c '.' "$SCRIPT_DIR/prism-providers.txt")

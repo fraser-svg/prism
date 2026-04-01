@@ -3,3 +3,4 @@ openai
 google
 vercel
 stripe
+stitch

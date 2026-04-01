@@ -28,6 +28,7 @@ _prism_env_var_for() {
     google)    echo "GOOGLE_API_KEY" ;;
     vercel)    echo "VERCEL_TOKEN" ;;
     stripe)    echo "STRIPE_SECRET_KEY" ;;
+    stitch)    echo "STITCH_API_KEY" ;;
   esac
 }
 

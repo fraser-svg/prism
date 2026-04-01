@@ -12,9 +12,10 @@ every project gets the keys automatically. Zero copy-paste after initial setup.
 | `vercel` | `prism-vercel` | `VERCEL_TOKEN` |
 | `stripe` | `prism-stripe` | `STRIPE_SECRET_KEY` |
 | `google` | `prism-google` | `GOOGLE_API_KEY` |
+| `stitch` | `prism-stitch` | `STITCH_API_KEY` |
 
 Only these provider names are accepted. Reject anything else with:
-"Unknown provider. Supported: anthropic, openai, google, vercel, stripe."
+"Unknown provider. Supported: anthropic, openai, google, vercel, stripe, stitch."
 
 ## Credential Precedence
 
@@ -80,7 +81,7 @@ If KEYCHAIN_LOCKED: "Your keychain is locked. Unlock it and try again."
 If KEYCHAIN_OK, check each provider (no -w flag, no secret exposed):
 
 ```bash
-for p in anthropic openai google vercel stripe; do
+for p in anthropic openai google vercel stripe stitch; do
   security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null && echo "$p: connected" || echo "$p: not connected"
 done
 ```

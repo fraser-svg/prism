@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "stitch": {
+      "command": "node",
+      "args": ["scripts/stitch-mcp/prism-stitch-proxy.mjs"],
+      "env": {}
+    }
+  }
+}
