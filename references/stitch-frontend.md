@@ -3,6 +3,25 @@
 Google Stitch generates complete UI screens (HTML + screenshots) from text prompts.
 It is a dedicated frontend generation service, separate from the Gemini code worker.
 
+Prism always knows the Stitch workflow. Availability is a separate question from workflow
+knowledge.
+
+## Readiness Modes
+
+Prism can reach Stitch in two ways:
+
+1. **Host-managed Stitch**
+   - Stitch MCP tools are already exposed by the active runtime.
+   - If the runtime tool list includes `create_project`, `generate_screen_from_text`,
+     `edit_screens`, `generate_variants`, or `getHtml`, Prism can use Stitch directly.
+
+2. **Repo-managed Stitch**
+   - The workspace-local MCP proxy in `scripts/stitch-mcp/` is used.
+   - This requires both the local SDK install and a Stitch API key in macOS Keychain.
+
+If host-managed Stitch is available, Prism may use it even when the repo-managed proxy is not ready.
+If host-managed Stitch is not available, Prism should check `bash scripts/prism-stitch-status.sh`
+to explain the exact repo-managed failure mode before falling back.
 ## When to Use Stitch vs Gemini Worker
 
 | Use Case | Tool | Why |
@@ -62,13 +81,26 @@ screens. Specify the target device to get appropriate layouts and breakpoints.
    cd scripts/stitch-mcp && npm install
    ```
 
-2. Connect your Stitch API key:
+2. In Prism chat, connect your Stitch API key:
    ```
    prism: connect stitch
    ```
 
-3. Verify connection:
+3. In Prism chat, verify connection:
    ```
    prism: status
    ```
    Should show `stitch: connected`.
+
+## Troubleshooting
+
+- `missing_sdk`:
+  Repo-managed Stitch is missing the local SDK install. Run `cd scripts/stitch-mcp && npm install`.
+- `missing_key`:
+  Repo-managed Stitch does not have a connected Stitch API key. In Prism chat, run `prism: connect stitch`.
+- `keychain_locked`:
+  Repo-managed Stitch cannot read the local key until the macOS Keychain is unlocked.
+- `keychain_unavailable`:
+  Repo-managed Stitch cannot use the local Keychain-backed path in the current environment.
+- Host-managed Stitch available but repo-managed broken:
+  Prism can still use Stitch if the active runtime already exposes the Stitch MCP tools.

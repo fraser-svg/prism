@@ -1508,6 +1508,97 @@ rm -rf "$INJECT_MOCK_BIN"
 
 # ============================================================
 echo ""
+echo "=== prism-stitch-status.sh ==="
+# ============================================================
+
+STITCH_STATUS_MOCK_BIN="/tmp/prism-stitch-status-mock-$$"
+mkdir -p "$STITCH_STATUS_MOCK_BIN"
+cat > "$STITCH_STATUS_MOCK_BIN/security" << 'MOCKEOF'
+#!/usr/bin/env bash
+case "$1" in
+  show-keychain-info)
+    if [ "${MOCK_KEYCHAIN_LOCKED:-0}" = "1" ]; then
+      echo "keychain: locked"
+    else
+      echo "keychain: unlocked"
+    fi
+    exit 0
+    ;;
+  find-generic-password)
+    if [ "${MOCK_STITCH_CONNECTED:-0}" = "1" ]; then
+      exit 0
+    fi
+    exit 1
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+MOCKEOF
+chmod +x "$STITCH_STATUS_MOCK_BIN/security"
+
+STITCH_STATUS_MOCK_UNAME="/tmp/prism-stitch-status-uname-$$"
+mkdir -p "$STITCH_STATUS_MOCK_UNAME"
+cat > "$STITCH_STATUS_MOCK_UNAME/uname" << 'MOCKEOF'
+#!/usr/bin/env bash
+echo "${MOCK_UNAME:-Darwin}"
+MOCKEOF
+chmod +x "$STITCH_STATUS_MOCK_UNAME/uname"
+
+STITCH_FIXTURE_ROOT="/tmp/prism-stitch-status-fixture-$$"
+mkdir -p "$STITCH_FIXTURE_ROOT"
+cp "$SCRIPT_DIR/prism-stitch-status.sh" "$STITCH_FIXTURE_ROOT/prism-stitch-status.sh"
+chmod +x "$STITCH_FIXTURE_ROOT/prism-stitch-status.sh"
+
+_stitch_json_field() {
+  local json="$1"
+  local field="$2"
+  python3 -c "import sys, json; print(json.loads(sys.argv[1])[sys.argv[2]])" "$json" "$field" 2>/dev/null
+}
+
+_stitch_run() {
+  PATH="$1:$PATH" MOCK_STITCH_CONNECTED="${2:-0}" MOCK_KEYCHAIN_LOCKED="${3:-0}" MOCK_UNAME="${4:-Darwin}" \
+    bash "$5" 2>/dev/null
+}
+
+# missing_sdk: no local SDK dir, key connected
+OUT=$(_stitch_run "$STITCH_STATUS_MOCK_UNAME:$STITCH_STATUS_MOCK_BIN" "1" "0" "Darwin" "$SCRIPT_DIR/prism-stitch-status.sh")
+_assert "stitch-status: missing_sdk status" "$(_stitch_json_field "$OUT" repo_status)" "missing_sdk"
+_assert "stitch-status: missing_sdk sdk_installed" "$(_stitch_json_field "$OUT" sdk_installed)" "False"
+_assert "stitch-status: missing_sdk keychain_connected" "$(_stitch_json_field "$OUT" keychain_connected)" "True"
+
+mkdir -p "$STITCH_FIXTURE_ROOT/stitch-mcp/node_modules/@google/stitch-sdk"
+
+# missing_key: SDK present, no key
+OUT=$(_stitch_run "$STITCH_STATUS_MOCK_UNAME:$STITCH_STATUS_MOCK_BIN" "0" "0" "Darwin" "$STITCH_FIXTURE_ROOT/prism-stitch-status.sh")
+_assert "stitch-status: missing_key status" "$(_stitch_json_field "$OUT" repo_status)" "missing_key"
+_assert "stitch-status: missing_key sdk_installed" "$(_stitch_json_field "$OUT" sdk_installed)" "True"
+_assert "stitch-status: missing_key keychain_connected" "$(_stitch_json_field "$OUT" keychain_connected)" "False"
+
+# keychain_locked: SDK present, locked keychain
+OUT=$(_stitch_run "$STITCH_STATUS_MOCK_UNAME:$STITCH_STATUS_MOCK_BIN" "1" "1" "Darwin" "$STITCH_FIXTURE_ROOT/prism-stitch-status.sh")
+_assert "stitch-status: keychain_locked status" "$(_stitch_json_field "$OUT" repo_status)" "keychain_locked"
+_assert "stitch-status: keychain_locked sdk_installed" "$(_stitch_json_field "$OUT" sdk_installed)" "True"
+_assert "stitch-status: keychain_locked keychain_connected" "$(_stitch_json_field "$OUT" keychain_connected)" "False"
+
+# keychain_unavailable: non-macOS
+OUT=$(_stitch_run "$STITCH_STATUS_MOCK_UNAME:$STITCH_STATUS_MOCK_BIN" "1" "0" "Linux" "$STITCH_FIXTURE_ROOT/prism-stitch-status.sh")
+_assert "stitch-status: keychain_unavailable status" "$(_stitch_json_field "$OUT" repo_status)" "keychain_unavailable"
+_assert "stitch-status: keychain_unavailable sdk_installed" "$(_stitch_json_field "$OUT" sdk_installed)" "True"
+_assert "stitch-status: keychain_unavailable keychain_connected" "$(_stitch_json_field "$OUT" keychain_connected)" "False"
+
+# ready: SDK present, key connected
+OUT=$(_stitch_run "$STITCH_STATUS_MOCK_UNAME:$STITCH_STATUS_MOCK_BIN" "1" "0" "Darwin" "$STITCH_FIXTURE_ROOT/prism-stitch-status.sh")
+_assert "stitch-status: ready status" "$(_stitch_json_field "$OUT" repo_status)" "ready"
+_assert "stitch-status: ready sdk_installed" "$(_stitch_json_field "$OUT" sdk_installed)" "True"
+_assert "stitch-status: ready keychain_connected" "$(_stitch_json_field "$OUT" keychain_connected)" "True"
+_assert_contains "stitch-status: setup steps include npm install" "$OUT" "cd scripts/stitch-mcp && npm install"
+_assert_contains "stitch-status: setup steps include connect stitch" "$OUT" "prism: connect stitch"
+
+rm -rf "$STITCH_STATUS_MOCK_BIN" "$STITCH_STATUS_MOCK_UNAME" "$STITCH_FIXTURE_ROOT"
+
+# ============================================================
+echo ""
 echo "=== SUMMARY ==="
 # ============================================================
 

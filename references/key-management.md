@@ -37,6 +37,8 @@ environment variables."
 ## Commands
 
 All commands use the `prism:` prefix to avoid false positives in the 40KB SKILL.md.
+These are Prism chat commands, not standalone shell binaries. Prism may ask the user to run a
+shell command in their terminal as part of the flow.
 
 ### prism: connect <provider>
 
@@ -93,6 +95,16 @@ Display as a clean list:
   vercel: not connected
   stripe: not connected
 ```
+
+## Stitch Availability Note
+
+Stitch has two readiness modes:
+
+1. **Host-managed Stitch**: the active runtime already exposes Stitch MCP tools.
+2. **Repo-managed Stitch**: the local proxy reads the key from macOS Keychain.
+
+`prism: connect stitch` and `prism: status` only affect the repo-managed path. Prism may still be
+able to use Stitch through host-managed MCP tools even when the local proxy is not ready.
 
 ### prism: inject
 
