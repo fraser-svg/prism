@@ -3,6 +3,8 @@ export { WorkspaceManager } from "./workspace-manager";
 export type { WorkspaceContext } from "./workspace-manager";
 export { ProjectRegistry } from "./project-registry";
 export type { ProjectRow, AutoDetectResult } from "./project-registry";
+export { ClientRepository } from "./client-repository";
+export type { ClientRow } from "./client-repository";
 export { EventLog, createEventLogWriteCallback } from "./event-log";
 export type { EventRecord, EventQueryOptions } from "./event-log";
 export { ArtifactSearch } from "./search";

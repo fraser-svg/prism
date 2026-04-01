@@ -2,12 +2,15 @@
   "name": "prism",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "typecheck:core": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/memory/tsconfig.json --noEmit && tsc -p packages/orchestrator/tsconfig.json --noEmit && tsc -p packages/guardian/tsconfig.json --noEmit && tsc -p packages/execution/tsconfig.json --noEmit && tsc -p packages/workspace/tsconfig.json --noEmit",
     "verify": "npm run typecheck:core && npm run test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev:desktop": "npm run dev --workspace=@prism/desktop",
+    "build:desktop": "npm run build --workspace=@prism/desktop"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -101,7 +101,7 @@ export class EventLog {
    */
   logSession(event: {
     projectId?: string | null;
-    action: "session:start" | "session:end" | "session:decision" | "session:error" | "session:gate" | "session:stage_transition" | "artifact:created" | "artifact:deleted";
+    action: "session:start" | "session:end" | "session:decision" | "session:error" | "session:gate" | "session:stage_transition" | "artifact:created" | "artifact:deleted" | "desktop:action_started" | "desktop:action_completed" | "desktop:action_failed" | "desktop:message" | "desktop:pipeline_updated";
     summary: string;
     metadata?: Record<string, unknown>;
   }): void {
@@ -123,6 +123,38 @@ export class EventLog {
         `SELECT id, project_id, event_type, summary, metadata, timestamp
          FROM events
          WHERE project_id = ? AND (event_type LIKE 'session:%' OR event_type LIKE 'artifact:%')
+         ORDER BY timestamp ASC, id ASC
+         LIMIT ?`,
+      )
+      .all(projectId, limit) as Array<{
+      id: number;
+      project_id: string | null;
+      event_type: string;
+      summary: string;
+      metadata: string | null;
+      timestamp: string;
+    }>;
+
+    return rows.map((r) => ({
+      id: r.id,
+      projectId: r.project_id,
+      eventType: r.event_type,
+      summary: r.summary,
+      metadata: r.metadata ? (JSON.parse(r.metadata) as Record<string, unknown>) : null,
+      timestamp: r.timestamp,
+    }));
+  }
+
+  /**
+   * Retrieve the full timeline for a project including both session and desktop events.
+   * Used by the Electron desktop shell to display the session drawer timeline.
+   */
+  desktopTimeline(projectId: string, limit = 50): EventRecord[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, project_id, event_type, summary, metadata, timestamp
+         FROM events
+         WHERE project_id = ? AND (event_type LIKE 'session:%' OR event_type LIKE 'artifact:%' OR event_type LIKE 'desktop:%')
          ORDER BY timestamp ASC, id ASC
          LIMIT ?`,
       )

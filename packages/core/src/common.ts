@@ -76,3 +76,5 @@ export type TrendDirection = "improving" | "stable" | "degrading";
 export type PrescriptionSeverity = "low" | "medium" | "high" | "critical";
 export type PrescriptionStatus = "active" | "resolved" | "dismissed";
 export type ReportCardDimensionSource = "auto" | "manual_on_resume" | "crash_recovery";
+export type RiskState = "healthy" | "at_risk" | "blocked";
+export type ProjectPriority = "low" | "normal" | "high" | "urgent";

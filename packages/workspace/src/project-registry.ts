@@ -15,6 +15,11 @@ export interface ProjectRow {
   status: string;
   primaryPlatform: string | null;
   productType: string | null;
+  clientAccountId: string | null;
+  owner: string | null;
+  priority: string | null;
+  riskState: string | null;
+  deployUrl: string | null;
   autodetectDismissed: boolean;
   registeredAt: string;
   lastAccessedAt: string | null;
@@ -223,6 +228,59 @@ export class ProjectRegistry {
     );
   }
 
+  updateProject(
+    id: string,
+    fields: {
+      clientAccountId?: string | null;
+      owner?: string | null;
+      priority?: string | null;
+      riskState?: string | null;
+      deployUrl?: string | null;
+    },
+  ): ProjectRow | null {
+    const existing = this.get(id);
+    if (!existing) return null;
+
+    const sets: string[] = [];
+    const params: unknown[] = [];
+
+    if (fields.clientAccountId !== undefined) {
+      sets.push("client_account_id = ?");
+      params.push(fields.clientAccountId);
+    }
+    if (fields.owner !== undefined) {
+      sets.push("owner = ?");
+      params.push(fields.owner);
+    }
+    if (fields.priority !== undefined) {
+      sets.push("priority = ?");
+      params.push(fields.priority);
+    }
+    if (fields.riskState !== undefined) {
+      sets.push("risk_state = ?");
+      params.push(fields.riskState);
+    }
+    if (fields.deployUrl !== undefined) {
+      sets.push("deploy_url = ?");
+      params.push(fields.deployUrl);
+    }
+
+    if (sets.length === 0) return existing;
+
+    params.push(id);
+    this.db
+      .prepare(`UPDATE projects SET ${sets.join(", ")} WHERE id = ?`)
+      .run(...params);
+
+    this.eventLog.append({
+      projectId: id,
+      eventType: "project:updated",
+      summary: `Updated project fields: ${Object.keys(fields).join(", ")}`,
+    });
+
+    return this.get(id);
+  }
+
   private toProjectRow(raw: RawProjectRow): ProjectRow {
     return {
       id: raw.id,
@@ -232,6 +290,11 @@ export class ProjectRegistry {
       status: raw.status,
       primaryPlatform: raw.primary_platform,
       productType: raw.product_type,
+      clientAccountId: raw.client_account_id,
+      owner: raw.owner,
+      priority: raw.priority,
+      riskState: raw.risk_state,
+      deployUrl: raw.deploy_url,
       autodetectDismissed: raw.autodetect_dismissed === 1,
       registeredAt: raw.registered_at,
       lastAccessedAt: raw.last_accessed_at,
@@ -247,6 +310,11 @@ interface RawProjectRow {
   status: string;
   primary_platform: string | null;
   product_type: string | null;
+  client_account_id: string | null;
+  owner: string | null;
+  priority: string | null;
+  risk_state: string | null;
+  deploy_url: string | null;
   autodetect_dismissed: number;
   registered_at: string;
   last_accessed_at: string | null;

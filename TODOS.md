@@ -303,6 +303,30 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Autoresearch Level 1 shipped + Pipeline Visualizer Session History Sparklines.
 
+## Electron Auto-Update + Code Signing (P2)
+
+**What:** Add electron-updater with code signing for macOS distribution.
+
+**Why:** Without auto-update, every bug fix requires users to manually download a new build. Without code signing, macOS Gatekeeper blocks the app entirely. Not needed for the YC demo (run from dev mode or local build), but required before any external user touches it.
+
+**When:** After MVP is shipped and before first external user.
+
+**How:** Add electron-updater, configure GitHub Releases as update source, set up Apple Developer signing with notarization. Build pipeline via electron-builder.
+
+**Depends on:** Electron Portfolio MVP shipped.
+
+## Event-Log Schema Versioning (P2)
+
+**What:** Add a schemaVersion field to event-log entries and a migration path for desktop event types.
+
+**Why:** The unified event-log now serves both orchestrator internals and desktop UI. If the schema changes again, old entries need to remain readable. Without versioning, unrecognized entries could crash the drawer.
+
+**When:** Before the next event-log schema change after MVP.
+
+**How:** Add `schemaVersion: 1` to event entries. On read, check version and apply transforms for older entries. Keep a version changelog in event-log.ts comments.
+
+**Depends on:** Event-log desktop extension (Electron MVP PR).
+
 ## Pipeline Visualizer: Session History Sparklines (P2)
 
 **What:** Embed the last 5 session report card scores as mini sparklines per dimension directly in the pipeline HTML, so you can see health trends without opening HEALTH.md.

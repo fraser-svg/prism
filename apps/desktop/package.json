@@ -1,0 +1,36 @@
+{
+  "name": "@prism/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && tsc -p tsconfig.node.json",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "postinstall": "electron-rebuild"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.5.0",
+    "zustand": "^5.0.5",
+    "@prism/core": "workspace:*",
+    "@prism/workspace": "workspace:*",
+    "@prism/orchestrator": "workspace:*",
+    "@prism/memory": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "electron": "^35.2.1",
+    "electron-rebuild": "^3.2.9",
+    "concurrently": "^9.1.2",
+    "wait-on": "^8.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5"
+  }
+}
