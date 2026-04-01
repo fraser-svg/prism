@@ -27,6 +27,10 @@ import { execShip } from "./ship";
 import { execDeployDetect, execDeployTrigger } from "./deploy";
 import { execRecordShip } from "./ship-receipt";
 import { runSelfHealingPipeline, runCrashRecovery } from "./self-healing";
+import { extractPipelineSnapshot } from "./pipeline-snapshot";
+import { generatePipelineHtml } from "./pipeline-visualizer";
+import { extractProjectSnapshot } from "./project-snapshot";
+import { generateProjectHtml } from "./project-visualizer";
 import {
   skillSpecToCore,
   skillPlanToCore,
@@ -344,6 +348,41 @@ async function execSessionEnd(args: string[], stdinData?: unknown): Promise<unkn
   return result;
 }
 
+async function execPipeline(args: string[]): Promise<unknown> {
+  const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
+
+  const snapshot = await extractPipelineSnapshot(projectRoot);
+  const html = generatePipelineHtml(snapshot);
+
+  const { writeFile, mkdir } = await import("node:fs/promises");
+  const { dogfoodPaths } = await import("@prism/memory");
+  const paths = dogfoodPaths(projectRoot);
+  await mkdir(paths.dogfoodDir, { recursive: true });
+  await writeFile(`${paths.dogfoodDir}/PIPELINE.html`, html);
+
+  return snapshot;
+}
+
+async function execProject(args: string[]): Promise<unknown> {
+  const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
+
+  const snapshot = await extractProjectSnapshot(projectRoot);
+  const html = generateProjectHtml(snapshot);
+
+  try {
+    const { writeFile, mkdir } = await import("node:fs/promises");
+    const { dogfoodPaths } = await import("@prism/memory");
+    const paths = dogfoodPaths(projectRoot);
+    await mkdir(paths.dogfoodDir, { recursive: true });
+    await writeFile(`${paths.dogfoodDir}/PROJECT.html`, html);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ...snapshot, writeError: message };
+  }
+
+  return snapshot;
+}
+
 async function execSessionReport(args: string[]): Promise<unknown> {
   const projectRoot = requireArg(args, 0, "projectRoot") as AbsolutePath;
   const projectId = args[1] as EntityId | undefined;
@@ -423,12 +462,20 @@ async function cmdReleaseState(args: string[]): Promise<void> {
   output(await execReleaseState(args));
 }
 
+async function cmdPipeline(args: string[]): Promise<void> {
+  output(await execPipeline(args));
+}
+
 async function cmdSessionEnd(args: string[]): Promise<void> {
   output(await execSessionEnd(args));
 }
 
 async function cmdSessionReport(args: string[]): Promise<void> {
   output(await execSessionReport(args));
+}
+
+async function cmdProject(args: string[]): Promise<void> {
+  output(await execProject(args));
 }
 
 // ---------------------------------------------------------------------------
@@ -459,6 +506,8 @@ const EXEC_HANDLERS: Record<string, (args: string[], stdin?: unknown) => Promise
   "record-ship": execRecordShip,
   "session-end": execSessionEnd,
   "session-report": execSessionReport as (args: string[], stdin?: unknown) => Promise<unknown>,
+  pipeline: execPipeline as (args: string[], stdin?: unknown) => Promise<unknown>,
+  project: execProject as (args: string[], stdin?: unknown) => Promise<unknown>,
 };
 
 async function cmdBatch(): Promise<void> {
@@ -509,6 +558,8 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   "record-ship": async (args) => output(await execRecordShip(args)),
   "session-end": cmdSessionEnd,
   "session-report": cmdSessionReport,
+  pipeline: cmdPipeline,
+  project: cmdProject,
   batch: cmdBatch,
 };
 

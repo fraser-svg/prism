@@ -615,6 +615,8 @@ When abandoned (retries >= 3):
 |------------|------------------------------------------------------|
 | `"any"`    | No routing preference — use the default Claude agent |
 | `"visual"` | Visual/UI task — prefer Gemini; falls back to Claude |
+| `"screen"` | Standalone UI screen — handled at Stage 2.5 via Stitch; falls back to `"visual"` |
+| `"backend"`| Backend task — use Claude agent                      |
 
 ### Task status transitions
 
@@ -639,7 +641,7 @@ Post-worker syntax verification: file existence, lint, and TypeScript compile ch
 ### Usage
 
 ```
-bash scripts/prism-verify.sh <root> [--files f1,f2,...] [--lint] [--compile] [--cwd dir]
+bash scripts/prism-verify.sh <root> [--files f1,f2,...] [--lint] [--compile] [--cwd dir] [--tolerant]
 ```
 
 | Arg         | Required | Description                                     |
@@ -649,6 +651,7 @@ bash scripts/prism-verify.sh <root> [--files f1,f2,...] [--lint] [--compile] [--
 | `--lint`    | no       | Run linter (auto-detects eslint or biome)       |
 | `--compile` | no       | Run `tsc --noEmit` (auto-detects tsconfig.json) |
 | `--cwd`     | no       | Working directory override for checks           |
+| `--tolerant`| no       | Skip missing files with warning instead of failing |
 
 ### Stdout
 
@@ -681,7 +684,7 @@ FAIL: 2 errors (files=failed lint=skipped compile=failed) -> /tmp/prism-verify-{
 | Field              | Type    | Values                                                               |
 |--------------------|---------|----------------------------------------------------------------------|
 | `passed`           | boolean | `true` if all enabled checks passed                                 |
-| `checks.files`     | string  | `"skipped"`, `"passed"`, `"failed"`                                  |
+| `checks.files`     | string  | `"skipped"`, `"passed"`, `"failed"`, `"skipped_all_missing"`         |
 | `checks.lint`      | string  | `"skipped"`, `"skipped_no_config"`, `"skipped_no_files"`, `"passed"`, `"failed"` |
 | `checks.compile`   | string  | `"skipped"`, `"skipped_no_tsconfig"`, `"skipped_no_npx"`, `"passed"`, `"failed"` |
 | `errors[]`         | array   | Error objects (empty when `passed` is true)                          |
@@ -692,6 +695,7 @@ FAIL: 2 errors (files=failed lint=skipped compile=failed) -> /tmp/prism-verify-{
 ### Notes
 - Auto-detects linter: checks for eslint config files or `biome.json`/`biome.jsonc`.
 - When `--files` is provided with `--lint`, only lints files with JS/TS extensions.
+- `--tolerant` mode: missing files emit a `WARN` to stderr and are skipped. If all files are missing, `checks.files` is set to `"skipped_all_missing"` and `passed` remains `true`. Used by post-QA re-verification where intermediate files may have been cleaned up.
 - Degrades gracefully if `jq` is not installed.
 
 ---
@@ -788,7 +792,8 @@ bash scripts/prism-telemetry.sh failures <root> [--cluster]
 `catalogue_write`, `catalogue_query`, `package_verified`, `guardian_learning`,
 `research_degraded`, `deploy_start`, `deploy_complete`, `deploy_fail`,
 `taxonomy_check`, `red_team_complete`, `red_team_vacuous`, `red_team_timeout`,
-`confidence_escalation`, `confidence_override`, `taxonomy_growth`
+`confidence_escalation`, `confidence_override`, `taxonomy_growth`, `test_execution`,
+`guardian_dispatch`, `qa_skipped`, `qa_regression`
 
 ### Subcommand: `record`
 

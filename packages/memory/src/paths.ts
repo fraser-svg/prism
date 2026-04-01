@@ -1,8 +1,10 @@
 import type { AbsolutePath, EntityId } from "@prism/core";
 import { validateEntityId } from "@prism/core";
+import { access } from "node:fs/promises";
 import { homedir } from "node:os";
 import type {
   CheckpointArtifactPaths,
+  ExperimentArtifactPaths,
   PlanArtifactPaths,
   PrismProjectPaths,
   ProblemArtifactPaths,
@@ -58,6 +60,7 @@ export function projectPaths(projectRoot: AbsolutePath): PrismProjectPaths {
     intakeDir: joinPath(prismDir, "intake"),
     thesesDir: joinPath(prismDir, "theses"),
     dogfoodDir: joinPath(prismDir, "dogfood"),
+    experimentsDir: joinPath(prismDir, "experiments"),
     telemetryFile: joinPath(prismDir, "telemetry.jsonl"),
     registryFile: joinPath(prismDir, "registry.json"),
     taskGraphFile: joinPath(prismDir, "task-graph.json"),
@@ -183,6 +186,20 @@ export function dogfoodPaths(
   };
 }
 
+export function experimentPaths(
+  projectRoot: AbsolutePath
+): ExperimentArtifactPaths {
+  const experimentsDir = projectPaths(projectRoot).experimentsDir;
+  return {
+    experimentsDir,
+    registryFile: joinPath(experimentsDir, "registry.json"),
+    activeVariantFile: joinPath(experimentsDir, "active-variant.md"),
+    levelDir: (level: string) => joinPath(experimentsDir, level) as AbsolutePath,
+    experimentFile: (level: string, id: string) =>
+      joinPath(experimentsDir, level, `${id}.json`) as AbsolutePath,
+  };
+}
+
 export function intakeBriefPaths(
   projectRoot: AbsolutePath,
   briefId: EntityId
@@ -219,6 +236,15 @@ export function workspacePaths(home?: AbsolutePath): WorkspacePaths {
     settingsPath: joinPath(workspaceHome, "settings.json"),
     templatesDir: joinPath(workspaceHome, "templates"),
   };
+}
+
+export async function pathExists(p: string): Promise<boolean> {
+  try {
+    await access(p);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const prismArtifactLocator: ProjectArtifactLocator = {

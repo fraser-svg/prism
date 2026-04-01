@@ -1,5 +1,29 @@
 # Prism TODOs
 
+## Monorepo Target Directory Resolution (P2)
+
+**What:** Add framework detection to `scripts/prism-inject.sh` for monorepo projects where `.env.local` needs to go in a subdirectory (e.g., `app/`, `packages/web/`).
+
+**Why:** Auto-inject uses `$PROJECT_ROOT` which is correct for single-app projects. Monorepo users would get `.env.local` in the wrong directory where their framework won't read it.
+
+**When:** When an internal user reports inject targeting the wrong directory.
+
+**How:** Look for `next.config.*`, `vite.config.*`, or `package.json` with framework deps in subdirectories. `scripts/prism-deploy.sh` already has app-root detection logic (line 119) that could be extracted into `prism-helpers.sh`. Fall back to `$PROJECT_ROOT` if no framework detected. Manual `prism: inject <dir>` override remains available.
+
+**Depends on:** Auto-inject PR (fraser-svg/api-key-vault).
+
+## Per-Project Key Scoping (P3)
+
+**What:** Allow projects to specify which providers they need, so inject only writes relevant keys instead of all connected keys.
+
+**Why:** Currently all connected keys are injected into every project (e.g., `STRIPE_SECRET_KEY` in projects that don't use Stripe). Accepted for M1 (internal users, gitignored file, known threat model) but violates least-privilege principle.
+
+**When:** When internal users report wanting per-project control, or when expanding beyond 2-5 internal users.
+
+**How:** Options: (a) `prism: inject --only anthropic openai` flag, (b) `.prism/config.json` in project root specifying required providers, (c) auto-detect by grepping source for env var references. Option (c) is cleanest UX but most complex to implement.
+
+**Depends on:** Auto-inject PR (fraser-svg/api-key-vault) + evidence from internal users.
+
 ## Doc Drift Lint (P2)
 
 **What:** A validation script or CI check that greps for stale references (deleted files, Tauri, Prismatic, hosted-web-app language) across all active docs.
@@ -227,9 +251,9 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **When:** After Better Solution Finding is shipped + seed taxonomy is populated.
 
-**How:** Add to `evals/` directory. Script that simulates the marketing verification task inputs and asserts Red Team + taxonomy outputs.
+**How:** Add to `evals/` directory. Script that simulates the marketing verification task inputs and asserts Red Team + taxonomy outputs. **Note (from 80% wall hardening review):** Also verify that confidence scoring incorporates build-time signals (guardian_dispatch count, qa_regression count, test failures) — not just pre-build assessment.
 
-**Depends on:** Better Solution Finding feature shipped + seed taxonomy entries.
+**Depends on:** Better Solution Finding feature shipped + seed taxonomy entries + 80% Wall Hardening (confidence scoring changes).
 
 ## Graduate Advisory Prescriptions to Auto-Tightening Gates (P2)
 
@@ -242,3 +266,87 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Add a `prescription.promotable` flag computed from recentScores. When promotable, the gate evaluator reads active promotable prescriptions and adds the requirement as a blocker (e.g., "IntakeBrief required before plan stage"). Requires a confirmation prompt before first auto-tighten to build operator trust.
 
 **Depends on:** Self-healing system (Slices C-E) shipped + 5+ sessions with accurate prescription scoring.
+
+## Autoresearch Level 2: Workflow Experiments (P2)
+
+**What:** Extend the experiment system beyond prompt variants to test workflow changes (gate thresholds, stage ordering, retry strategies).
+
+**Why:** Level 1 (Prompt Evolution) only covers one dimension of Prism's behavior. Workflow experiments would let Prism self-optimize its own pipeline structure, not just its prompts. Deferred from autoresearch v1 to keep scope tight for the first implementation.
+
+**When:** After Level 1 has run 20+ experiments with at least 3 promotions, proving the infrastructure works.
+
+**How:** Add `workflow` to ExperimentLevel. Define workflow variant templates targeting gate thresholds and stage transitions. Requires careful rollback semantics since workflow changes affect multiple stages.
+
+**Depends on:** Autoresearch Level 1 (Prompt Evolution) shipped and proven reliable.
+
+## Reduce Experiment Decision Threshold (P3)
+
+**What:** Lower the >10% improvement threshold after collecting real data on score variance across sessions.
+
+**Why:** The 10% threshold is conservative for launch. Real session score variance may be much tighter, meaning 5% improvement could be statistically meaningful. Need data first to calibrate properly.
+
+**When:** After 50+ experiment metrics are recorded from real sessions.
+
+**How:** Analyze metric variance from `.prism/experiments/` data. If the standard deviation of dimension scores is <3%, a 5% threshold would be appropriate. Consider making the threshold configurable per experiment.
+
+**Depends on:** Autoresearch Level 1 running in production with real session data.
+
+## Experiment Dashboard in Pipeline Visualizer (P3)
+
+**What:** Add an experiment status panel to PIPELINE.html showing active experiments, their metrics, and decisions.
+
+**Why:** Currently experiment state is only visible via JSON files. A visual panel would let operators see at a glance which experiments are running, how they're trending, and what was recently promoted or discarded.
+
+**When:** After pipeline visualizer sparklines TODO is complete (builds on the same rendering infrastructure).
+
+**How:** Add `activeExperiments` field to `PipelineSnapshot`. Read experiment registry + active experiments, include metric summaries. Render as a table in the HTML with baseline vs test averages and session counts.
+
+**Depends on:** Autoresearch Level 1 shipped + Pipeline Visualizer Session History Sparklines.
+
+## Pipeline Visualizer: Session History Sparklines (P2)
+
+**What:** Embed the last 5 session report card scores as mini sparklines per dimension directly in the pipeline HTML, so you can see health trends without opening HEALTH.md.
+
+**Why:** Fraser is dyslexic — switching between HEALTH.md (markdown) and PIPELINE.html (visual) to see trends is friction. Sparklines in the pipeline view create a single-pane-of-glass for pipeline state + health trends. Also useful for demos.
+
+**When:** After pipeline visualizer is shipped and proven useful in daily use.
+
+**How:** Add report card reading to `extractPipelineSnapshot()` (same pattern as `health-dashboard.ts` — readdir reports dir, parse JSON, sort by timestamp, take last 5). Add a `recentReportCards` field to `PipelineSnapshot`. Render sparklines per dimension in the HTML stage detail panel. The `sparkline()` function is already exported from `health-dashboard.ts`.
+
+**Depends on:** Pipeline visualizer shipped (pipeline-snapshot.ts + pipeline-visualizer.ts).
+
+## Stitch Pipeline Integration (P2)
+
+**What:** Feed Stitch-generated HTML into Prism's worker/verification pipeline so Stitch output gets the same quality gates as Gemini worker output.
+
+**Why:** Currently Stitch output bypasses Prism's Guardian, QA review, and engineering review stages. For agency operators delivering to clients, unverified output is a risk. Integrating Stitch into the pipeline means Stitch screens get the same confidence scoring, QA, and design review as any other build artifact.
+
+**When:** After evidence that Stitch is actively used in real builds.
+
+**How:** After Stitch generates HTML via `getHtml`, pass it through the existing verification pipeline as a build artifact. Requires adapting the worker output format to accept Stitch HTML alongside Gemini code output.
+
+**Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + evidence Stitch is used in real sessions.
+
+## Stitch Orchestrator Routing (P3)
+
+**What:** Automatic routing of frontend tasks to Stitch or Gemini worker based on task characteristics, without user intervention.
+
+**Why:** Currently the user or Prism operator must decide whether to use Stitch or Gemini for a frontend task. Automatic routing based on task type (standalone screen vs integrated code) would reduce friction and improve output quality by always picking the right tool.
+
+**When:** After Stitch SDK integration is shipped and the Tool Routing TODO is implemented.
+
+**How:** Extend the tool routing check in Stage 1 to classify frontend phases as "standalone screen" (→ Stitch) or "integrated code" (→ Gemini worker). Use heuristics: presence of existing project files, whether the output is a full page vs a component, user intent signals.
+
+**Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + Tool Routing TODO.
+
+## Proof-Check Gate Accuracy Tracking (P2)
+
+**What:** After 10+ sessions with proof_check_pass/fix telemetry, analyse the fix rate and false positive rate to determine if the gate is effective.
+
+**Why:** The Proof-Check Gate (added in the Consultant Communication update) asks the Operator to self-review build output before advancing to QA. Without tracking accuracy, you cannot tell if the gate is catching real issues or rubber-stamping. If fix rate is <5%, the gate may not be adding value. If >50%, it may indicate systemic build quality issues.
+
+**When:** After 10+ Prism sessions with proof-check telemetry recorded in `.prism/telemetry.jsonl`.
+
+**How:** Read `proof_check_pass` and `proof_check_fix` events from telemetry. Compute: total runs, fix count, fix rate (fixes/total), category breakdown (coherence vs ux vs fidelity). If fix rate is very low, consider simplifying the gate. If high, investigate whether the gate is catching genuine issues or being overly cautious.
+
+**Depends on:** Consultant Communication + Self-Review shipped + 10 sessions with telemetry data.

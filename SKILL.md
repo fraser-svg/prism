@@ -56,12 +56,22 @@ Starting PRISMATIC...
   To begin: describe the your need...
 ```
 
-Then run auto-update in background via Agent tool:
-> "Check if Prism skill at {skill_dir} is a git repo. If so, `git fetch origin --quiet`
-> and check `git rev-list HEAD..origin/main --count`. If behind, `git pull origin main --quiet`.
-> Return: UPDATED {old}→{new}, UP_TO_DATE, NOT_FOUND, NOT_GIT, or FETCH_FAILED."
+### Auto-update check
 
-If UPDATED: show `"  Updated: v{old} → v{new}"` below banner. Otherwise silent.
+**Hook registration (first-run only):** Check if `prism-check-update` appears in `~/.claude/settings.json`:
+```bash
+grep -q "prism-check-update" "$HOME/.claude/settings.json" 2>/dev/null && echo "registered" || echo "missing"
+```
+If `missing`: run `bash {skill_dir}/scripts/prism-install-hook.sh` to register the SessionStart hook. This is a one-time bootstrap — once registered, the hook runs automatically on every Claude Code session.
+
+**Update status:** Read the cache file (do NOT run git commands or spawn agents for checking):
+```bash
+cat "$HOME/.claude/cache/prism-update-check.json" 2>/dev/null || echo "{}"
+```
+Parse the JSON. Based on `status`:
+- `UPDATE_AVAILABLE`: show `"  Update available: v{installed} → v{latest}"` below the banner, then use AskUserQuestion: "Prism v{latest} is available (you're on v{installed}). Update now?" with options ["Yes, update now", "Not now"]. If Yes: run `cd {skill_dir} && git pull --ff-only --quiet origin main` and report the result. If the pull succeeds, show `"  Updated to v{latest}"` and delete the cache file (`rm -f "$HOME/.claude/cache/prism-update-check.json"`) so the next session re-checks cleanly. If it fails, show the error and suggest running `cd {skill_dir} && git pull` manually.
+- All other statuses (`UP_TO_DATE`, `FETCH_FAILED`, `DIRTY`, `NOT_GIT`, `NOT_FOUND`): silent.
+- Cache missing or unreadable: silent.
 
 ## Session Awareness
 
@@ -96,6 +106,29 @@ followed by: `bash "$SKILL_DIR/scripts/prism-save.sh" "$PROJECT_ROOT" "emergency
 The user is NOT an engineer. Use Agent tool for ALL technical operations. The main
 conversation is ONLY for plain-English communication. If a subagent fails: retry once.
 If still fails, do inline (visible but functional > broken).
+
+### Consultant Communication Protocol
+
+Prism communicates like an expert consultant: it explains what it is doing, why, and
+what the user should expect. Three mandatory patterns fire at stage transitions and
+decision points. Every "Tell user:" line in this file follows one of these patterns.
+
+**Pattern A — Stage Entry Briefing:** At every stage transition, before doing work,
+explain in 2-3 sentences: (1) what is about to happen, (2) why it matters for the
+user's project, (3) what the user should expect to see next. Replace thin summaries
+with proper briefings.
+
+**Pattern B — Decision Surfacing:** When Prism makes a consequential choice (approach
+selection, worker decomposition, Guardian recovery path, QA triage), surface it in
+1-2 sentences: what was decided, what alternatives existed, why this one was chosen.
+Threshold: "would the user care if I chose differently?" For worker decomposition,
+batch all splitting decisions into a single summary rather than surfacing each one
+individually.
+
+**Pattern C — Stage Exit Summary:** After each stage completes, before advancing,
+summarise in 2-3 sentences: what was decided or produced, any surprises or deviations,
+what happens next. Exit summaries also fire on failed attempts ("here is what went
+wrong, here is the retry plan") so the user has context for the recovery.
 
 ## Bridge — Typed Core Integration
 
@@ -140,6 +173,25 @@ Read the temp file path from the summary line for structured data.
 | `prism-telemetry.sh {cmd} {root} [args]` | Build telemetry (record, summary, failures) | After every stage transition |
 | `prism-improve.sh {cmd} {root} [args]` | Safe self-improvement (propose, eval, promote, reject) | Post-build analysis |
 | `prism-eval.sh {cmd} {root} [args]` | Eval suite (run, baseline, compare) | Before promoting improvements |
+| `prism-pipeline.sh [--no-open] {root}` | Pipeline visualization (regenerate HTML, optionally open) | After stage transitions |
+
+### Pipeline Visualizer
+
+Generates `.prism/dogfood/PIPELINE.html` — an interactive HTML snapshot of all pipeline
+stages, gate results, artifacts, and confidence. Helps the user see where they are.
+
+**Calling patterns (always advisory):**
+```bash
+# Regenerate only (mid-stage transitions — no browser open, avoids stealing focus)
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
+
+# Regenerate + open in browser (Stage 0 initial view and Stage 5 ship receipt only)
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
+```
+
+**When to regenerate:** After Stage 0 scan (open), after each stage transition checkpoint
+(regenerate only, `--no-open`), and in the Stage 5 ship receipt (open). Never mid-stage.
+Failures are silent — never block or report.
 
 **Auto-save milestones:** After spec generation, spec approval, planning, design,
 each worker completion, QA fixes, and before shipping. Failures are silent — never
@@ -161,39 +213,17 @@ On every invocation, check if the macOS Keychain is available:
 [ "$(uname)" = "Darwin" ] && command -v security >/dev/null 2>&1 && echo "KEYCHAIN_AVAILABLE" || echo "KEYCHAIN_UNAVAILABLE"
 ```
 
-If KEYCHAIN_AVAILABLE, check connected providers with caching (1-hour TTL):
+If KEYCHAIN_AVAILABLE, probe connected providers using the shared helper:
 
 ```bash
-# Portable timeout function (macOS has no GNU timeout)
-_prism_timeout() {
-  local secs=$1; shift
-  "$@" &
-  local pid=$!
-  ( sleep "$secs" && kill "$pid" 2>/dev/null ) &
-  local watchdog=$!
-  wait "$pid" 2>/dev/null
-  local rc=$?
-  kill "$watchdog" 2>/dev/null 2>&1; wait "$watchdog" 2>/dev/null
-  return $rc
-}
-
-KEYCHAIN_CACHE="/tmp/prism-keychain-${UID:-0}-cache"
-if [ -f "$KEYCHAIN_CACHE" ] && [ "$(( $(date +%s) - $(stat -f%m "$KEYCHAIN_CACHE") ))" -lt 3600 ]; then
-  # Cache hit — read via grep (NOT source, for security)
-  for p in anthropic openai google vercel stripe; do
-    eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
-  done
-else
-  # Cache miss — probe each provider (2s timeout per probe)
-  for p in anthropic openai google vercel stripe; do
-    _prism_timeout 2 security find-generic-password -s "prism-$p" -a "prism" 2>/dev/null \
-      && echo "PRISM_KEY_$p=connected" || echo "PRISM_KEY_$p=disconnected"
-  done > "$KEYCHAIN_CACHE"
-  for p in anthropic openai google vercel stripe; do
-    eval "PRISM_KEY_$p=$(grep "^PRISM_KEY_$p=" "$KEYCHAIN_CACHE" 2>/dev/null | cut -d= -f2)"
-  done
-fi
+source "$SKILL_DIR/scripts/prism-helpers.sh"
+_prism_keychain_probe
 ```
+
+This uses `_prism_keychain_probe` from `scripts/prism-helpers.sh` which handles caching
+(1-hour TTL at `/tmp/prism-keychain-{UID}-cache`) and 2-second timeouts per provider.
+After the call, `PRISM_KEY_<provider>` is set to `connected` or `disconnected` for each
+provider in `scripts/prism-providers.txt`.
 
 Store the result. If any providers are connected, auto-inject at the start of every
 project. See [references/key-management.md](references/key-management.md) for the
@@ -201,9 +231,38 @@ full protocol.
 
 If KEYCHAIN_UNAVAILABLE: skip silently. Key management is macOS-only.
 
+### Stitch Capability Truth
+
+Prism always knows the Stitch workflow from [references/stitch-frontend.md](references/stitch-frontend.md).
+Never say Prism "doesn't know how to use Stitch" or "doesn't have Stitch integrated" without
+qualifying whether you mean the repo-managed path or active host MCP tools.
+
+Determine Stitch capability from two separate signals:
+
+1. **Host-exposed Stitch tools**
+   - Inspect the active runtime tool list for these Stitch MCP tools:
+     `create_project`, `generate_screen_from_text`, `edit_screens`, `generate_variants`, `getHtml`
+   - If any are present, set `HOST_STITCH_TOOLS_AVAILABLE=true`; otherwise `false`.
+   - This check must come from the active runtime tool list only. Never infer it from shell output,
+     Conductor files, debug logs, or local config scraping.
+
+2. **Repo-managed Stitch readiness**
+   - Run:
+   ```bash
+   bash "$SKILL_DIR/scripts/prism-stitch-status.sh"
+   ```
+   - Parse the JSON and store:
+     - `REPO_STITCH_STATUS` = `.repo_status`
+     - `REPO_STITCH_REASON` = `.reason`
+     - `REPO_STITCH_SETUP_STEPS` = `.setup_steps`
+
+Set `STITCH_AVAILABLE=true` if `HOST_STITCH_TOOLS_AVAILABLE=true` OR `REPO_STITCH_STATUS="ready"`.
+Otherwise set `STITCH_AVAILABLE=false`.
+
 ### Key Management Commands
 
-These commands use the `prism:` prefix to avoid false positives.
+These commands use the `prism:` prefix to avoid false positives. They are Prism chat commands,
+not standalone shell binaries.
 
 | Command | What it does |
 |---------|-------------|
@@ -212,7 +271,7 @@ These commands use the `prism:` prefix to avoid false positives.
 | `prism: status` | Show which providers are connected |
 | `prism: inject` | Write connected keys to .env.local |
 
-Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`.
+Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`, `stitch`.
 
 **Security rules:**
 - Agent NEVER executes commands containing secrets. Prints the template, user runs it.
@@ -310,6 +369,27 @@ checkpoint JSON (`stage_route`, `stage_total`). Include route in all subsequent 
 **New projects (NONE status):** Product type is unknown until Stage 1 creates PRODUCT.md.
 Default to Route A (total = 5). After Stage 1 Part 0 (Product context) determines the
 product type, update the route if needed. This is the one exception to "never recompute."
+
+**Pipeline visualizer (after scan):**
+```bash
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
+```
+
+**Auto-inject API keys (after pipeline visualizer):**
+```bash
+bash "$SKILL_DIR/scripts/prism-inject.sh" "$PROJECT_ROOT" 2>/dev/null || true
+```
+
+Read the inject JSON output. Behavior rules:
+- **`status: "ok"`** — Silent. Internal context only.
+- **`status: "ok"` with non-empty `conflicts`** — Surface: "Note: {VAR} is already set
+  outside the prism block, skipping injection for that provider."
+- **`status: "skip", reason: "no_keys"` + NONE scan status** — First-session tip:
+  "Run `prism: connect <provider>` to link your API keys once — they'll auto-inject
+  in every project."
+- **`status: "skip", reason: "keychain_locked"`** — Surface warning.
+- **`status: "error"`** — Surface warning with reason.
+- All other skips — Silent.
 
 ### Stage 1: Understand
 
@@ -409,7 +489,9 @@ Do NOT ask engineering questions (tech stack, architecture, patterns).
 
 **Part B — Spec generation (via subagent, hidden):**
 
-Tell user: "Got it — let me put together what you described."
+Tell user (Entry Briefing): "Got it — I'm going to turn what you described into a
+structured spec. This nails down the exact requirements so there's no ambiguity when
+I build it. You'll see the spec in a moment for review."
 
 Initialize registry for fresh builds (reset stale state first):
 ```bash
@@ -466,6 +548,7 @@ BATCH_RESULT=$(echo '[
   {"command":"write-spec","args":["'"$PROJECT_ROOT"'","{change}"],"stdin":{"title":"{feature}","type":"change","status":"approved","acceptanceCriteria":["{req1}","{req2}"]}},
   {"command":"gate-check","args":["'"$PROJECT_ROOT"'","spec","plan","--spec-id","{change}"]}
 ]' | $BRIDGE batch 2>/dev/null) || true
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 ### Stage 2: Plan (Auto-invoked via gstack)
@@ -554,7 +637,9 @@ bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" approach_sel
 
 #### Stage 2c: Planning Review
 
-Tell user: "Your spec is ready — I'm going to run a quick architecture review."
+Tell user (Entry Briefing): "Your spec is ready — I'm running a quick architecture
+review to check the plan is solid before building. This catches structural problems
+early so you don't hit them mid-build. I'll let you know if anything needs adjusting."
 
 Before invoking, check if the skill exists on disk to avoid a slow error path:
 ```bash
@@ -671,6 +756,7 @@ Store confidence in checkpoint JSON for propagation to later stages:
 ```bash
 echo '{"stage":2,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"approach validated","confidence":{"level":"{level}","concerns":[...],"checksRun":["taxonomy","red_team"],"checksSkipped":[...]}}' | \
   bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 **Routing after confidence:**
@@ -682,7 +768,9 @@ echo '{"stage":2,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"appro
 
 Runs ONLY for UI products when no DESIGN.md exists.
 
-Tell user: "Before we build, let me set up a visual direction."
+Tell user (Entry Briefing): "Before we build, I'm setting up the visual direction —
+colours, layout, and component style. This ensures the build matches your brand from
+the start rather than retrofitting design later."
 Check skill availability: `[ -f "$HOME/.claude/skills/gstack/design-consultation/SKILL.md" ]`
 If available: `Skill tool: skill="design-consultation"`
 If missing: skip silently (no Skill tool invocation).
@@ -690,6 +778,31 @@ If missing: skip silently (no Skill tool invocation).
 - **Skip:** User can say "skip design".
 - **Graceful degradation:** If skill not installed or errors, skip silently.
 - After completion → Stage 3.
+
+**Stitch screen generation (optional):**
+If `STITCH_AVAILABLE=true` and the user needs initial screen mockups (landing pages,
+dashboards, signup flows), offer to generate via Stitch MCP tools before moving to Stage 3.
+Tell user: "Generating your screen with Stitch — this takes about 30 seconds."
+Use the workflow: `create_project` → `generate_screen_from_text` → `getHtml` → fetch the
+returned download URL to retrieve the actual HTML markup → save to the project directory.
+Stitch output bypasses the worker/verification pipeline — the user reviews it directly.
+Decision rule:
+- If `HOST_STITCH_TOOLS_AVAILABLE=true`, use the active host-exposed Stitch tools directly even if
+  `REPO_STITCH_STATUS` is not `ready`.
+- If `HOST_STITCH_TOOLS_AVAILABLE=false` and `REPO_STITCH_STATUS="ready"`, use the repo-managed
+  Stitch path.
+- If `HOST_STITCH_TOOLS_AVAILABLE=false` and `REPO_STITCH_STATUS!="ready"`, explain the exact
+  repo-managed reason in plain English:
+  - `missing_sdk` → local Stitch SDK is missing; tell the user to run `cd scripts/stitch-mcp && npm install`
+  - `missing_key` → Stitch API key is not connected; tell the user to run `prism: connect stitch`
+  - `keychain_locked` → macOS Keychain is locked
+  - `keychain_unavailable` → macOS Keychain is unavailable in this environment
+  Then fall back to building the screen as a regular `"visual"` task in Stage 3 (assign
+  `route_hint: "visual"` instead of `"screen"`).
+If Stitch MCP tools are attempted but unavailable or fail at runtime, log fallback and build the
+screen as a regular `"visual"` task in Stage 3.
+Log fallback: `bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" stitch_fallback '{"reason":"{reason}"}'`
+Full reference: [references/stitch-frontend.md](references/stitch-frontend.md)
 
 **Bridge (after design consultation):** Record design review artifact if produced.
 ```bash
@@ -726,6 +839,7 @@ Map requirements to worker tasks. For each, prepare a TaskPrompt:
 conversation, personality, vision, other workers' raw context, the spec itself.
 
 Assign `route_hint` per task based on content:
+- Tasks producing standalone UI screens or pages (landing pages, dashboards, signup flows) → `"screen"` (handled at Stage 2.5 via Stitch, not decomposed into workers)
 - Tasks involving components, layouts, styles, CSS, visual, UI, design, animation, responsive → `"visual"`
 - Everything else → `"any"`
 
@@ -774,6 +888,20 @@ bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" gemini_fallb
 
 Forward `provider` and `model` from the adapter result into the existing `worker_complete` telemetry event.
 
+#### Test runner detection rules
+
+These rules are used by both worker test generation (Stage 3) and runtime verification
+(Stage 4). Defined once here to avoid drift.
+
+| Signal | Runner | Command |
+|--------|--------|---------|
+| `package.json` has `scripts.test` | npm/node | `npm test` (or `npx vitest run` / `npx jest --ci` based on devDependencies) |
+| `pytest.ini` or `pyproject.toml` with `[tool.pytest]` | pytest | `pytest` |
+| `go.mod` present | go | `go test ./...` |
+| None of the above | — | Skip runtime verification, note "no test suite detected" |
+
+Default for new JS/TS projects with no framework: `vitest`.
+
 #### Worker dispatch (Claude — default)
 
 Each worker via Agent tool:
@@ -783,6 +911,11 @@ Each worker via Agent tool:
 > RESEARCH CONTEXT: {recommended packages, catalogue matches, approach constraints from .prism/research/{change}/decision.md}.
 > Prefer the recommended libraries/patterns unless they don't fit. If you discover
 > a better approach, note why.
+> TESTING: Write 1-3 unit tests per requirement you implement (no network calls, no
+> database, no external services — tests must complete in under 10 seconds total).
+> Check package.json/pyproject.toml for existing test framework before writing tests
+> (see test runner detection rules above). If no framework exists, use vitest for JS/TS.
+> List test files in your output file list.
 > Build this task. Write working code.
 > When done, list ALL files you created or modified (one per line, relative paths)."
 
@@ -818,6 +951,13 @@ Extract the file list from the worker's response. Store in registry:
 #### Guardian (on worker failure)
 
 NOT a retry — each dispatch is smarter. In the Operator context (full build awareness):
+
+**Log every Guardian intervention** (counts toward confidence scoring in Stage 4.7):
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" guardian_dispatch \
+  '{"change":"{change}","worker":"{id}","task":"{task}","attempt":{N}}'
+```
+
 1. Read worker's error output
 2. Diagnose: what went wrong?
 3. **Research before retrying:** Search docs, check packages, look for alternative patterns.
@@ -852,20 +992,85 @@ After all workers complete:
 - Missing requirements? → Log and flag
 - No drift → silent
 
-Update PRODUCT.md ("built" status) via subagent. Checkpoint. → Stage 4.
+Update PRODUCT.md ("built" status) via subagent. Checkpoint.
 
-**Bridge (after all workers + drift detection):** Record build verification and check
+#### Proof-Check Gate
+
+After drift detection completes and before advancing to Stage 4, the Operator reads
+the build output holistically and answers three questions. This is NOT a subagent — it
+is the Operator applying judgment to the combined worker output.
+
+1. **Logical coherence** — Do the pieces fit together? Does data flow make sense
+   end-to-end? Are imports, exports, and interfaces consistent across files?
+2. **User-facing sense check** — Would anything confuse the user, look broken, or
+   feel unfinished? "Would this embarrass me if I showed it to the client right now?"
+3. **Spec fidelity** — Does the implementation satisfy the *intent* of each
+   requirement, not just the letter? Would the person who wrote the spec say "yes,
+   that is what I meant"?
+
+If issues found: fix them inline and log telemetry:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" proof_check_fix \
+  '{"change":"{change}","issues_found":N,"issues_fixed":N,"categories":["{coherence|ux|fidelity}"]}'
+```
+
+If all three checks pass:
+```bash
+bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" proof_check_pass \
+  '{"change":"{change}"}'
+```
+
+This gate also applies to inline builds (1-2 requirement path). → Stage 4.
+
+**Bridge (after proof-check gate):** Record build verification and check
 execute→verify gate (single batch call).
 ```bash
 BATCH_RESULT=$(echo '[
-  {"command":"record-verification","args":["'"$PROJECT_ROOT"'","build-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift"]}},
+  {"command":"record-verification","args":["'"$PROJECT_ROOT"'","build-{change}"],"stdin":{"specId":"{change}","passed":true,"checksRun":["lint","compile","drift","proof-check"]}},
   {"command":"gate-check","args":["'"$PROJECT_ROOT"'","execute","verify"]}
 ]' | $BRIDGE batch 2>/dev/null) || true
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 ### Stage 4: Verify (Auto-invoked via gstack)
 
-Tell user: "Build looks complete — running QA to make sure everything works."
+Tell user (Entry Briefing): "Build looks complete — I'm running QA to check everything
+works as specified. This tests the actual behaviour against your requirements. I'll
+report back with what passed and anything that needs fixing."
+
+**Runtime verification (before QA dispatch):**
+
+This block runs every time Stage 4 is entered, including on regression return from
+QA fixes. This ensures QA always has fresh test results.
+
+1. Detect test runner using the test runner detection rules (see Stage 3).
+2. If test runner detected, install deps if needed and execute:
+   ```bash
+   # Install deps if missing (bounded at 60s)
+   if [ -f "$PROJECT_ROOT/package.json" ] && [ ! -d "$PROJECT_ROOT/node_modules" ]; then
+     echo "Installing test dependencies (up to 60s)..."
+     timeout 60 bash -c "cd '$PROJECT_ROOT' && npm install" 2>&1 | tail -5
+     INSTALL_EXIT=${PIPESTATUS[0]}
+     # If timeout (exit 124): skip runtime verification, note in QA context
+   fi
+   cd "$PROJECT_ROOT" && timeout 120 npm test 2>&1 > /tmp/prism-test-output.txt; TEST_EXIT=$?
+   head -200 /tmp/prism-test-output.txt
+   ```
+   Capture `TEST_EXIT` (not pipe status): exit code, stdout/stderr (truncated to 200 lines), pass/fail count.
+3. Pass results to QA review as additional context:
+   - Tests passed → "Existing test suite: X/Y passed"
+   - Tests failed → "Existing test suite: X/Y passed, Z FAILED: {failure output}"
+   - No tests → "No test suite detected"
+   - Timeout → "Test suite timed out after 120s"
+   - 0 tests found (runner exits 0 but ran nothing) → treat as "No tests detected" (not "all passed")
+   - Deps install timed out → "Dependency install timed out, skipping runtime verification"
+4. If ANY tests fail, QA review MUST address the failures. Failed tests are
+   treated as P1 input to the QA prompt (not auto-P1, but QA must evaluate).
+5. Telemetry:
+   ```bash
+   bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" test_execution \
+     '{"change":"{change}","runner":"{npm|pytest|go}","exit_code":{N},"tests_passed":{N},"tests_failed":{N},"timeout":false}'
+   ```
 
 **Catalogue failure pattern query (before QA):** Query catalogue for failure data on
 libraries/patterns used in this build. Inject known failure patterns into the QA prompt.
@@ -883,12 +1088,40 @@ Check skill availability: `[ -f "$HOME/.claude/skills/gstack/qa/SKILL.md" ]`
 If available: `Skill tool: skill="qa", args="Test at {URL}"`
 If missing: skip directly to native QA fallback.
 
-- **Skip:** User can say "skip QA".
+- **Skip:** QA cannot be skipped by default. If user explicitly says "skip QA" or
+  "I'll test myself," respond: "QA is what catches the bugs that look invisible in
+  code. I can run a quick version (2 min) or the full version. Which do you prefer?"
+  Options: **Quick QA** (acceptance criteria only) or **Full QA** (current).
+  Only if user insists a SECOND time after seeing the options: skip with a logged
+  `qa_skipped` telemetry event and confidence capped at `low`.
+  ```bash
+  bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" qa_skipped \
+    '{"change":"{change}","reason":"user_insisted"}'
+  ```
+  **Quick QA definition:** Run qa-review.md but ONLY test Functional Correctness
+  (happy path pass/fail per acceptance criterion). Skip Error States, Edge Cases,
+  Performance, and Accessibility sections. Output format is the same but those
+  sections are omitted. Quick QA still produces a PASS/HOLD verdict.
 - **Fallback:** If Skill tool errors OR skill is missing, run Prism-native QA review via
   Agent tool using the prompt from [references/reviews/qa-review.md](references/reviews/qa-review.md).
-  Pass known failure patterns as additional input.
+  Pass known failure patterns and runtime evidence as additional input.
 - **Passed:** UI product → Stage 4.5. Otherwise → Stage 4.6.
 - **Issues found:** "QA found issues — let me fix those." → Stage 3 for fixes.
+  Log regression:
+  ```bash
+  bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" qa_regression \
+    '{"change":"{change}","issues_count":{N},"p1_count":{N}}'
+  ```
+  After fixes complete, run FULL verification across all worker output files:
+  ```bash
+  # Collect ALL output files from ALL workers (not just the fixed ones)
+  ALL_FILES=$(bash "$SKILL_DIR/scripts/prism-registry.sh" log "$PROJECT_ROOT" "{change}" | \
+    jq -r '.[].output_files[]?' 2>/dev/null | sort -u | paste -sd, -)
+  bash "$SKILL_DIR/scripts/prism-verify.sh" "$PROJECT_ROOT" --files "$ALL_FILES" --lint --compile --tolerant
+  ```
+  If full verification finds NEW errors (not present before the fix): fix those too
+  before returning to Stage 4. Then **re-enter Stage 4 from the top** (runtime
+  verification runs again, QA gets fresh test results).
 
 Auto-save after fixes: `"QA fixes for {change}"`
 
@@ -926,7 +1159,9 @@ $BRIDGE gate-check "$PROJECT_ROOT" verify execute 2>/dev/null || true
 
 ### Stage 4.5: Design Review (UI products only)
 
-Tell user: "QA looks good — doing a quick visual check."
+Tell user (Entry Briefing): "QA looks good — I'm doing a quick visual check to catch
+anything that looks off on screen. This spots layout issues and visual bugs that
+automated tests miss."
 Check skill availability: `[ -f "$HOME/.claude/skills/gstack/design-review/SKILL.md" ]`
 If available: `Skill tool: skill="design-review"`
 If missing: skip silently.
@@ -944,7 +1179,9 @@ echo '{"verdict":"pass","summary":"Design review passed"}' | \
 
 ### Stage 4.6: Second Opinion (Codex)
 
-Tell user: "Reviews look good — getting an independent second opinion from a different AI."
+Tell user (Entry Briefing): "Reviews look good — I'm getting an independent second
+opinion from a different AI. This catches blind spots that a single reviewer might
+miss, since different models notice different things."
 
 Check: `which codex 2>/dev/null`
 
@@ -962,7 +1199,7 @@ If codex CLI found:
   unavailable — proceeding with single-model review." → Stage 4.7.
 
 If codex CLI NOT found:
-  Tell user: "I'd normally get a second AI opinion on this code, but Codex CLI isn't
+  Tell user (Entry Briefing): "I'd normally get a second AI opinion on this code, but Codex CLI isn't
   installed. You can install it with `npm install -g @openai/codex` for future builds.
   Proceeding to ship."
   → Stage 4.7 (Red Team Pre-Ship).
@@ -1005,14 +1242,43 @@ Pass:
 **Same rules as Stage 2e:** at least 1 concern required, re-dispatch once on zero,
 timeout → skip.
 
-**Confidence update:** Merge Stage 2f confidence with Stage 4.7 Red Team results.
-The final confidence level is the LOWER of the two checkpoints. If Stage 4.7 Red Team
-skipped: inherit Stage 2f confidence but note the skip in `checksSkipped`.
+**Confidence update:** Merge Stage 2f confidence with build-time signals and Stage 4.7
+Red Team results. The final confidence incorporates:
+
+1. **Pre-build confidence** (Stage 2f): taxonomy + Red Team assessment
+2. **Build-time signals:**
+   - Guardian recovery count: 0 = neutral, 1 = -1 tier, 2+ = -2 tiers
+   - QA fix cycles: 0 = neutral, 1 = -1 tier, 2+ = -2 tiers
+   - Test suite results: all pass = neutral, any fail = -1 tier, no tests = neutral
+3. **Post-build Red Team** (Stage 4.7): concern severity
+
+Tier scale: high > medium > low > unknown
+Each negative signal drops confidence one tier. Floor is `low` (not `unknown` —
+unknown means "couldn't assess," low means "assessed and concerning").
+
+Example: Pre-build `high` + 1 Guardian recovery + 1 QA fix cycle = `high` - 1 - 1 = `low`.
+
+Count build-time signals from telemetry (scoped to current change):
+```bash
+GUARDIAN_COUNT=$(grep '"guardian_dispatch"' "$PROJECT_ROOT/.prism/telemetry.jsonl" 2>/dev/null | grep -c '"change":"{change}"' || true)
+QA_CYCLES=$(grep '"qa_regression"' "$PROJECT_ROOT/.prism/telemetry.jsonl" 2>/dev/null | grep -c '"change":"{change}"' || true)
+```
+Note: `grep -c` exits 1 on zero matches but still prints `0`. Use `|| true`
+(not `|| echo 0`) to avoid appending a duplicate zero.
+
+If Stage 4.7 Red Team skipped: inherit pre-build confidence (adjusted by build signals)
+but note the skip in `checksSkipped`.
+
+Display to user:
+- high: "Confidence: high. Build went clean — no Guardian recoveries, QA passed first time."
+- medium: "Confidence: medium. Build needed some fixes but resolved cleanly."
+- low: "Confidence: low. Build had significant issues — {N} Guardian recoveries and {N} QA cycles. Review carefully before shipping."
 
 **Update confidence in checkpoint for Stage 5:**
 ```bash
-echo '{"stage":4,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"pre-ship validation","confidence":{"level":"{final_level}","concerns":[...],"checksRun":[...],"checksSkipped":[...]}}' | \
+echo '{"stage":4,"stage_route":"{A|B|C}","stage_total":{5|6|7},"progress":"pre-ship validation","confidence":{"level":"{final_level}","pre_build":"{stage2f_level}","guardian_recoveries":{GUARDIAN_COUNT},"qa_fix_cycles":{QA_CYCLES},"test_failures":{N},"post_build_red_team":"{level}","signals_applied":[...],"concerns":[...],"checksRun":[...],"checksSkipped":[...]}}' | \
   bash "$SKILL_DIR/scripts/prism-checkpoint.sh" "$PROJECT_ROOT" "{change}"
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" --no-open "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 **Telemetry:**
@@ -1038,7 +1304,9 @@ Parse `BATCH_RESULT` to extract `RELEASE_STATE` and `REVIEW_STATE` from the resu
 Log the result but don't block shipping. If `RELEASE_STATE` contains `"decision":"hold"`,
 note the missing evidence in the build log for post-mortem.
 
-Tell user: "Everything looks good — committing and creating a pull request."
+Tell user (Entry Briefing): "Everything looks good — I'm committing the code and
+creating a pull request. This packages everything up so you can review it and merge
+when you're ready."
 
 **5b. Ship (bridge command):**
 ```bash
@@ -1080,6 +1348,7 @@ echo '{
   "reviewVerdicts":{review_verdicts_json},
   "confidence":{"level":"{final_level}","method":"{method}","concerns":[{concerns}],"escalated":{bool},"escalationCount":{N},"checksRun":[{checks}],"checksSkipped":[{skipped}]}
 }' | $BRIDGE record-ship "$PROJECT_ROOT" "{change}" 2>/dev/null || true
+bash "$SKILL_DIR/scripts/prism-pipeline.sh" "$PROJECT_ROOT" 2>/dev/null || true
 ```
 
 **5e. Ship receipt + cleanup:**
@@ -1094,6 +1363,7 @@ Branch: {branch} → main
 Commit: {commit_sha}
 Tag: {tag_name}
 Deploy: {deploy_url or "auto on merge" or "not configured"}
+Pipeline: {.prism/dogfood/PIPELINE.html if file exists, omit this line if not}
 What's next: {next_phase from roadmap}
 ```
 
@@ -1105,7 +1375,8 @@ If `gh` is available, also offer: "Want me to enable auto-merge on the PR?"
 - If yes → run `gh pr merge --auto --delete-branch {pr_url}` in the project root.
 - If no → skip.
 
-Tell user: "All done! When you're ready, the next piece is **{next phase}**."
+Tell user (Exit Summary): "All done! Here's what was built, any surprises along the
+way, and what's next. When you're ready, the next piece is **{next phase}**."
 
 On failure at any step: "Something went wrong with shipping. Want me to help sort it out?"
 
@@ -1166,7 +1437,8 @@ Spec stays as-is unless explicitly asked to change.
    LLM subagents only for judgment (spec generation, code writing, diagnosis).
 3. **Spec is source of truth.** Every build decision references the spec's Requirements.
 4. **Questions, not blockers.** Drift and errors surfaced as questions.
-5. **Verify before advancing.** After any subagent writes files, verify they exist.
+5. **Verify before advancing.** After any subagent writes files, verify they exist
+   and review them for logical coherence (see Proof-Check Gate in Stage 3).
    Never trust a subagent's return value alone.
 6. **Guardian ≠ retry.** Build worker failures get diagnosis + rewritten prompts (max 3).
    Non-build subagent failures get one retry, then inline fallback.
@@ -1176,3 +1448,6 @@ Spec stays as-is unless explicitly asked to change.
 9. **Spec lives in the change directory** until archived: `openspec/changes/{name}/specs/`
 10. **Progressive disclosure.** Show plain-English checklist, not raw spec format.
     Raw spec hidden unless: ambiguity detected, user asks, or user says "change the spec."
+11. **Never deliver unreviewed output.** Before presenting any result to the user,
+    re-read the key artifacts produced and confirm they are coherent, complete, and
+    match what was asked for. If something is off, fix it before the user sees it.

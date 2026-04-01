@@ -2,6 +2,149 @@
 
 All notable changes to Prism are documented here.
 
+## [Unreleased]
+
+### Changed
+- **Stitch capability truth** — Prism now distinguishes between host-managed Stitch tools already exposed by the active runtime and the repo-managed Stitch proxy in `scripts/stitch-mcp/`.
+
+### Fixed
+- **Stitch troubleshooting clarity** — Prism now explains the specific repo-managed Stitch failure mode, including the missing-SDK symptom (`cd scripts/stitch-mcp && npm install`), instead of collapsing all Stitch issues into a generic "not integrated" response.
+
+## [4.0.20.3] - 2026-04-01
+
+### Added
+- **Frontend tool awareness** — Prism's Operator now knows it can generate standalone UI screens via Stitch. Stage 2.5 offers Stitch screen generation when the key is connected, with graceful fallback to visual worker tasks when Stitch is unavailable.
+- New `"screen"` value in `RouteHint` type for standalone UI screen tasks (landing pages, dashboards, signup flows). Screen tasks are handled at Stage 2.5 via Stitch, not decomposed into Stage 3 workers.
+- Build worker rule 10: workers are told they won't receive standalone screen tasks, and should write integrable code for visual tasks they do receive.
+- `stitch_fallback` telemetry event for observability when Stitch MCP tools are unavailable.
+- Updated `route_hint` documentation in `docs/architecture/script-contracts.md` with `"screen"` and `"backend"` values.
+
+## [4.0.20.2] - 2026-04-01
+
+### Added
+- **Google Stitch SDK integration** — Prism can now generate standalone UI screens (landing pages, dashboards, signup flows) via Google Stitch as an MCP proxy. Complements the existing Gemini worker: Stitch for complete screen generation, Gemini for code integrating into existing projects.
+- New provider `stitch` in key management vault with `prism: connect stitch` support.
+- MCP proxy (`scripts/stitch-mcp/prism-stitch-proxy.mjs`) with three-phase startup guard: SDK import, Keychain read, proxy construction. Each failure exits with a human-readable message.
+- Reference doc (`references/stitch-frontend.md`) with decision criteria, latency expectations (20-40s), verification bypass note, and setup checklist.
+- Smoke test script (`scripts/test-stitch-proxy.sh`) validating syntax, missing SDK detection, and missing Keychain entry handling.
+- `"stitch"` added to `ServiceProvider` type union in `packages/core/src/common.ts`.
+- Two future TODOs: Stitch pipeline integration (P2) and Stitch orchestrator routing (P3).
+
+## [4.0.20.1] - 2026-03-31
+
+### Added
+- **Consultant Communication Protocol** — Prism now explains what it is doing, why, and what to expect at every stage transition. Three mandatory patterns: Stage Entry Briefing, Decision Surfacing, and Stage Exit Summary.
+- **Proof-Check Gate** — after all workers complete and before QA, the Operator holistically reviews build output for logical coherence, user-facing sense, and spec fidelity. Issues are fixed inline before advancing.
+- **Rule 11: Never deliver unreviewed output** — Prism re-reads key artifacts and confirms coherence before presenting any result to the user.
+- `proof_check_pass` and `proof_check_fix` telemetry events for tracking gate effectiveness.
+
+### Changed
+- All 9 "Tell user:" lines upgraded from thin summaries to structured Entry Briefings with context on what is happening, why, and what to expect.
+- Rule 5 amended to reference the Proof-Check Gate for logical coherence verification.
+- Bridge batch call now runs after the Proof-Check Gate (not before), so verification records reflect the post-check state.
+
+## [4.0.20.0] - 2026-03-31
+
+### Added
+- **Project Visualizer** — self-contained PROJECT.html showing features (kanban board), task progress (wave-grouped with status icons), architecture/state/roadmap memory sections, ship status timeline, and current phase from checkpoint data.
+- **`project-snapshot.ts`** — extracts structured project state from `.prism/` directory: product identity from `product.md`, feature map from specs (type=product only), task graphs (root + plan-level fallback + supervisor format), memory markdown files, ship receipts with ReleaseState resolution, and checkpoint phase/blockers.
+- **`visualizer-common.ts`** — shared infrastructure for both PIPELINE.html and PROJECT.html: `escapeHtml`, `safeJsonEmbed` (path-stripping), `renderNavBar` (cross-links between views), `renderMarkdown` (headings, lists, code fences, bold/italic), `relativeTimeScript`, and `COMMON_CSS` design tokens.
+- **`scripts/prism-project.sh`** — shell wrapper that generates and opens PROJECT.html.
+- **Nav bar** linking PIPELINE.html and PROJECT.html in both visualizers.
+- **64 new tests** across 4 test files covering snapshot extraction, HTML generation, shared utilities, and security (XSS prevention, javascript: URL sanitization).
+
+### Changed
+- `pipeline-visualizer.ts` refactored to use shared `visualizer-common.ts` utilities, removing ~170 lines of duplicated code.
+- `pipeline-snapshot.ts` now imports `pathExists` from `@prism/memory` instead of local implementation.
+
+## [4.0.19.0] - 2026-03-31
+
+### Added
+- **API Key Vault — Auto-Inject** — connect API keys once to macOS Keychain, every project gets them automatically at session start. Zero copy-paste after initial setup.
+- **`scripts/prism-inject.sh`** — auto-injects connected Keychain keys into `.env.local` with conflict detection (project-local values always win), corrupt block detection, idempotency checks, and atomic writes.
+- **`scripts/prism-helpers.sh`** — shared functions extracted from across Prism scripts: provider list, env var mapping, portable timeout, and Keychain probe with 1-hour cache.
+- **`scripts/prism-providers.txt`** — single source of truth for supported providers (anthropic, openai, google, vercel, stripe).
+- **33 new tests** covering inject happy path, error handling, conflict semantics, corrupt block detection, idempotency, keychain lock, platform guard, timeout behavior, and provider mapping.
+
+### Changed
+- `scripts/prism-deploy.sh` now sources `prism-helpers.sh` instead of duplicating timeout and env var mapping functions.
+- SKILL.md wires auto-inject at Stage 0 (session start) and surfaces warnings only when needed.
+- `references/key-management.md` simplified to point at `prism-inject.sh` as the reference implementation.
+
+### Fixed
+- Eval injection vector in Keychain cache probe — values are now validated via case statement before eval.
+- Conflict detection now catches `export VAR=` syntax in addition to bare `VAR=`.
+- Temp files containing secrets are created with `umask 077` (owner-only permissions).
+
+### Removed
+- Dead code in test suite: unused variable assignments, intermediate files, and unnecessary sleep.
+
+## [4.0.18.0] - 2026-03-31
+
+### Added
+- **Autoresearch Layer (Level 1: Prompt Evolution)** — experiment system that A/B tests prompt variants against Prism's self-healing report card. Session ID parity assigns baseline vs test, metrics accumulate over 10 sessions, and a >10% improvement threshold decides promotion or discard. Variants are deterministic templates, no LLM calls.
+- **Experiment types** (`packages/core/src/experiments.ts`) — foundation types for experiment lifecycle: levels, status, variants, metrics, decisions.
+- **Experiment paths** (`packages/memory/src/paths.ts`) — registry, active-variant, and per-level experiment file paths.
+- **Self-healing Step 7** — evaluates active experiments with each session's report card, proposes new experiments from degrading journal patterns, and writes the active variant file for the next session. Incomplete sessions are filtered out to prevent polluted samples.
+- **35 tests** covering registry CRUD, variant assignment (SHA-256 parity), metric recording with dedup, decision engine (test wins, baseline wins, inconclusive, insufficient data), promote/discard lifecycle, atomic variant file writes, and full evaluate integration.
+
+### Changed
+- Corrupt registry files are renamed with timestamp suffix for forensic debugging instead of being silently overwritten.
+- Experiment IDs include a random UUID suffix to prevent collisions on same-day same-dimension experiments.
+- Path segments are validated against a safe character pattern to prevent path traversal.
+
+## [4.0.17.1] - 2026-03-31
+
+### Added
+- **Pipeline Visualizer Awareness** — SKILL.md now references the pipeline visualizer with calling patterns at every stage transition. Prism automatically regenerates `PIPELINE.html` after scan and each checkpoint, and opens it at Stage 0 (initial view) and Stage 5 (ship receipt).
+- **`--no-open` flag** for `prism-pipeline.sh` — regenerate-only mode that skips browser open, used at mid-stage transitions to avoid stealing focus.
+
+### Changed
+- Ship receipt conditionally includes `Pipeline:` line only when `PIPELINE.html` exists on disk.
+
+## [4.0.17.0] - 2026-03-31
+
+### Added
+- **Reliable auto-update** — replaces broken prompt-based update with a real `SessionStart` hook (`hooks/prism-check-update.js`) that runs `git fetch` in a detached background process. Writes cache to `~/.claude/cache/prism-update-check.json` with 1-hour TTL. Check-and-notify only — never auto-pulls.
+- **Update prompt in SKILL.md** — reads cache on `/prism` invocation, shows "Update available: v{old} → v{new}" banner with Yes/No prompt. Cache cleared after successful pull to prevent repeat prompts.
+- **Hook auto-registration** — first `/prism` run detects missing hook and runs `scripts/prism-install-hook.sh` to register in `~/.claude/settings.json`. One-time bootstrap, then permanent.
+- **Install hook script** (`scripts/prism-install-hook.sh`) — idempotent JSON injection into settings.json using python3. Handles missing keys gracefully.
+- **Update hook tests** (`hooks/test-update-hook.sh`) — 15 automated tests covering all 6 git states (NOT_FOUND, NOT_GIT, DIRTY, FETCH_FAILED, UP_TO_DATE, UPDATE_AVAILABLE), TTL guard, and install script idempotency.
+
+### Fixed
+- Auto-update actually works now. Previously the prompt-based Agent approach was unreliable and the installed skill could fall behind indefinitely.
+
+## [4.0.16.0] - 2026-03-31
+
+### Added
+- **Pipeline Visualizer** — static HTML generator (`PIPELINE.html`) that renders Prism's 7-stage workflow pipeline as a visual, interactive diagram. Composes resume-engine, gate-evaluator, prescription-manager, and learning journal into a single `PipelineSnapshot` JSON contract (future Electron IPC interface).
+- **PipelineSnapshot JSON contract** — `extractPipelineSnapshot()` produces structured state: stages with status/gates/artifacts, recommendations from prescriptions and checkpoints, weaknesses from learning journal, health score and trend.
+- **Pipeline HTML features** — dark/light theme toggle with localStorage persistence, artifact lineage graph, gate requirement tooltips, print stylesheet for demo screenshots, XSS-safe JSON embedding with absolute path stripping.
+- **CLI `pipeline` command** — `execPipeline`/`cmdPipeline` following existing exec*/cmd* pattern, writes `PIPELINE.html` to `.prism/dogfood/`.
+- **Shell wrapper** — `scripts/prism-pipeline.sh` runs CLI and opens HTML in browser.
+- **Sparkline export** — `sparkline()` from health-dashboard.ts now exported for reuse in pipeline visualizer sparklines (P2 follow-up).
+- **Sparklines TODO** — added "Pipeline Visualizer: Session History Sparklines (P2)" to TODOS.md.
+
+## [4.0.15.0] - 2026-03-31
+
+### Added
+- **Runtime Verification in QA** — test suite execution before QA dispatch (Stage 4), with results passed as runtime evidence to the QA review prompt. Supports npm/vitest/jest, pytest, and go test with 120s timeout. Includes npm install with 60s timeout for missing dependencies.
+- **Worker Test Generation** — workers now write 1-3 unit tests per requirement (no network calls, no database, <10s total). Test runner detection rules consolidated into single reference block to prevent drift.
+- **Guardian Dispatch Telemetry** — new `guardian_dispatch` event logged at every Guardian intervention, scoped by change name. Used for honest confidence scoring.
+- **QA Regression Telemetry** — new `qa_regression` event logged when QA finds issues and regresses to Stage 3. Used for honest confidence scoring.
+- **Full Re-Verification After QA Fixes** — after QA-driven fixes, `prism-verify.sh` runs on ALL worker output files (not just the fix) with `--tolerant` flag to skip deleted files gracefully. Stage 4 re-enters from the top on regression return.
+- **Quick QA Mode** — acceptance-criteria-only QA (functional correctness only, skip edge cases/error states/perf/a11y) offered as alternative when user attempts to skip QA.
+- **Stale File Guard** — `prism-verify.sh --tolerant` flag skips missing files with warning instead of failing. Used in post-QA re-verification. Default behavior unchanged (missing files still fail).
+
+### Changed
+- **Honest Confidence Scoring** — confidence now incorporates build-time signals (Guardian recovery count, QA fix cycles, test suite results) alongside pre-build assessment and post-build Red Team. Tier scale: high > medium > low (floor). Signals scoped to current change via telemetry grep.
+- **QA Skip Friction** — QA can no longer be skipped with zero friction. First attempt gets a choice between Quick QA and Full QA. Only on second insistence: skip with `qa_skipped` telemetry and confidence capped at `low`.
+- **Runtime Evidence in QA** — qa-review.md accepts optional runtime evidence input. New-build test failures are P1 input; pre-existing failures are noted but not blocking.
+
+### Fixed
+- **Confidence grep double-zero bug** — replaced `grep -c ... || echo 0` (which appended duplicate zero on zero-match exit) with `|| true` pattern
+- **Confidence scoping** — grep now filters telemetry by change name, preventing past builds from bleeding into current confidence
+
 ## [4.0.14.0] - 2026-03-31
 
 ### Added

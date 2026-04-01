@@ -34,6 +34,7 @@ Prism Core exists as five cooperating layers, implemented across `packages/`:
 - Ship command (squash, push, PR creation, tagging)
 - Deploy detection and triggering
 - Self-healing engine (report cards, learning journal, prescriptions, health dashboard, dogfood generator) — see `docs/designs/trust-first-self-healing.md`
+- Autoresearch experiment system (Level 1: A/B prompt variant experiments, session-parity assignment, metric recording, promote/discard lifecycle) stored under `.prism/experiments/`
 
 ### 4. Execution Layer (`packages/execution`)
 - Intent policy
@@ -136,7 +137,7 @@ These principles are non-negotiable commitments that govern how Prism is built.
 
 2. **Minimize LLM dependence.** Use deterministic scripts and structured data wherever they produce correct results. LLM calls are reserved for tasks that require generation, reasoning, or judgment. This reduces cost, latency, and hallucination surface.
 
-3. **Route by capability.** Model selection should be per-task, not global. Simple tasks get simple models. Complex reasoning gets capable models. The orchestration layer should decide, not the user and not a default. (Partially implemented — `route_hint` field on task nodes routes visual/UI tasks to Gemini via `prism-gemini-worker.sh`, with automatic Claude fallback. General per-task model routing remains future work.)
+3. **Route by capability.** Model selection should be per-task, not global. Simple tasks get simple models. Complex reasoning gets capable models. The orchestration layer should decide, not the user and not a default. (Partially implemented — `route_hint` field on task nodes routes visual/UI tasks to Gemini via `prism-gemini-worker.sh`, standalone screen tasks to Stitch at Stage 2.5, with automatic Claude fallback. General per-task model routing remains future work.)
 
 4. **Build AI-native.** Prism is expert at structuring work for AI tools — prompt decomposition, output verification, context management, failure recovery. This expertise is embedded in the orchestration and guardian layers, not left to individual prompts.
 
