@@ -315,6 +315,30 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Pipeline visualizer shipped (pipeline-snapshot.ts + pipeline-visualizer.ts).
 
+## Stitch Pipeline Integration (P2)
+
+**What:** Feed Stitch-generated HTML into Prism's worker/verification pipeline so Stitch output gets the same quality gates as Gemini worker output.
+
+**Why:** Currently Stitch output bypasses Prism's Guardian, QA review, and engineering review stages. For agency operators delivering to clients, unverified output is a risk. Integrating Stitch into the pipeline means Stitch screens get the same confidence scoring, QA, and design review as any other build artifact.
+
+**When:** After evidence that Stitch is actively used in real builds.
+
+**How:** After Stitch generates HTML via `getHtml`, pass it through the existing verification pipeline as a build artifact. Requires adapting the worker output format to accept Stitch HTML alongside Gemini code output.
+
+**Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + evidence Stitch is used in real sessions.
+
+## Stitch Orchestrator Routing (P3)
+
+**What:** Automatic routing of frontend tasks to Stitch or Gemini worker based on task characteristics, without user intervention.
+
+**Why:** Currently the user or Prism operator must decide whether to use Stitch or Gemini for a frontend task. Automatic routing based on task type (standalone screen vs integrated code) would reduce friction and improve output quality by always picking the right tool.
+
+**When:** After Stitch SDK integration is shipped and the Tool Routing TODO is implemented.
+
+**How:** Extend the tool routing check in Stage 1 to classify frontend phases as "standalone screen" (→ Stitch) or "integrated code" (→ Gemini worker). Use heuristics: presence of existing project files, whether the output is a full page vs a component, user intent signals.
+
+**Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + Tool Routing TODO.
+
 ## Proof-Check Gate Accuracy Tracking (P2)
 
 **What:** After 10+ sessions with proof_check_pass/fix telemetry, analyse the fix rate and false positive rate to determine if the gate is effective.
