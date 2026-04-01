@@ -1,4 +1,9 @@
 import { build } from "esbuild";
+import { cpSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Main process — ESM (workspace packages use import.meta)
 await build({
@@ -27,3 +32,10 @@ await build({
   external: ["electron"],
   sourcemap: true,
 });
+
+// Copy migrations so workspace-database.ts can find them at runtime
+cpSync(
+  resolve(__dirname, "../../packages/workspace/src/migrations"),
+  resolve(__dirname, "dist/main/migrations"),
+  { recursive: true },
+);
