@@ -2,6 +2,15 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.20.3] - 2026-04-01
+
+### Added
+- **Frontend tool awareness** — Prism's Operator now knows it can generate standalone UI screens via Stitch. Stage 2.5 offers Stitch screen generation when the key is connected, with graceful fallback to visual worker tasks when Stitch is unavailable.
+- New `"screen"` value in `RouteHint` type for standalone UI screen tasks (landing pages, dashboards, signup flows). Screen tasks are handled at Stage 2.5 via Stitch, not decomposed into Stage 3 workers.
+- Build worker rule 10: workers are told they won't receive standalone screen tasks, and should write integrable code for visual tasks they do receive.
+- `stitch_fallback` telemetry event for observability when Stitch MCP tools are unavailable.
+- Updated `route_hint` documentation in `docs/architecture/script-contracts.md` with `"screen"` and `"backend"` values.
+
 ## [4.0.20.2] - 2026-04-01
 
 ### Added
