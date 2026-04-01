@@ -35,7 +35,10 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - A **continuous intelligence layer** with skill catalogue, research, and learning
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, and an **autoresearch experiment system** (Level 1: prompt evolution — A/B testing of prompt variants scored across the 4 self-healing dimensions)
-- A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
+- A **pipeline visualizer** generating interactive HTML dashboards of the 7-stage workflow and project state (PIPELINE.html + PROJECT.html)
+- An **API key vault** for macOS Keychain-based provider key management with auto-inject to `.env.local`
+- **Consultant-grade communication** with decision surfacing, stage briefings, and proof-check gates
+- **Google Stitch integration** for standalone UI screen generation (landing pages, dashboards) via MCP proxy
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
@@ -80,7 +83,7 @@ Prism turns that into real, working software by guiding it through a structured 
 | **5. Ship** | Finalises everything and prepares it to go live |
 
 If you are building something visual like a website, it also:
-- Designs it first
+- Designs it first (with optional Stitch screen generation for standalone pages)
 - Reviews the design before shipping
 
 ---
@@ -183,7 +186,7 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.17.0
+├── VERSION               # 4.0.20.3
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config
@@ -194,13 +197,17 @@ prism/
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
-├── scripts/              # Deterministic bookkeeping (16 scripts)
+├── scripts/              # Deterministic bookkeeping (23 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
 │   ├── prism-verify.sh   # Syntax/lint/compile verification
 │   ├── prism-checkpoint.sh # Session context persistence
 │   ├── prism-deploy.sh   # Vercel deploy detection and triggering
+│   ├── prism-inject.sh   # API key auto-inject from macOS Keychain
+│   ├── prism-helpers.sh  # Shared utilities (Keychain read, key check)
+│   ├── prism-pipeline.sh # Pipeline visualizer HTML generation
+│   ├── prism-project.sh  # Project visualizer HTML generation
 │   ├── prism-research.sh # Solution research before building
 │   ├── prism-catalogue.sh # Skill catalogue CRUD
 │   └── ...               # eval, improve, supervisor, telemetry, state, gemini-worker
@@ -208,7 +215,7 @@ prism/
 ├── hooks/                # Claude Code hook integrations
 ├── evals/                # Evaluation harnesses
 ├── openspec/             # OpenSpec integration
-├── references/           # Personality, spec format, skill catalog, product context
+├── references/           # Personality, spec format, skill catalog, product context, Stitch frontend
 ├── templates/            # Spec templates
 ├── planning/             # Planning artifacts
 ├── test/                 # Test infrastructure
