@@ -20,6 +20,8 @@ silent — the user sees outcomes, not process.
 3. Stage 3 (Build): Workers receive research context; Guardian learns from failures
 4. Stage 4 (Verify): QA targets known failure patterns from catalogue
 
+**Stitch frontend generation:** `references/stitch-frontend.md` — Google Stitch SDK for standalone UI screen generation (HTML + screenshots from text prompts). Complements the Gemini worker: Stitch for standalone screens, Gemini for code integrating into existing projects.
+
 **Complexity tiers:**
 - Quick (1-2 reqs): Catalogue query only
 - Standard (3-4 reqs): Package search + catalogue (30s budget)

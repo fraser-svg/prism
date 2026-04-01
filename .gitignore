@@ -11,6 +11,9 @@ coverage/
 # Environment
 .env*
 
+# Stitch MCP proxy
+scripts/stitch-mcp/node_modules/
+
 # System
 .DS_Store
 .gstack/

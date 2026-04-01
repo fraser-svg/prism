@@ -2,6 +2,17 @@
 
 All notable changes to Prism are documented here.
 
+## [4.0.20.2] - 2026-04-01
+
+### Added
+- **Google Stitch SDK integration** — Prism can now generate standalone UI screens (landing pages, dashboards, signup flows) via Google Stitch as an MCP proxy. Complements the existing Gemini worker: Stitch for complete screen generation, Gemini for code integrating into existing projects.
+- New provider `stitch` in key management vault with `prism: connect stitch` support.
+- MCP proxy (`scripts/stitch-mcp/prism-stitch-proxy.mjs`) with three-phase startup guard: SDK import, Keychain read, proxy construction. Each failure exits with a human-readable message.
+- Reference doc (`references/stitch-frontend.md`) with decision criteria, latency expectations (20-40s), verification bypass note, and setup checklist.
+- Smoke test script (`scripts/test-stitch-proxy.sh`) validating syntax, missing SDK detection, and missing Keychain entry handling.
+- `"stitch"` added to `ServiceProvider` type union in `packages/core/src/common.ts`.
+- Two future TODOs: Stitch pipeline integration (P2) and Stitch orchestrator routing (P3).
+
 ## [4.0.20.1] - 2026-03-31
 
 ### Added
