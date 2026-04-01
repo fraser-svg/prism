@@ -16,8 +16,8 @@ await build({
   external: ["electron", "better-sqlite3"],
   sourcemap: true,
   banner: {
-    // Fix __dirname for ESM (needed by Electron for preload path)
-    js: 'import { createRequire } from "module"; import { fileURLToPath } from "url"; import { dirname } from "path"; const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename); const require = createRequire(import.meta.url);',
+    // Fix __dirname/__filename for ESM — avoid named imports to prevent conflicts with bundled code
+    js: 'import { createRequire as _cr } from "module"; const require = _cr(import.meta.url); const __filename = new URL(import.meta.url).pathname; const __dirname = __filename.slice(0, __filename.lastIndexOf("/"));',
   },
 });
 
