@@ -9,7 +9,6 @@ All notable changes to Prism are documented here.
 
 ### Fixed
 - **Stitch troubleshooting clarity** — Prism now explains the specific repo-managed Stitch failure mode, including the missing-SDK symptom (`cd scripts/stitch-mcp && npm install`), instead of collapsing all Stitch issues into a generic "not integrated" response.
-
 ## [4.0.20.3] - 2026-04-01
 
 ### Added

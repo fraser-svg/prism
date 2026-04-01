@@ -22,7 +22,6 @@ Prism can reach Stitch in two ways:
 If host-managed Stitch is available, Prism may use it even when the repo-managed proxy is not ready.
 If host-managed Stitch is not available, Prism should check `bash scripts/prism-stitch-status.sh`
 to explain the exact repo-managed failure mode before falling back.
-
 ## When to Use Stitch vs Gemini Worker
 
 | Use Case | Tool | Why |
