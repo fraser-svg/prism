@@ -242,7 +242,7 @@ These commands use the `prism:` prefix to avoid false positives.
 | `prism: status` | Show which providers are connected |
 | `prism: inject` | Write connected keys to .env.local |
 
-Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`.
+Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`, `stitch`.
 
 **Security rules:**
 - Agent NEVER executes commands containing secrets. Prints the template, user runs it.
@@ -750,6 +750,18 @@ If missing: skip silently (no Skill tool invocation).
 - **Graceful degradation:** If skill not installed or errors, skip silently.
 - After completion → Stage 3.
 
+**Stitch screen generation (optional):**
+If `$PRISM_KEY_stitch` is `connected` and the user needs initial screen mockups (landing pages,
+dashboards, signup flows), offer to generate via Stitch MCP tools before moving to Stage 3.
+Tell user: "Generating your screen with Stitch — this takes about 30 seconds."
+Use the workflow: `create_project` → `generate_screen_from_text` → `getHtml` → fetch the
+returned download URL to retrieve the actual HTML markup → save to the project directory.
+Stitch output bypasses the worker/verification pipeline — the user reviews it directly.
+If Stitch MCP tools are unavailable or fail, fall back to building the screen as a regular
+`"visual"` task in Stage 3 (assign `route_hint: "visual"` instead of `"screen"`).
+Log fallback: `bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" stitch_fallback '{"reason":"{reason}"}'`
+Full reference: [references/stitch-frontend.md](references/stitch-frontend.md)
+
 **Bridge (after design consultation):** Record design review artifact if produced.
 ```bash
 echo '{"verdict":"pass","summary":"Design consultation completed"}' | \
@@ -785,6 +797,7 @@ Map requirements to worker tasks. For each, prepare a TaskPrompt:
 conversation, personality, vision, other workers' raw context, the spec itself.
 
 Assign `route_hint` per task based on content:
+- Tasks producing standalone UI screens or pages (landing pages, dashboards, signup flows) → `"screen"` (handled at Stage 2.5 via Stitch, not decomposed into workers)
 - Tasks involving components, layouts, styles, CSS, visual, UI, design, animation, responsive → `"visual"`
 - Everything else → `"any"`
 

@@ -90,6 +90,7 @@ Output the file manifest — a newline-separated list of all files created or mo
 7. Do not modify files outside the task scope, even if they look broken.
 8. Empty output or unclear output is treated as failure by the Operator. Always return a manifest.
 9. If a dependency's contract is missing from shared_context, halt and return ERROR — do not guess the interface.
+10. Standalone UI screen tasks (landing pages, dashboards, signup flows) are handled by the Operator via Stitch at Stage 2.5 — you will not receive them. When you do receive visual tasks, write code that integrates into the existing project (components, styles, routes).
 
 ## Examples
 
