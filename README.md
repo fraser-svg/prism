@@ -36,6 +36,7 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, and an **autoresearch experiment system** (Level 1: prompt evolution — A/B testing of prompt variants scored across the 4 self-healing dimensions)
 - A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
+- **Google Stitch SDK** for standalone UI screen generation (landing pages, dashboards, signup flows) via MCP proxy, complementing the Gemini worker for integrated code
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
@@ -183,7 +184,7 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.17.0
+├── VERSION               # 4.0.20.2
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config
@@ -194,7 +195,7 @@ prism/
 │   ├── guardian/         # Review matrix, release-state derivation
 │   ├── execution/        # Intent policy, execution adapters
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
-├── scripts/              # Deterministic bookkeeping (16 scripts)
+├── scripts/              # Deterministic bookkeeping (20 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
 │   ├── prism-save.sh     # Auto-save (commit + push at milestones)
 │   ├── prism-scan.sh     # Project scan (Stage 0 resume detection)
@@ -208,7 +209,7 @@ prism/
 ├── hooks/                # Claude Code hook integrations
 ├── evals/                # Evaluation harnesses
 ├── openspec/             # OpenSpec integration
-├── references/           # Personality, spec format, skill catalog, product context
+├── references/           # Personality, spec format, skill catalog, product context, key management, Stitch frontend
 ├── templates/            # Spec templates
 ├── planning/             # Planning artifacts
 ├── test/                 # Test infrastructure
