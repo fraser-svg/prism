@@ -8,7 +8,7 @@
 
 PRISMATIC v{version}
 For agency operators who need to turn client briefs into shipped software without engineers.
-Prismatic finds the real problem, shapes the right solution, then specs, builds, and verifies it.
+Prismatic finds the real problem, shapes the right solution, then specs, builds, verifies, ships and deploys it.
 To begin: describe your need...
 
 ---
