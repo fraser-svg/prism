@@ -23,7 +23,7 @@ function mockExecFileResult(stdout: string, code: number | null = 0) {
     } else {
       cb(null, stdout);
     }
-    return { unref: vi.fn() } as any;
+    return {} as any;
   });
 }
 
@@ -31,7 +31,7 @@ function mockExecFileError(message: string) {
   mockedExecFile.mockImplementation((_cmd, _args, _opts, callback) => {
     const cb = callback as (err: Error | null, stdout: string) => void;
     cb(new Error(message), "");
-    return { unref: vi.fn() } as any;
+    return {} as any;
   });
 }
 
@@ -42,6 +42,7 @@ async function getSelectDirectory() {
 }
 
 beforeEach(() => {
+  vi.resetModules();
   vi.resetAllMocks();
 });
 
@@ -95,7 +96,7 @@ describe("native-dialog: Linux", () => {
         // zenity dialog
         cb(null, "/home/user/projects/app");
       }
-      return { unref: vi.fn() } as any;
+      return {} as any;
     });
 
     const selectDirectory = await getSelectDirectory();
@@ -114,7 +115,7 @@ describe("native-dialog: Linux", () => {
         const err = Object.assign(new Error("exit"), { code: 1 });
         cb(err, "");
       }
-      return { unref: vi.fn() } as any;
+      return {} as any;
     });
 
     const selectDirectory = await getSelectDirectory();
@@ -166,5 +167,30 @@ describe("native-dialog: unsupported platform", () => {
     mockedPlatform.mockReturnValue("freebsd" as any);
     const selectDirectory = await getSelectDirectory();
     await expect(selectDirectory()).rejects.toThrow("Unsupported platform: freebsd");
+  });
+});
+
+describe("native-dialog: mutex", () => {
+  it("rejects concurrent calls while dialog is open", async () => {
+    mockedPlatform.mockReturnValue("darwin");
+
+    // Make execFile hang until we resolve it
+    let resolveDialog!: (stdout: string) => void;
+    mockedExecFile.mockImplementation((_cmd, _args, _opts, callback) => {
+      const cb = callback as (err: Error | null, stdout: string) => void;
+      new Promise<string>((resolve) => { resolveDialog = resolve; }).then((stdout) => {
+        cb(null, stdout);
+      });
+      return {} as any;
+    });
+
+    const selectDirectory = await getSelectDirectory();
+    const first = selectDirectory();
+    await expect(selectDirectory()).rejects.toThrow("already open");
+
+    // Resolve the first dialog so cleanup happens
+    resolveDialog("/Users/foxy/projects/app/");
+    const result = await first;
+    expect(result).toBe("/Users/foxy/projects/app");
   });
 });

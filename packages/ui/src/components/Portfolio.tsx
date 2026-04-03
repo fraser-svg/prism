@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, ProgressBar, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
@@ -178,6 +178,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [initialProjectPath, setInitialProjectPath] = useState("");
   const [browsing, setBrowsing] = useState(false);
+  const browsingRef = useRef(false);
   const [clientProfiles, setClientProfiles] = useState<Map<string, ClientProfileData>>(new Map());
 
   useEffect(() => {
@@ -247,7 +248,8 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       return;
     }
 
-    if (browsing) return;
+    if (browsingRef.current) return;
+    browsingRef.current = true;
     setBrowsing(true);
     try {
       const selected = await onBrowse();
@@ -255,6 +257,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       setInitialProjectPath(selected);
       setShowCreateProject(true);
     } finally {
+      browsingRef.current = false;
       setBrowsing(false);
     }
   };

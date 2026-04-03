@@ -1,25 +1,39 @@
 import { execFile } from "node:child_process";
 import { platform } from "node:os";
 
+let pending: Promise<string | null> | null = null;
+
 /**
  * Opens a native OS folder-picker dialog and returns the selected absolute path.
  * Returns null when the user cancels. Throws on unsupported platform or tool missing.
+ * Only one dialog can be open at a time — concurrent calls reject with an error.
  */
 export function selectDirectory(): Promise<string | null> {
+  if (pending) {
+    return Promise.reject(new Error("A folder picker dialog is already open"));
+  }
+
   const os = platform();
 
+  let p: Promise<string | null>;
   switch (os) {
     case "darwin":
-      return macosDialog();
+      p = macosDialog();
+      break;
     case "linux":
-      return linuxDialog();
+      p = linuxDialog();
+      break;
     case "win32":
-      return windowsDialog();
+      p = windowsDialog();
+      break;
     default:
       return Promise.reject(
         new Error(`Unsupported platform: ${os}. Native folder picker is not available.`),
       );
   }
+
+  pending = p;
+  return p.finally(() => { pending = null; });
 }
 
 function exec(cmd: string, args: string[]): Promise<{ stdout: string; code: number | null }> {
@@ -35,8 +49,6 @@ function exec(cmd: string, args: string[]): Promise<{ stdout: string; code: numb
       }
       resolve({ stdout: stdout?.trim() ?? "", code: 0 });
     });
-    // Detach so the server process doesn't hang if dialog is orphaned
-    child.unref?.();
   });
 }
 
