@@ -14,6 +14,9 @@
     "dev:web": "npm run dev --workspace=@prism/web",
     "build:web": "npm run build --workspace=@prism/web"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/supertest": "^7.2.0",
