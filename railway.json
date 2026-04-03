@@ -5,6 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
+    "startCommand": "node apps/web/dist/server/index.js",
     "restartPolicyType": "ON_FAILURE"
   }
 }
