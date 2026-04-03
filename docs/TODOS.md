@@ -10,6 +10,17 @@
 - **Depends on:** Fixes 1-4 shipping + 3 dogfood sessions showing continued violations.
 - **Blocked by:** Nothing — can be specced anytime.
 
+### TODO-3: BETTER_AUTH_SECRET Validation Guard
+- **What:** Add a startup guard in `apps/web/server/index.ts` that crashes with a clear error if `BETTER_AUTH_SECRET` is missing or shorter than 32 characters when `NODE_ENV !== "development"`.
+- **Why:** Silently using a weak or missing secret in production means sessions are trivially forgeable. The existing `SKIP_AUTH` guard pattern is the right model.
+- **Fix:** `if (process.env.NODE_ENV !== "development" && (!process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32)) { console.error("FATAL: BETTER_AUTH_SECRET must be set to a 32+ char secret in production"); process.exit(1); }`
+- **Blocked by:** Nothing.
+
+### TODO-4: Crash on Workspace Init Failure
+- **What:** In `apps/web/server/index.ts`, if `facade` or `clients` fails to initialize, the process currently logs an error but stays alive with no listener. Add `process.exit(1)` after the error log.
+- **Why:** A zombie process that never listens is a silent failure. It will look healthy to process monitors but serve no requests.
+- **Blocked by:** Nothing.
+
 ### TODO-2: Quantitative Success Metrics
 - **What:** After each dogfood session, log pass/fail for 4 checks: (1) discovery before building, (2) research before committing, (3) no broken/unverified suggestions, (4) no manual terminal steps. Aggregate across sessions.
 - **Why:** "Feels like gstack" is not a release gate. Need data on which fixes worked and which didn't to iterate effectively.
