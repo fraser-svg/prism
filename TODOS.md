@@ -12,6 +12,18 @@
 - **Zustand persist**: Persist `searchQuery` + `activeProjectId` across page reloads in web app
 - **`dev:app` script**: Add root-level `npm run dev:app` that starts both web server and Vite concurrently
 
+## Canonical Orchestration Spec — YAML Compiler (P1)
+
+**What:** Extract root SKILL.md into `compiler/skills/prism-orchestrator.yaml`. Phase 1: manifest + static sections. Phase 2: stage logic extraction. Phase 3: Codex AGENTS.md compile target. CLI manifest stub at `compiler/output/cli/prism-orchestrator/manifest.json`.
+
+**Why:** Planned as part of the LLM Decoupling work but deferred from the first PR to keep scope manageable. The adapter/routing/dashboard work shipped, but the compiler extraction is the highest YC narrative impact item: proving Prism's orchestration logic is portable across model runtimes.
+
+**When:** Next PR after decouple-prism-llm lands.
+
+**How:** See the CEO plan at `~/.gstack/projects/fraser-svg-prism/ceo-plans/2026-04-03-decouple-prism-llm.md` for full phased extraction plan with gate checks.
+
+**Depends on:** LLM Decoupling PR 1 (fraser-svg/decouple-prism-llm) shipped. Deferred from plan: `2026-04-03-decouple-prism-llm.md`.
+
 ## Batch Portfolio Endpoint (P3)
 
 **What:** Add `GET /api/portfolio/full` endpoint that returns portfolio data + all pipeline snapshots in a single response, replacing the current N+1 request pattern.
@@ -386,6 +398,18 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Extend the tool routing check in Stage 1 to classify frontend phases as "standalone screen" (→ Stitch) or "integrated code" (→ Gemini worker). Use heuristics: presence of existing project files, whether the output is a full page vs a component, user intent signals.
 
 **Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + Tool Routing TODO.
+
+## Provider Dashboard E2E Tests (P1)
+
+**What:** Playwright E2E tests for the Providers tab: render with 2+ providers, refresh triggers health checks and badge updates, provider disconnect turns badge red.
+
+**Why:** The Providers dashboard is the YC demo surface for LLM agnosticism. Untested UI is demo risk. Unit tests cover adapters and router logic, but the full stack (IPC -> cabinet -> adapters -> UI badges) needs integration coverage. Eng review identified 3 E2E gaps.
+
+**When:** After Phase 3 (Provider Dashboard) implementation is complete, before YC demo.
+
+**How:** Add Playwright tests targeting the Electron app's Providers route. Test: (1) tab renders with provider list from cabinet, (2) refresh button calls `providers:check-health` IPC and updates badges, (3) simulated provider disconnect (mock adapter returning unavailable) shows red badge. Follows the same Electron E2E pattern as any future desktop tests.
+
+**Depends on:** LLM Decoupling PR 1 (fraser-svg/decouple-prism-llm) — Phase 3 dashboard shipped.
 
 ## Proof-Check Gate Accuracy Tracking (P2)
 

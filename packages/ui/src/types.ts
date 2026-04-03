@@ -10,6 +10,8 @@ export interface PrismAPI {
   runAction: (projectId: string, action: string) => Promise<IpcResult>;
   onEvent: (callback: (event: unknown) => void) => () => void;
   selectDirectory: () => Promise<IpcResult>;
+  listProviders: () => Promise<IpcResult>;
+  checkProviderHealth: () => Promise<IpcResult>;
 }
 
 export interface IpcResult {
@@ -87,6 +89,14 @@ export interface ClientView {
 export interface PortfolioGroup {
   client: ClientView | null;
   projects: ProjectView[];
+}
+
+export interface ProviderView {
+  providerId: string;
+  displayName: string;
+  status: "connected" | "degraded" | "needs_reauth" | "unavailable";
+  taskCount: number;
+  lastHealthCheck: string | null;
 }
 
 export interface TimelineEvent {

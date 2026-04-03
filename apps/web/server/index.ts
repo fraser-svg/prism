@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
-import { WorkspaceFacade, ClientRepository } from "@prism/workspace";
+import { WorkspaceFacade, ClientRepository, buildProviderViews } from "@prism/workspace";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath } from "@prism/core";
 import { existsSync } from "node:fs";
@@ -285,6 +285,23 @@ app.post(
     });
 
     res.json({ data: { status: "completed", action } });
+  }),
+);
+
+// Providers
+app.get(
+  "/api/providers",
+  requireWorkspace,
+  safeHandle(async (_req, res) => {
+    res.json({ data: await buildProviderViews(facade!.integrations) });
+  }),
+);
+
+app.post(
+  "/api/providers/check-health",
+  requireWorkspace,
+  safeHandle(async (_req, res) => {
+    res.json({ data: await buildProviderViews(facade!.integrations) });
   }),
 );
 

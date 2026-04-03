@@ -101,7 +101,7 @@ export class EventLog {
    */
   logSession(event: {
     projectId?: string | null;
-    action: "session:start" | "session:end" | "session:decision" | "session:error" | "session:gate" | "session:stage_transition" | "artifact:created" | "artifact:deleted" | "desktop:action_started" | "desktop:action_completed" | "desktop:action_failed" | "desktop:message" | "desktop:pipeline_updated";
+    action: "session:start" | "session:end" | "session:decision" | "session:error" | "session:gate" | "session:stage_transition" | "artifact:created" | "artifact:deleted" | "desktop:action_started" | "desktop:action_completed" | "desktop:action_failed" | "desktop:message" | "desktop:pipeline_updated" | "routing:completed";
     summary: string;
     metadata?: Record<string, unknown>;
   }): void {

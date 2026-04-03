@@ -82,6 +82,26 @@ export class IntegrationCabinet {
     this.healthAdapters.set(provider, adapter);
   }
 
+  ensureRegistered(
+    provider: string,
+    instanceLabel: string,
+    config?: Record<string, unknown>,
+  ): void {
+    const id = randomUUID();
+    const changes = this.db
+      .prepare(
+        "INSERT OR IGNORE INTO integrations (id, provider, instance_label, scope, config) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(id, provider, instanceLabel, null, config ? JSON.stringify(config) : null);
+
+    if (changes.changes > 0) {
+      this.eventLog.append({
+        eventType: "integration:registered",
+        summary: `Registered integration: ${provider}/${instanceLabel}`,
+      });
+    }
+  }
+
   async checkHealth(
     provider: string,
     instanceLabel: string,
@@ -143,25 +163,17 @@ export class IntegrationCabinet {
     Array<{ provider: string; instanceLabel: string; result: HealthResult }>
   > {
     const integrations = this.list();
-    const results: Array<{
-      provider: string;
-      instanceLabel: string;
-      result: HealthResult;
-    }> = [];
 
-    for (const integration of integrations) {
-      const result = await this.checkHealth(
-        integration.provider,
-        integration.instanceLabel,
-      );
-      results.push({
+    return Promise.all(
+      integrations.map(async (integration) => ({
         provider: integration.provider,
         instanceLabel: integration.instanceLabel,
-        result,
-      });
-    }
-
-    return results;
+        result: await this.checkHealth(
+          integration.provider,
+          integration.instanceLabel,
+        ),
+      })),
+    );
   }
 
   private getById(id: string): IntegrationRow | null {

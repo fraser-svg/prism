@@ -6,7 +6,8 @@
       "@prism/core": ["../core/src/index.ts"],
       "@prism/memory": ["../memory/src/index.ts"],
       "@prism/guardian": ["../guardian/src/index.ts"],
-      "@prism/execution": ["../execution/src/index.ts"]
+      "@prism/execution": ["../execution/src/index.ts"],
+      "@prism/workspace": ["../workspace/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"]
