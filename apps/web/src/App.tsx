@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { PrismStoreContext, AppShell, Portfolio, ControlRoom } from "@prism/ui";
+import { PrismStoreContext, AppShell, Portfolio, ControlRoom, ClientContextPage } from "@prism/ui";
 import { Spinner } from "@heroui/react";
 import { useStore } from "./store";
 import { WebHeader } from "./WebHeader";
@@ -28,6 +28,7 @@ export function App() {
           <Route element={<AppShell header={<WebHeader user={session.user} />} />}>
             <Route path="/" element={<Portfolio />} />
             <Route path="/project/:id" element={<ControlRoom />} />
+            <Route path="/clients/:clientId/context" element={<ClientContextPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

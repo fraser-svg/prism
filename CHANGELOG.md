@@ -4,6 +4,25 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.24.0] - 2026-04-03
+
+### Added
+- **Context Dump UI** — drag-and-drop knowledge base for client and project contexts. Drop files, folders, or paste notes to teach Prism about a client. Extraction status badges show processing state.
+- **ContextTab component** — full-featured context panel with drop zone, text notes, item list with hover actions (Re-extract, Delete), and extraction queue indicator.
+- **Knowledge sidebar** — "What Prism Knows" panel displaying AI-extracted knowledge grouped by category (business, technical, design, history) with hover actions (Copy, Apply to Brief, Flag Wrong).
+- **Client profile banner** — Portfolio shows client summary text, brand color swatches, and context health progress bar for clients with profile data.
+- **Client knowledge page** — dedicated `/clients/:clientId/context` route for viewing and managing client-level context.
+- **Context health score** — 4-criteria scoring (profile exists, 3+ items, recent update, 2+ categories) visualized as a progress bar with color coding.
+- **Transport layer** — 8 context API methods wired through both IPC (Electron) and HTTP (web) transports.
+- **IPC stubs** — Electron handlers return empty data so the UI is testable before the backend lands.
+- **HeroUI skills** — added heroui-react, heroui-native, and heroui-migration skill documentation for component development.
+
+### Changed
+- **Tailwind `@source` directive** — added to `global.css` so Tailwind v4 scans `@prism/ui` component files for utility classes. Without this, classes like `rounded-md` and `transition-colors` were purged from production CSS.
+
+### Removed
+- **Dead desktop renderer components** — removed 8 unused component files from `apps/desktop/src/renderer/components/` (app imports from `@prism/ui` instead).
+
 ## [4.0.23.0] - 2026-04-03
 
 ### Added

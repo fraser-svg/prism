@@ -422,3 +422,27 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Read `proof_check_pass` and `proof_check_fix` events from telemetry. Compute: total runs, fix count, fix rate (fixes/total), category breakdown (coherence vs ux vs fidelity). If fix rate is very low, consider simplifying the gate. If high, investigate whether the gate is catching genuine issues or being overly cautious.
 
 **Depends on:** Consultant Communication + Self-Review shipped + 10 sessions with telemetry data.
+
+## Orphaned Context File Cleanup (P3)
+
+**What:** A background scan that finds files in `~/.prism/clients/*/context/` and `{project}/.prism/context/` that don't have matching `context_items` rows in the DB.
+
+**Why:** The DB-first delete strategy intentionally leaves orphaned files on disk when `fs.unlink` fails. Over time these accumulate and waste disk space silently.
+
+**When:** After Phase 1 of Context Dump is shipped and in regular use.
+
+**How:** On app startup (or manual trigger), scan managed context directories. For each file, check if a `context_items` row exists with matching `file_path`. If not, delete the orphan. Log count of cleaned files.
+
+**Depends on:** Context Dump Phase 1 (fraser-svg/context-dump).
+
+## IntakeBrief → ExtractedKnowledge Migration (P3)
+
+**What:** When IntakeBrief data exists for a project, auto-convert `clientContext`, `painPoints`, and `assumptions` into `ExtractedKnowledge` entries so the context system benefits from historical session data.
+
+**Why:** IntakeBrief captures per-session discovery data that's currently ephemeral. Converting these to persistent knowledge means returning clients benefit from all previous Prism sessions, not just dropped files.
+
+**When:** After Context Dump Phase 2 (extraction pipeline) is shipped and proven.
+
+**How:** Map IntakeBrief fields to ExtractedKnowledge categories: `painPoints` → category 'business', `assumptions` → category 'business', `clientContext` → category 'business'. Set confidence to 0.7 (lower than AI extraction since these are user-reported, not verified). Run as a one-time migration or on-demand per project.
+
+**Depends on:** Context Dump Phase 2 (fraser-svg/context-dump) + IntakeBrief having real data from sessions.
