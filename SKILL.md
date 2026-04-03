@@ -231,9 +231,38 @@ full protocol.
 
 If KEYCHAIN_UNAVAILABLE: skip silently. Key management is macOS-only.
 
+### Stitch Capability Truth
+
+Prism always knows the Stitch workflow from [references/stitch-frontend.md](references/stitch-frontend.md).
+Never say Prism "doesn't know how to use Stitch" or "doesn't have Stitch integrated" without
+qualifying whether you mean the repo-managed path or active host MCP tools.
+
+Determine Stitch capability from two separate signals:
+
+1. **Host-exposed Stitch tools**
+   - Inspect the active runtime tool list for these Stitch MCP tools:
+     `create_project`, `generate_screen_from_text`, `edit_screens`, `generate_variants`, `getHtml`
+   - If any are present, set `HOST_STITCH_TOOLS_AVAILABLE=true`; otherwise `false`.
+   - This check must come from the active runtime tool list only. Never infer it from shell output,
+     Conductor files, debug logs, or local config scraping.
+
+2. **Repo-managed Stitch readiness**
+   - Run:
+   ```bash
+   bash "$SKILL_DIR/scripts/prism-stitch-status.sh"
+   ```
+   - Parse the JSON and store:
+     - `REPO_STITCH_STATUS` = `.repo_status`
+     - `REPO_STITCH_REASON` = `.reason`
+     - `REPO_STITCH_SETUP_STEPS` = `.setup_steps`
+
+Set `STITCH_AVAILABLE=true` if `HOST_STITCH_TOOLS_AVAILABLE=true` OR `REPO_STITCH_STATUS="ready"`.
+Otherwise set `STITCH_AVAILABLE=false`.
+
 ### Key Management Commands
 
-These commands use the `prism:` prefix to avoid false positives.
+These commands use the `prism:` prefix to avoid false positives. They are Prism chat commands,
+not standalone shell binaries.
 
 | Command | What it does |
 |---------|-------------|
@@ -242,7 +271,7 @@ These commands use the `prism:` prefix to avoid false positives.
 | `prism: status` | Show which providers are connected |
 | `prism: inject` | Write connected keys to .env.local |
 
-Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`.
+Supported providers: `anthropic`, `openai`, `google`, `vercel`, `stripe`, `stitch`.
 
 **Security rules:**
 - Agent NEVER executes commands containing secrets. Prints the template, user runs it.
@@ -750,6 +779,31 @@ If missing: skip silently (no Skill tool invocation).
 - **Graceful degradation:** If skill not installed or errors, skip silently.
 - After completion → Stage 3.
 
+**Stitch screen generation (optional):**
+If `STITCH_AVAILABLE=true` and the user needs initial screen mockups (landing pages,
+dashboards, signup flows), offer to generate via Stitch MCP tools before moving to Stage 3.
+Tell user: "Generating your screen with Stitch — this takes about 30 seconds."
+Use the workflow: `create_project` → `generate_screen_from_text` → `getHtml` → fetch the
+returned download URL to retrieve the actual HTML markup → save to the project directory.
+Stitch output bypasses the worker/verification pipeline — the user reviews it directly.
+Decision rule:
+- If `HOST_STITCH_TOOLS_AVAILABLE=true`, use the active host-exposed Stitch tools directly even if
+  `REPO_STITCH_STATUS` is not `ready`.
+- If `HOST_STITCH_TOOLS_AVAILABLE=false` and `REPO_STITCH_STATUS="ready"`, use the repo-managed
+  Stitch path.
+- If `HOST_STITCH_TOOLS_AVAILABLE=false` and `REPO_STITCH_STATUS!="ready"`, explain the exact
+  repo-managed reason in plain English:
+  - `missing_sdk` → local Stitch SDK is missing; tell the user to run `cd scripts/stitch-mcp && npm install`
+  - `missing_key` → Stitch API key is not connected; tell the user to run `prism: connect stitch`
+  - `keychain_locked` → macOS Keychain is locked
+  - `keychain_unavailable` → macOS Keychain is unavailable in this environment
+  Then fall back to building the screen as a regular `"visual"` task in Stage 3 (assign
+  `route_hint: "visual"` instead of `"screen"`).
+If Stitch MCP tools are attempted but unavailable or fail at runtime, log fallback and build the
+screen as a regular `"visual"` task in Stage 3.
+Log fallback: `bash "$SKILL_DIR/scripts/prism-telemetry.sh" record "$PROJECT_ROOT" stitch_fallback '{"reason":"{reason}"}'`
+Full reference: [references/stitch-frontend.md](references/stitch-frontend.md)
+
 **Bridge (after design consultation):** Record design review artifact if produced.
 ```bash
 echo '{"verdict":"pass","summary":"Design consultation completed"}' | \
@@ -785,6 +839,7 @@ Map requirements to worker tasks. For each, prepare a TaskPrompt:
 conversation, personality, vision, other workers' raw context, the spec itself.
 
 Assign `route_hint` per task based on content:
+- Tasks producing standalone UI screens or pages (landing pages, dashboards, signup flows) → `"screen"` (handled at Stage 2.5 via Stitch, not decomposed into workers)
 - Tasks involving components, layouts, styles, CSS, visual, UI, design, animation, responsive → `"visual"`
 - Everything else → `"any"`
 

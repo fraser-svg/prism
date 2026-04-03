@@ -615,6 +615,8 @@ When abandoned (retries >= 3):
 |------------|------------------------------------------------------|
 | `"any"`    | No routing preference — use the default Claude agent |
 | `"visual"` | Visual/UI task — prefer Gemini; falls back to Claude |
+| `"screen"` | Standalone UI screen — handled at Stage 2.5 via Stitch; falls back to `"visual"` |
+| `"backend"`| Backend task — use Claude agent                      |
 
 ### Task status transitions
 
