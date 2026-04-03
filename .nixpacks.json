@@ -2,11 +2,11 @@
   "providers": ["node"],
   "phases": {
     "install": {
-      "cmds": ["npm install && npm rebuild better-sqlite3"]
+      "cmds": ["npm install"]
     },
     "build": {
       "cmds": ["npm run build:web"]
     }
   },
-  "start": "node apps/web/dist/server/index.js"
+  "start": "npm rebuild better-sqlite3 && node apps/web/dist/server/index.js"
 }
