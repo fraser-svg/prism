@@ -54,3 +54,28 @@ Key routing rules:
 - Design system, brand → invoke design-consultation
 - Visual audit, design polish → invoke design-review
 - Architecture review → invoke plan-eng-review
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: Railway
+- Production URL: https://prismatic.build
+- Deploy workflow: auto-deploy on push to main
+- Deploy status command: HTTP health check
+- Merge method: squash
+- Project type: web app (React SPA + Express API + SQLite)
+- Post-deploy health check: https://prismatic.build/api/providers
+
+### Custom deploy hooks
+- Pre-merge: npm run build:web
+- Deploy trigger: automatic on push to main
+- Deploy status: poll production URL
+- Health check: https://prismatic.build/api/providers
+
+### Environment Variables (Railway dashboard)
+- NODE_ENV=production
+- PORT=3001
+- BETTER_AUTH_SECRET=(set in Railway, generated)
+- GOOGLE_CLIENT_ID=(set in Railway)
+- GOOGLE_CLIENT_SECRET=(set in Railway)
+- GITHUB_CLIENT_ID=(set in Railway)
+- GITHUB_CLIENT_SECRET=(set in Railway)
+- BETTER_AUTH_URL=https://prismatic.build
