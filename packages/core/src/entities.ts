@@ -8,6 +8,7 @@ import type {
   ModelProvider,
   NamedEntity,
   PrimaryPlatform,
+  ProviderId,
   ProductType,
   ProjectPriority,
   ProjectStatus,
@@ -240,8 +241,16 @@ export interface TaskNode {
   wave?: number;
   contextBudgetPct?: number;
   routeHint?: RouteHint;
-  providerUsed?: ModelProvider;
+  capabilities?: ProviderCapability[];
+  providerUsed?: ProviderId;
 }
+
+export type ProviderCapability =
+  | "reasoning"
+  | "code_generation"
+  | "visual_design"
+  | "verification"
+  | "tool_use";
 
 export interface TaskGraph extends AuditStamp {
   id: EntityId;

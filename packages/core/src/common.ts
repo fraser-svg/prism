@@ -57,6 +57,7 @@ export type DeviationSeverity = "auto_fix" | "auto_fix_critical" | "auto_fix_blo
 
 export type ModelProvider = "anthropic" | "openai" | "google";
 export type ServiceProvider = "vercel" | "stripe" | "stitch";
+export type ProviderId = ModelProvider | ServiceProvider;
 export type RouteHint = "visual" | "screen" | "backend" | "any";
 
 export interface AuditStamp {
