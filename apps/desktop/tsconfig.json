@@ -9,6 +9,8 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
+      "@prism/ui": ["../../packages/ui/src/index.ts"],
+      "@prism/ui/*": ["../../packages/ui/*"],
       "@prism/core": ["../../packages/core/src/index.ts"],
       "@prism/workspace": ["../../packages/workspace/src/index.ts"],
       "@prism/orchestrator/*": ["../../packages/orchestrator/src/*"],

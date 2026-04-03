@@ -45,5 +45,3 @@ const api = {
 };
 
 contextBridge.exposeInMainWorld("prism", api);
-
-export type PrismAPI = typeof api;
