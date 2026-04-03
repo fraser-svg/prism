@@ -10,7 +10,9 @@
     "verify": "npm run typecheck:core && npm run test",
     "test": "vitest run",
     "dev:desktop": "npm run dev --workspace=@prism/desktop",
-    "build:desktop": "npm run build --workspace=@prism/desktop"
+    "build:desktop": "npm run build --workspace=@prism/desktop",
+    "dev:web": "npm run dev --workspace=@prism/web",
+    "build:web": "npm run build --workspace=@prism/web"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
