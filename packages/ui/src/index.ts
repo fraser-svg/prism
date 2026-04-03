@@ -10,6 +10,7 @@ export { ProjectCard } from "./components/ProjectCard";
 export { SessionDrawer } from "./components/SessionDrawer";
 export { ClientContextPage } from "./components/ClientContextPage";
 export { ContextTab } from "./components/ContextTab";
+export { PrismaticLogo } from "./branding/PrismaticLogo";
 
 // Store
 export { createPrismStore, buildPortfolioGroups } from "./store";

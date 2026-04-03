@@ -265,7 +265,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       {isEmpty && (
         <div className="flex h-[60%] flex-col items-center justify-center gap-4">
           <span className="text-lg font-medium text-[var(--foreground)]">
-            Welcome to Prism
+            Welcome to Prismatic
           </span>
           <span className="max-w-[400px] text-center text-sm text-[var(--muted)]">
             Create a client and link your first project to see its pipeline

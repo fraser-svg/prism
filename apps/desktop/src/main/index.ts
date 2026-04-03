@@ -58,7 +58,7 @@ async function createWindow() {
     height: 900,
     minWidth: 1180,
     minHeight: 760,
-    title: "Prism",
+    title: "Prismatic",
     backgroundColor: "#0a0a0f",
     titleBarStyle: "hiddenInset",
     webPreferences: {

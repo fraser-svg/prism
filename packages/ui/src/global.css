@@ -139,6 +139,31 @@ body,
   -webkit-app-region: no-drag;
 }
 
+.prismatic-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--foreground);
+}
+
+.prismatic-lockup-mark {
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: none;
+}
+
+.prismatic-lockup-text {
+  height: 2.2rem;
+  width: auto;
+  flex: none;
+}
+
+@media (max-width: 720px) {
+  .prismatic-lockup-text {
+    display: none;
+  }
+}
+
 @keyframes stage-pulse {
   0%,
   100% {
