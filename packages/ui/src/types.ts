@@ -10,6 +10,15 @@ export interface PrismAPI {
   runAction: (projectId: string, action: string) => Promise<IpcResult>;
   onEvent: (callback: (event: unknown) => void) => () => void;
   selectDirectory: () => Promise<IpcResult>;
+  // Context dump
+  getContextItems: (entityType: "project" | "client", entityId: string) => Promise<IpcResult>;
+  addContextItem: (item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }) => Promise<IpcResult>;
+  deleteContextItem: (id: string) => Promise<IpcResult>;
+  reExtractItem: (id: string) => Promise<IpcResult>;
+  getKnowledge: (entityType: "project" | "client", entityId: string) => Promise<IpcResult>;
+  getSummary: (entityType: "project" | "client", entityId: string) => Promise<IpcResult>;
+  flagKnowledge: (knowledgeId: string) => Promise<IpcResult>;
+  applyToBrief: (projectId: string, knowledgeId: string) => Promise<IpcResult>;
 }
 
 export interface IpcResult {
@@ -96,4 +105,45 @@ export interface TimelineEvent {
   summary: string;
   metadata: Record<string, unknown> | null;
   timestamp: string;
+}
+
+// Context Dump types
+export interface ContextHealth {
+  score: number;
+  hasProfile: boolean;
+  hasDocs: boolean;
+  recent: boolean;
+  hasCategories: boolean;
+}
+export interface ContextItem {
+  id: string;
+  projectId: string | null;
+  clientAccountId: string | null;
+  itemType: "file" | "directory" | "text_note" | "url";
+  title: string;
+  sourcePath: string | null;
+  content: string | null;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
+  extractionStatus: "queued" | "extracting" | "extracted" | "failed" | "stored";
+  createdAt: string;
+}
+
+export interface ExtractedKnowledge {
+  id: string;
+  sourceItemId: string;
+  category: "business" | "technical" | "design" | "history";
+  key: string;
+  value: string;
+  confidence: number;
+  extractedAt: string;
+}
+
+export interface KnowledgeSummary {
+  id: string;
+  entityType: "project" | "client";
+  entityId: string;
+  summaryText: string;
+  brandColors: string[] | null;
+  generatedAt: string;
 }

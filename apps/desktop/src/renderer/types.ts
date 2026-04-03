@@ -10,6 +10,16 @@ export interface PrismAPI {
   runAction: (projectId: string, action: string) => Promise<IpcResult>;
   onEvent: (callback: (event: unknown) => void) => () => void;
   selectDirectory: () => Promise<IpcResult>;
+
+  // Context dump
+  getContextItems: (entityType: string, entityId: string) => Promise<IpcResult>;
+  addContextItem: (item: Record<string, unknown>) => Promise<IpcResult>;
+  deleteContextItem: (id: string) => Promise<IpcResult>;
+  reExtractItem: (id: string) => Promise<IpcResult>;
+  getKnowledge: (entityType: string, entityId: string) => Promise<IpcResult>;
+  getSummary: (entityType: string, entityId: string) => Promise<IpcResult>;
+  flagKnowledge: (knowledgeId: string) => Promise<IpcResult>;
+  applyToBrief: (projectId: string, knowledgeId: string) => Promise<IpcResult>;
 }
 
 export interface IpcResult {

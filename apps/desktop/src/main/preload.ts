@@ -40,6 +40,24 @@ const api = {
     return () => ipcRenderer.removeListener("prism:event", handler);
   },
 
+  // Context dump
+  getContextItems: (entityType: string, entityId: string) =>
+    ipcRenderer.invoke("context:getItems", entityType, entityId),
+  addContextItem: (item: Record<string, unknown>) =>
+    ipcRenderer.invoke("context:addItem", item),
+  deleteContextItem: (id: string) =>
+    ipcRenderer.invoke("context:deleteItem", id),
+  reExtractItem: (id: string) =>
+    ipcRenderer.invoke("context:reExtract", id),
+  getKnowledge: (entityType: string, entityId: string) =>
+    ipcRenderer.invoke("context:getKnowledge", entityType, entityId),
+  getSummary: (entityType: string, entityId: string) =>
+    ipcRenderer.invoke("context:getSummary", entityType, entityId),
+  flagKnowledge: (knowledgeId: string) =>
+    ipcRenderer.invoke("context:flagKnowledge", knowledgeId),
+  applyToBrief: (projectId: string, knowledgeId: string) =>
+    ipcRenderer.invoke("context:applyToBrief", projectId, knowledgeId),
+
   // Dialog
   selectDirectory: () => ipcRenderer.invoke("dialog:selectDirectory"),
 };

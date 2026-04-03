@@ -7,6 +7,8 @@ export { PipelineStrip } from "./components/PipelineStrip";
 export { Portfolio } from "./components/Portfolio";
 export { ProjectCard } from "./components/ProjectCard";
 export { SessionDrawer } from "./components/SessionDrawer";
+export { ClientContextPage } from "./components/ClientContextPage";
+export { ContextTab } from "./components/ContextTab";
 
 // Store
 export { createPrismStore, buildPortfolioGroups } from "./store";
@@ -29,4 +31,8 @@ export type {
   ClientView,
   PortfolioGroup,
   TimelineEvent,
+  ContextItem,
+  ExtractedKnowledge,
+  KnowledgeSummary,
+  ContextHealth,
 } from "./types";

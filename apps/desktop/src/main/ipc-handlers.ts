@@ -170,6 +170,39 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
     },
   );
 
+  // ─── Context Dump (stubs — backend wired in next PR) ───
+  safeHandle("context:getItems", (_entityType: unknown, _entityId: unknown) => {
+    return [];
+  });
+
+  safeHandle("context:addItem", (_item: unknown) => {
+    return { id: crypto.randomUUID(), status: "stored" };
+  });
+
+  safeHandle("context:deleteItem", (_id: unknown) => {
+    return { ok: true };
+  });
+
+  safeHandle("context:reExtract", (_id: unknown) => {
+    return { ok: true };
+  });
+
+  safeHandle("context:getKnowledge", (_entityType: unknown, _entityId: unknown) => {
+    return [];
+  });
+
+  safeHandle("context:getSummary", (_entityType: unknown, _entityId: unknown) => {
+    return null;
+  });
+
+  safeHandle("context:flagKnowledge", (_knowledgeId: unknown) => {
+    return { ok: true };
+  });
+
+  safeHandle("context:applyToBrief", (_projectId: unknown, _knowledgeId: unknown) => {
+    return { ok: true };
+  });
+
   // Directory picker
   safeHandle("dialog:selectDirectory", async () => {
     const result = await dialog.showOpenDialog({
