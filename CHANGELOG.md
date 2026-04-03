@@ -4,6 +4,9 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+### Added
+- **Prismatic app branding** — web and desktop app chrome now use the new Prismatic mark and wordmark, and top-level runtime surfaces now show the Prismatic product name.
+
 ## [4.0.24.0] - 2026-04-03
 
 ### Added

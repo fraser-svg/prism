@@ -8,7 +8,7 @@ import {
   Label,
   Separator,
 } from "@heroui/react";
-import { usePrismStore } from "@prism/ui";
+import { PrismaticLogo, usePrismStore } from "@prism/ui";
 import { authClient } from "./auth-client";
 
 interface WebHeaderProps {
@@ -31,10 +31,17 @@ export function WebHeader({ user }: WebHeaderProps) {
       className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--separator)] bg-[var(--surface)] px-6"
     >
       <button
-        className="cursor-pointer border-none bg-transparent text-[13px] font-semibold tracking-wide text-[var(--accent)]"
+        className="flex cursor-pointer items-center border-none bg-transparent p-0 text-[var(--foreground)]"
         onClick={() => navigate("/")}
+        aria-label="Prismatic home"
       >
-        PRISM
+        <PrismaticLogo
+          className="prismatic-lockup"
+          markClassName="prismatic-lockup-mark"
+          textClassName="prismatic-lockup-text"
+          variant="lockup"
+          theme="dark"
+        />
       </button>
 
       {isPortfolio ? (
