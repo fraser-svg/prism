@@ -65,9 +65,8 @@ async function macosDialog(): Promise<string | null> {
 
 async function linuxDialog(): Promise<string | null> {
   // Check zenity is available
-  try {
-    await exec("which", ["zenity"]);
-  } catch {
+  const which = await exec("which", ["zenity"]).catch(() => ({ code: 1, stdout: "" }));
+  if (which.code !== 0) {
     throw new Error(
       "zenity is required for folder selection on Linux. Install it with: sudo apt install zenity",
     );

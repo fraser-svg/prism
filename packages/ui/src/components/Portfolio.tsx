@@ -253,8 +253,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
     setBrowsing(true);
     try {
       const selected = await onBrowse();
-      if (!selected) return;
-      setInitialProjectPath(selected);
+      setInitialProjectPath(selected || "");
       setShowCreateProject(true);
     } finally {
       browsingRef.current = false;

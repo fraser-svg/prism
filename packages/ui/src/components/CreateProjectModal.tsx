@@ -38,7 +38,7 @@ export function CreateProjectModal({
   onBrowse,
   initialRootPath = "",
 }: CreateProjectModalProps) {
-  const initialName = initialRootPath.split("/").filter(Boolean).pop() || "";
+  const initialName = initialRootPath.split(/[/\\]/).filter(Boolean).pop() || "";
   const [name, setName] = useState(initialName);
   const [clientId, setClientId] = useState(defaultClientId || "");
   const [mode, setMode] = useState<"link" | "create">("link");
