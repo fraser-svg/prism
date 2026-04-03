@@ -11,9 +11,9 @@ export function AppShell({ header }: AppShellProps) {
   const { drawerOpen } = usePrismStore();
 
   return (
-    <div style={{ display: "flex", height: "100vh", flexDirection: "column" }}>
+    <div className="flex h-screen flex-col">
       {header}
-      <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+      <div className="relative flex-1 overflow-hidden">
         <Outlet />
         {drawerOpen && <SessionDrawer />}
       </div>

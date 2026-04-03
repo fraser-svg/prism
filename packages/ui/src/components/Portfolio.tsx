@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
 import { ProjectCard } from "./ProjectCard";
 import { CreateClientModal } from "./CreateClientModal";
@@ -48,51 +49,19 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   if (portfolioLoading && portfolioGroups.length === 0) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          color: "var(--text-secondary)",
-          fontSize: 14,
-        }}
-      >
-        Loading workspace...
+      <div className="flex h-full items-center justify-center">
+        <Spinner label="Loading workspace..." />
       </div>
     );
   }
 
   if (portfolioError) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: 12,
-        }}
-      >
-        <span style={{ color: "var(--accent-red)", fontSize: 14 }}>
-          {portfolioError}
-        </span>
-        <button
-          onClick={() => loadPortfolio()}
-          style={{
-            padding: "6px 16px",
-            background: "var(--bg-elevated)",
-            border: "none",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--text-primary)",
-            fontSize: 13,
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-          }}
-        >
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <span className="text-sm text-danger">{portfolioError}</span>
+        <Button size="sm" variant="tertiary" onPress={() => loadPortfolio()}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -100,174 +69,68 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
   const isEmpty = filteredGroups.length === 0 && !searchQuery;
 
   return (
-    <div
-      style={{
-        height: "100%",
-        overflow: "auto",
-        padding: "24px 32px",
-      }}
-    >
+    <div className="h-full overflow-auto px-8 py-6">
       {/* Actions bar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: 20,
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-        >
-          Portfolio
-        </h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => setShowCreateClient(true)}
-            style={{
-              padding: "6px 14px",
-              background: "var(--bg-elevated)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--text-primary)",
-              fontSize: 12,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-            }}
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Portfolio</h1>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="tertiary"
+            onPress={() => setShowCreateClient(true)}
           >
             + Client
-          </button>
-          <button
-            onClick={() => setShowCreateProject(true)}
-            style={{
-              padding: "6px 14px",
-              background: "var(--accent-blue)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              color: "#fff",
-              fontSize: 12,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-            }}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            onPress={() => setShowCreateProject(true)}
           >
             + Project
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Empty state */}
       {isEmpty && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "60%",
-            gap: 16,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 18,
-              fontWeight: 500,
-              color: "var(--text-primary)",
-            }}
-          >
+        <div className="flex h-[60%] flex-col items-center justify-center gap-4">
+          <span className="text-lg font-medium text-[var(--foreground)]">
             Welcome to Prism
           </span>
-          <span
-            style={{
-              fontSize: 13,
-              color: "var(--text-secondary)",
-              textAlign: "center",
-              maxWidth: 400,
-            }}
-          >
+          <span className="max-w-[400px] text-center text-sm text-[var(--muted)]">
             Create a client and link your first project to see its pipeline
             progress here.
           </span>
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button
-              onClick={() => setShowCreateClient(true)}
-              style={{
-                padding: "8px 20px",
-                background: "var(--bg-elevated)",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--text-primary)",
-                fontSize: 13,
-                cursor: "pointer",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
+          <div className="mt-2 flex gap-2">
+            <Button variant="tertiary" onPress={() => setShowCreateClient(true)}>
               Create Client
-            </button>
-            <button
-              onClick={() => setShowCreateProject(true)}
-              style={{
-                padding: "8px 20px",
-                background: "var(--accent-blue)",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                color: "#fff",
-                fontSize: 13,
-                cursor: "pointer",
-                fontFamily: "var(--font-sans)",
-              }}
+            </Button>
+            <Button
+              variant="primary"
+              onPress={() => setShowCreateProject(true)}
             >
               Link Project
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Client groups */}
       {filteredGroups.map((group, idx) => (
-        <div key={group.client?.id || `ungrouped-${idx}`} style={{ marginBottom: 28 }}>
+        <div key={group.client?.id || `ungrouped-${idx}`} className="mb-7">
           {/* Client header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 12,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--text-secondary)",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-            >
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
               {group.client?.name || "Unassigned"}
             </span>
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--text-tertiary)",
-              }}
-            >
+            <span className="text-[11px] text-[var(--field-placeholder)]">
               {group.projects.length} project
               {group.projects.length !== 1 ? "s" : ""}
             </span>
           </div>
 
           {/* Project cards grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
             {group.projects.map((project) => (
               <ProjectCard
                 key={project.id}

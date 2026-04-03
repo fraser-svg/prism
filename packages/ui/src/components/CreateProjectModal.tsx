@@ -1,10 +1,33 @@
 import { useState } from "react";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalHeading,
+  ModalBody,
+  ModalFooter,
+  useOverlayState,
+  TextField,
+  Label,
+  Input,
+  Button,
+  Tabs,
+  TabList,
+  Tab,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectPopover,
+  ListBox,
+  ListBoxItem,
+} from "@heroui/react";
 import { usePrismStore } from "../context";
 
 interface CreateProjectModalProps {
   onClose: () => void;
   defaultClientId?: string;
-  /** If provided, shows a Browse button. If omitted, shows an editable text input. */
   onBrowse?: () => Promise<string | null>;
 }
 
@@ -15,11 +38,18 @@ export function CreateProjectModal({
 }: CreateProjectModalProps) {
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState(defaultClientId || "");
-  const [mode, setMode] = useState<"create" | "link">("link");
+  const [mode, setMode] = useState<"link" | "create">("link");
   const [rootPath, setRootPath] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { clients, createProject, linkProject } = usePrismStore();
+
+  const state = useOverlayState({
+    isOpen: true,
+    onOpenChange: (open) => {
+      if (!open) onClose();
+    },
+  });
 
   const handleBrowse = async () => {
     if (!onBrowse) return;
@@ -33,8 +63,7 @@ export function CreateProjectModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!rootPath) return;
 
     setSaving(true);
@@ -58,201 +87,97 @@ export function CreateProjectModal({
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 100,
-      }}
-      onClick={onClose}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="fade-in"
-        style={{
-          background: "var(--bg-elevated)",
-          borderRadius: "var(--radius-lg)",
-          padding: 24,
-          width: 440,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-        >
-          Add Project
-        </h2>
+    <Modal state={state}>
+      <ModalBackdrop>
+        <ModalContainer>
+          <ModalDialog>
+            <ModalHeader>
+              <ModalHeading>Add Project</ModalHeading>
+            </ModalHeader>
+            <ModalBody className="flex flex-col gap-4">
+              <Tabs
+                selectedKey={mode}
+                onSelectionChange={(key) => setMode(key as "link" | "create")}
+              >
+                <TabList>
+                  <Tab id="link">Link Existing</Tab>
+                  <Tab id="create">Create New</Tab>
+                </TabList>
+              </Tabs>
 
-        {/* Mode toggle */}
-        <div style={{ display: "flex", gap: 8 }}>
-          {(["link", "create"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              style={{
-                padding: "4px 12px",
-                background:
-                  mode === m ? "var(--bg-active)" : "var(--bg-surface)",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                color:
-                  mode === m
-                    ? "var(--text-primary)"
-                    : "var(--text-secondary)",
-                fontSize: 12,
-                cursor: "pointer",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              {m === "link" ? "Link Existing" : "Create New"}
-            </button>
-          ))}
-        </div>
+              <div className="flex gap-2">
+                <TextField className="flex-1">
+                  <Label>Project path</Label>
+                  <Input
+                    value={rootPath}
+                    readOnly={!!onBrowse}
+                    onChange={onBrowse ? undefined : (e) => setRootPath(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                </TextField>
+                {onBrowse && (
+                  <Button
+                    variant="outline"
+                    onPress={handleBrowse}
+                    className="mt-auto"
+                  >
+                    Browse
+                  </Button>
+                )}
+              </div>
 
-        {/* Directory picker — Browse button if onBrowse provided, text input otherwise */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            type="text"
-            placeholder="Project path"
-            value={rootPath}
-            readOnly={!!onBrowse}
-            onChange={onBrowse ? undefined : (e) => setRootPath(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-default)",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--text-primary)",
-              fontSize: 13,
-              fontFamily: "var(--font-mono)",
-              outline: "none",
-            }}
-          />
-          {onBrowse && (
-            <button
-              type="button"
-              onClick={handleBrowse}
-              style={{
-                padding: "8px 12px",
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border-default)",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--text-primary)",
-                fontSize: 13,
-                cursor: "pointer",
-                fontFamily: "var(--font-sans)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Browse
-            </button>
-          )}
-        </div>
+              {mode === "create" && (
+                <TextField>
+                  <Label>Project name</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </TextField>
+              )}
 
-        {/* Name (for create mode) */}
-        {mode === "create" && (
-          <input
-            type="text"
-            placeholder="Project name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-default)",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--text-primary)",
-              fontSize: 14,
-              fontFamily: "var(--font-sans)",
-              outline: "none",
-            }}
-          />
-        )}
+              {clients.length > 0 && (
+                <Select
+                  selectedKey={clientId || null}
+                  onSelectionChange={(key) => setClientId(key ? String(key) : "")}
+                >
+                  <Label>Client</Label>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopover>
+                    <ListBox>
+                      {clients.map((c) => (
+                        <ListBoxItem key={c.id} id={c.id}>
+                          {c.name}
+                        </ListBoxItem>
+                      ))}
+                    </ListBox>
+                  </SelectPopover>
+                </Select>
+              )}
 
-        {/* Client selector */}
-        {clients.length > 0 && (
-          <select
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-default)",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--text-primary)",
-              fontSize: 13,
-              fontFamily: "var(--font-sans)",
-              outline: "none",
-            }}
-          >
-            <option value="">No client</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {error && (
-          <span style={{ fontSize: 12, color: "var(--accent-red)" }}>
-            {error}
-          </span>
-        )}
-
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "6px 16px",
-              background: "none",
-              border: "1px solid var(--border-default)",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--text-secondary)",
-              fontSize: 13,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!rootPath || saving}
-            style={{
-              padding: "6px 16px",
-              background: "var(--accent-blue)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              color: "#fff",
-              fontSize: 13,
-              cursor: rootPath && !saving ? "pointer" : "not-allowed",
-              fontFamily: "var(--font-sans)",
-              opacity: rootPath && !saving ? 1 : 0.5,
-            }}
-          >
-            {saving
-              ? "Adding..."
-              : mode === "link"
-                ? "Link Project"
-                : "Create Project"}
-          </button>
-        </div>
-      </form>
-    </div>
+              {error && <p className="text-sm text-danger">{error}</p>}
+            </ModalBody>
+            <ModalFooter className="flex justify-end gap-2">
+              <Button variant="outline" onPress={onClose}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                isDisabled={!rootPath || saving}
+                onPress={handleSubmit}
+              >
+                {saving
+                  ? "Adding..."
+                  : mode === "link"
+                    ? "Link Project"
+                    : "Create Project"}
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </ModalBackdrop>
+    </Modal>
   );
 }
