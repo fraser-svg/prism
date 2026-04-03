@@ -1,5 +1,29 @@
 # Prism TODOs
 
+## ~~Portfolio MVP — Shared UI + Web App~~ — DONE in fraser-svg/portfolio-mvp
+
+`packages/ui/` extracted as shared React component library. `apps/web/` created (Vite + Express). `apps/desktop/` refactored to import from `@prism/ui`. Transport adapter pattern (`IpcTransport` / `FetchTransport`) enables both apps to share the same Zustand store.
+
+### P1 deferred items from portfolio-mvp
+
+- **Favicon**: Add `apps/web/public/favicon.svg` + `apps/desktop/` icon
+- **Skeleton loading**: Show placeholder cards while portfolio loads instead of blank screen
+- **Keyboard shortcuts**: `⌘K` to focus search, `⌘N` to open new project dialog
+- **Zustand persist**: Persist `searchQuery` + `activeProjectId` across page reloads in web app
+- **`dev:app` script**: Add root-level `npm run dev:app` that starts both web server and Vite concurrently
+
+## Batch Portfolio Endpoint (P3)
+
+**What:** Add `GET /api/portfolio/full` endpoint that returns portfolio data + all pipeline snapshots in a single response, replacing the current N+1 request pattern.
+
+**Why:** The Portfolio page currently fires one `GET /api/portfolio` then N separate `GET /api/projects/:id/pipeline` requests (one per project). At demo scale (<20 projects on localhost), latency is negligible. At real scale or over a network, this becomes a visible page load delay.
+
+**When:** When page load on the Portfolio page is noticeably slow, or when the web app is used over a network (not localhost).
+
+**How:** Add a new Express route that calls `facade.registry.list()`, `clients.list()`, and `extractPipelineSnapshot()` for each project server-side, returning the combined result. Update `FetchTransport.listPortfolioFull()` to call it. Keep the existing separate endpoints for granular refresh.
+
+**Depends on:** Web app MVP shipped (`apps/web/`).
+
 ## Monorepo Target Directory Resolution (P2)
 
 **What:** Add framework detection to `scripts/prism-inject.sh` for monorepo projects where `.env.local` needs to go in a subdirectory (e.g., `app/`, `packages/web/`).
