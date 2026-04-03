@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Button, Card, CardContent, Chip, Separator, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
 import { PipelineStrip } from "./PipelineStrip";
 import type { StageView } from "../types";
@@ -37,22 +38,11 @@ export function ControlRoom() {
     }
   }, [activePipeline]);
 
-  // Portfolio may still be loading — don't flash "not found" prematurely
-  if (!project && portfolioLoading) {
-    return null;
-  }
+  if (!project && portfolioLoading) return null;
 
   if (!project) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          color: "var(--text-secondary)",
-        }}
-      >
+      <div className="flex h-full items-center justify-center text-[var(--muted)]">
         Project not found
       </div>
     );
@@ -60,515 +50,223 @@ export function ControlRoom() {
 
   if (pipelineLoading && !activePipeline) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          color: "var(--text-secondary)",
-          fontSize: 14,
-        }}
-      >
-        Loading pipeline...
+      <div className="flex h-full items-center justify-center">
+        <Spinner label="Loading pipeline..." />
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+    <div className="flex h-full overflow-hidden">
       {/* Main content */}
-      <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
+      <div className="flex-1 overflow-auto px-6 py-5">
         {/* Project header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
+        <div className="mb-5 flex items-center justify-between">
           <div>
-            <h1
-              style={{
-                fontSize: 18,
-                fontWeight: 600,
-                color: "var(--text-primary)",
-                marginBottom: 4,
-              }}
-            >
+            <h1 className="mb-1 text-lg font-semibold text-[var(--foreground)]">
               {project.name}
             </h1>
-            <span
-              style={{
-                fontSize: 12,
-                color: "var(--text-tertiary)",
-                fontFamily: "var(--font-mono)",
-              }}
-            >
+            <span className="font-mono text-xs text-[var(--field-placeholder)]">
               {project.rootPath}
             </span>
           </div>
-          <button
-            onClick={() => toggleDrawer(id)}
-            style={{
-              padding: "8px 16px",
-              background: "var(--accent-blue)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              color: "#fff",
-              fontSize: 13,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-            }}
-          >
+          <Button variant="primary" onPress={() => toggleDrawer(id)}>
             Open Session
-          </button>
+          </Button>
         </div>
 
         {/* Pipeline strip */}
         {activePipeline && activePipeline.stages.length > 0 && (
-          <div
-            style={{
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-lg)",
-              padding: 16,
-              marginBottom: 20,
-            }}
-          >
-            <PipelineStrip
-              stages={activePipeline.stages}
-              onStageClick={setSelectedStage}
-            />
-          </div>
+          <Card className="mb-5">
+            <CardContent className="p-4">
+              <PipelineStrip
+                stages={activePipeline.stages}
+                onStageClick={setSelectedStage}
+              />
+            </CardContent>
+          </Card>
         )}
 
         {/* Error state */}
         {activePipeline?.error && (
-          <div
-            style={{
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-lg)",
-              padding: 16,
-              marginBottom: 20,
-              borderLeft: "3px solid var(--accent-red)",
-            }}
-          >
-            <span style={{ fontSize: 13, color: "var(--accent-red)" }}>
-              Pipeline extraction failed: {activePipeline.error}
-            </span>
-            <button
-              onClick={() => id && loadPipeline(id)}
-              style={{
-                marginLeft: 12,
-                padding: "4px 10px",
-                background: "var(--bg-elevated)",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--text-primary)",
-                fontSize: 12,
-                cursor: "pointer",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              Retry
-            </button>
-          </div>
+          <Card className="mb-5 border-l-3 border-l-[var(--danger)]">
+            <CardContent className="flex flex-row items-center gap-3 p-4">
+              <span className="text-sm text-danger">
+                Pipeline extraction failed: {activePipeline.error}
+              </span>
+              <Button
+                size="sm"
+                variant="tertiary"
+                onPress={() => id && loadPipeline(id)}
+              >
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* Stage detail */}
         {selectedStage && (
-          <div
-            style={{
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-lg)",
-              padding: 20,
-              marginBottom: 20,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                }}
-              >
-                {selectedStage.label}
-              </h2>
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: "2px 8px",
-                  borderRadius: "var(--radius-sm)",
-                  background:
+          <Card className="mb-5">
+            <CardContent className="flex flex-col gap-4 p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[15px] font-semibold text-[var(--foreground)]">
+                  {selectedStage.label}
+                </h2>
+                <Chip
+                  size="sm"
+                  variant="soft"
+                  color={
                     selectedStage.status === "completed"
-                      ? "rgba(52,211,153,0.15)"
+                      ? "success"
                       : selectedStage.status === "blocked"
-                        ? "rgba(239,68,68,0.15)"
-                        : "rgba(77,142,255,0.15)",
-                  color:
-                    selectedStage.status === "completed"
-                      ? "var(--accent-green)"
-                      : selectedStage.status === "blocked"
-                        ? "var(--accent-red)"
-                        : "var(--accent-blue)",
-                }}
-              >
-                {selectedStage.status}
-              </span>
-            </div>
-
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--text-secondary)",
-                marginBottom: 16,
-              }}
-            >
-              {selectedStage.description}
-            </p>
-
-            {/* Gate requirements */}
-            {selectedStage.gateRequirements.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <h3
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    marginBottom: 8,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
+                        ? "danger"
+                        : "accent"
+                  }
                 >
-                  Gate Requirements
-                </h3>
-                {selectedStage.gateRequirements.map((req, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: req.met
-                          ? "var(--accent-green)"
-                          : "var(--accent-red)",
-                      }}
-                    >
-                      {req.met ? "\u2713" : "\u2717"}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {req.description}
-                    </span>
-                  </div>
-                ))}
+                  {selectedStage.status}
+                </Chip>
               </div>
-            )}
 
-            {/* Artifacts */}
-            {selectedStage.artifacts.length > 0 && (
-              <div>
-                <h3
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    marginBottom: 8,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Artifacts
-                </h3>
-                {selectedStage.artifacts.map((art, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: art.present
-                          ? "var(--accent-green)"
-                          : "var(--text-tertiary)",
-                      }}
-                    >
-                      {art.present ? "\u25CF" : "\u25CB"}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {art.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+              <p className="text-sm text-[var(--muted)]">{selectedStage.description}</p>
 
-            {/* Blockers */}
-            {selectedStage.blockers.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <h3
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--accent-red)",
-                    marginBottom: 8,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Blockers
-                </h3>
-                {selectedStage.blockers.map((blocker, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      fontSize: 12,
-                      color: "var(--accent-red)",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {blocker}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              {/* Gate requirements */}
+              {selectedStage.gateRequirements.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Gate Requirements
+                  </h3>
+                  {selectedStage.gateRequirements.map((req, i) => (
+                    <div key={i} className="mb-1 flex items-center gap-2">
+                      <span className={`text-xs ${req.met ? "text-success" : "text-danger"}`}>
+                        {req.met ? "\u2713" : "\u2717"}
+                      </span>
+                      <span className="text-xs text-[var(--muted)]">
+                        {req.description}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Artifacts */}
+              {selectedStage.artifacts.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Artifacts
+                  </h3>
+                  {selectedStage.artifacts.map((art, i) => (
+                    <div key={i} className="mb-1 flex items-center gap-2">
+                      <span className={`text-xs ${art.present ? "text-success" : "text-[var(--field-placeholder)]"}`}>
+                        {art.present ? "\u25CF" : "\u25CB"}
+                      </span>
+                      <span className="text-xs text-[var(--muted)]">{art.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Blockers */}
+              {selectedStage.blockers.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-danger">
+                    Blockers
+                  </h3>
+                  {selectedStage.blockers.map((blocker, i) => (
+                    <div key={i} className="mb-1 text-xs text-danger">
+                      {blocker}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Recommendations */}
-        {activePipeline &&
-          activePipeline.recommendations.length > 0 && (
-            <div
-              style={{
-                background: "var(--bg-surface)",
-                borderRadius: "var(--radius-lg)",
-                padding: 20,
-                marginBottom: 20,
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "var(--text-secondary)",
-                  marginBottom: 12,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
+        {activePipeline && activePipeline.recommendations.length > 0 && (
+          <Card className="mb-5">
+            <CardContent className="flex flex-col gap-3 p-5">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                 Next Actions
               </h2>
               {activePipeline.recommendations.map((rec, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "flex-start",
-                    marginBottom: 8,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 10,
-                      padding: "1px 6px",
-                      borderRadius: "var(--radius-sm)",
-                      background: "var(--bg-elevated)",
-                      color: "var(--text-tertiary)",
-                      whiteSpace: "nowrap",
-                      marginTop: 1,
-                    }}
-                  >
-                    {rec.source}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {rec.text}
-                  </span>
+                <div key={i} className="flex items-start gap-2">
+                  <Chip size="sm" variant="soft">
+                    <span className="text-[10px]">{rec.source}</span>
+                  </Chip>
+                  <span className="text-sm text-[var(--foreground)]">{rec.text}</span>
                 </div>
               ))}
-            </div>
-          )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Right rail: Timeline */}
-      <div
-        style={{
-          width: 300,
-          borderLeft: "1px solid var(--border-subtle)",
-          overflow: "auto",
-          padding: "20px 16px",
-          flexShrink: 0,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--text-secondary)",
-            marginBottom: 16,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
+      <div className="w-[300px] shrink-0 overflow-auto border-l border-[var(--separator)] px-4 py-5">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
           Timeline
         </h2>
 
         {activeTimeline.length === 0 ? (
-          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+          <span className="text-xs text-[var(--field-placeholder)]">
             No events yet
           </span>
         ) : (
           activeTimeline.map((event) => (
-            <div
-              key={event.id}
-              style={{
-                marginBottom: 12,
-                paddingBottom: 12,
-                borderBottom: "1px solid var(--border-subtle)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: "var(--text-tertiary)",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
+            <div key={event.id} className="mb-3 pb-3">
+              <div className="mb-1 flex justify-between">
+                <span className="font-mono text-[10px] text-[var(--field-placeholder)]">
                   {event.eventType}
                 </span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: "var(--text-tertiary)",
-                  }}
-                >
+                <span className="text-[10px] text-[var(--field-placeholder)]">
                   {new Date(event.timestamp).toLocaleTimeString()}
                 </span>
               </div>
-              <span
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-secondary)",
-                }}
-              >
-                {event.summary}
-              </span>
+              <span className="text-xs text-[var(--muted)]">{event.summary}</span>
+              <Separator className="mt-3" />
             </div>
           ))
         )}
 
         {/* Health score */}
         {activePipeline && activePipeline.healthScore !== null && (
-          <div
-            style={{
-              marginTop: 20,
-              padding: 12,
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--text-tertiary)",
-                display: "block",
-                marginBottom: 4,
-              }}
-            >
-              Health Score
-            </span>
-            <span
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                color:
+          <Card className="mt-5">
+            <CardContent className="p-3">
+              <span className="mb-1 block text-[11px] text-[var(--field-placeholder)]">
+                Health Score
+              </span>
+              <span
+                className={`text-2xl font-semibold ${
                   activePipeline.healthScore >= 7
-                    ? "var(--accent-green)"
+                    ? "text-success"
                     : activePipeline.healthScore >= 4
-                      ? "var(--accent-amber)"
-                      : "var(--accent-red)",
-              }}
-            >
-              {activePipeline.healthScore}
-            </span>
-            <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-              /10 {activePipeline.healthTrend}
-            </span>
-          </div>
+                      ? "text-warning"
+                      : "text-danger"
+                }`}
+              >
+                {activePipeline.healthScore}
+              </span>
+              <span className="text-xs text-[var(--field-placeholder)]">
+                /10 {activePipeline.healthTrend}
+              </span>
+            </CardContent>
+          </Card>
         )}
 
         {/* Deploy URL */}
         {project?.deployUrl && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: 12,
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--text-tertiary)",
-                display: "block",
-                marginBottom: 4,
-              }}
-            >
-              Live URL
-            </span>
-            <span
-              style={{
-                fontSize: 12,
-                color: "var(--accent-green)",
-                fontFamily: "var(--font-mono)",
-                wordBreak: "break-all",
-              }}
-            >
-              {project.deployUrl}
-            </span>
-          </div>
+          <Card className="mt-3">
+            <CardContent className="p-3">
+              <span className="mb-1 block text-[11px] text-[var(--field-placeholder)]">
+                Live URL
+              </span>
+              <span className="break-all font-mono text-xs text-success">
+                {project.deployUrl}
+              </span>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

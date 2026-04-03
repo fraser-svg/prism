@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { Button, TextField, Input } from "@heroui/react";
 import { usePrismStore } from "@prism/ui";
 
 export function WebHeader() {
@@ -10,67 +11,32 @@ export function WebHeader() {
 
   return (
     <div
-      style={{
-        height: 48,
-        background: "var(--bg-surface)",
-        display: "flex",
-        alignItems: "center",
-        paddingLeft: 24,
-        paddingRight: 24,
-        gap: 12,
-        flexShrink: 0,
-        borderBottom: "1px solid var(--border-subtle)",
-      }}
+      className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--separator)] bg-[var(--surface)] px-6"
     >
-      <span
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: "var(--accent-blue)",
-          cursor: "pointer",
-          letterSpacing: "0.02em",
-        }}
+      <button
+        className="cursor-pointer border-none bg-transparent text-[13px] font-semibold tracking-wide text-[var(--accent)]"
         onClick={() => navigate("/")}
       >
         PRISM
-      </span>
+      </button>
 
-      {isPortfolio && (
-        <input
-          type="text"
-          placeholder="Search clients and projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: 360,
-            height: 30,
-            padding: "0 10px",
-            background: "var(--bg-elevated)",
-            border: "none",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--text-primary)",
-            fontSize: 12,
-            fontFamily: "var(--font-sans)",
-            outline: "none",
-          }}
-        />
-      )}
-
-      {!isPortfolio && (
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-secondary)",
-            fontSize: 12,
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-          }}
+      {isPortfolio ? (
+        <TextField className="max-w-[360px] flex-1">
+          <Input
+            placeholder="Search clients and projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="text-xs"
+          />
+        </TextField>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={() => navigate("/")}
         >
           Portfolio
-        </button>
+        </Button>
       )}
     </div>
   );

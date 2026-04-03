@@ -1,3 +1,4 @@
+import { Tooltip, TooltipTrigger, TooltipContent } from "@heroui/react";
 import type { StageView } from "../types";
 
 const STAGE_COLORS: Record<string, string> = {
@@ -21,71 +22,43 @@ export function PipelineStrip({
   if (stages.length === 0) return null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: compact ? 3 : 6,
-        alignItems: "center",
-      }}
-    >
+    <div className={`flex items-center ${compact ? "gap-1" : "gap-1.5"}`}>
       {stages.map((stage) => {
         const color = STAGE_COLORS[stage.status] || "var(--stage-upcoming)";
         const isCurrent = stage.status === "current";
 
         if (compact) {
           return (
-            <div
-              key={stage.id}
-              className={isCurrent ? "stage-current" : undefined}
-              style={{
-                width: 16,
-                height: 4,
-                borderRadius: 2,
-                background: color,
-              }}
-              title={`${stage.label}: ${stage.status}`}
-            />
+            <Tooltip key={stage.id}>
+              <TooltipTrigger>
+                <div
+                  className={isCurrent ? "stage-current" : undefined}
+                  style={{ width: 16, height: 4, borderRadius: 2, background: color }}
+                />
+              </TooltipTrigger>
+              <TooltipContent>{`${stage.label}: ${stage.status}`}</TooltipContent>
+            </Tooltip>
           );
         }
 
         return (
           <button
             key={stage.id}
-            className={isCurrent ? "stage-current" : undefined}
+            className={`flex flex-col items-center gap-1 rounded-lg border-none px-3 py-2 min-w-[80px] transition-colors ${
+              isCurrent
+                ? "bg-[var(--default)] stage-current"
+                : "bg-[var(--surface-secondary)] hover:bg-[var(--default)]"
+            } ${onStageClick ? "cursor-pointer" : "cursor-default"}`}
             onClick={() => onStageClick?.(stage)}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 4,
-              padding: "8px 12px",
-              background:
-                isCurrent ? "var(--bg-active)" : "var(--bg-elevated)",
-              border: "none",
-              borderRadius: "var(--radius-md)",
-              cursor: onStageClick ? "pointer" : "default",
-              minWidth: 80,
-              transition: "background 0.15s",
-            }}
           >
             <div
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: color,
-              }}
+              className="size-2 rounded-full"
+              style={{ background: color }}
             />
             <span
-              style={{
-                fontSize: 11,
-                fontWeight: isCurrent ? 600 : 400,
-                color: isCurrent
-                  ? "var(--text-primary)"
-                  : "var(--text-secondary)",
-                fontFamily: "var(--font-sans)",
-                whiteSpace: "nowrap",
-              }}
+              className={`text-xs whitespace-nowrap font-[var(--font-sans)] ${
+                isCurrent ? "font-semibold text-[var(--foreground)]" : "text-[var(--muted)]"
+              }`}
             >
               {stage.label}
             </span>

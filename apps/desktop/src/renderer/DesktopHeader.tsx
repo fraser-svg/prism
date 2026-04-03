@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { Button, TextField, Input } from "@heroui/react";
 import { usePrismStore } from "@prism/ui";
 
 export function DesktopHeader() {
@@ -10,70 +11,33 @@ export function DesktopHeader() {
 
   return (
     <div
-      className="titlebar-drag"
-      style={{
-        height: 38,
-        background: "var(--bg-surface)",
-        display: "flex",
-        alignItems: "center",
-        paddingLeft: 78,
-        paddingRight: 16,
-        gap: 12,
-        flexShrink: 0,
-      }}
+      className="titlebar-drag flex h-[38px] shrink-0 items-center gap-3 bg-[var(--surface)] pl-[78px] pr-4"
     >
-      <span
-        className="titlebar-no-drag"
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: "var(--accent-blue)",
-          cursor: "pointer",
-          letterSpacing: "0.02em",
-        }}
+      <button
+        className="titlebar-no-drag cursor-pointer border-none bg-transparent text-[13px] font-semibold tracking-wide text-[var(--accent)]"
         onClick={() => navigate("/")}
       >
         PRISM
-      </span>
+      </button>
 
-      {isPortfolio && (
-        <input
+      {isPortfolio ? (
+        <TextField className="titlebar-no-drag max-w-[360px] flex-1">
+          <Input
+            placeholder="Search clients and projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="text-xs"
+          />
+        </TextField>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={() => navigate("/")}
           className="titlebar-no-drag"
-          type="text"
-          placeholder="Search clients and projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: 360,
-            height: 26,
-            padding: "0 10px",
-            background: "var(--bg-elevated)",
-            border: "none",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--text-primary)",
-            fontSize: 12,
-            fontFamily: "var(--font-sans)",
-            outline: "none",
-          }}
-        />
-      )}
-
-      {!isPortfolio && (
-        <button
-          className="titlebar-no-drag"
-          onClick={() => navigate("/")}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-secondary)",
-            fontSize: 12,
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-          }}
         >
           Portfolio
-        </button>
+        </Button>
       )}
     </div>
   );
