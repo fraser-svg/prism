@@ -9,6 +9,25 @@ All notable changes to Prism are documented here.
 
 ### Fixed
 - **Stitch troubleshooting clarity** — Prism now explains the specific repo-managed Stitch failure mode, including the missing-SDK symptom (`cd scripts/stitch-mcp && npm install`), instead of collapsing all Stitch issues into a generic "not integrated" response.
+## [4.0.21.0] - 2026-04-03
+
+### Added
+- **Electron Portfolio MVP** — the desktop app you demo to YC. Create and manage client accounts, browse projects grouped by client, see the 7-stage pipeline with real data from each project, and open a session drawer to trigger actions.
+- **`apps/web/`** — a Vite SPA + Express API server that runs Prism's workspace in the browser. Same portfolio and control room UI, accessed over HTTP instead of Electron IPC.
+- **`packages/ui/`** — shared React component library used by both desktop and web. PortfolioView, ControlRoom, SessionDrawer, PipelineStrip, AppShell, and modals for adding clients and projects.
+- **Transport adapter pattern** — `IpcTransport` (Electron) and `FetchTransport` (HTTP) implement the same `PrismTransport` interface. The same Zustand store code runs in both apps without modification.
+- **ClientRepository** — full CRUD for client accounts with slug generation, archiving, and `db.transaction()` atomic slug deduplication to prevent race conditions.
+
+### Fixed
+- **CORS locked down** — web server was open to any origin in dev. Now restricted to `http://localhost:5173`.
+- **Path validation on project create** — desktop and web now both check that a path exists before registering it as a project.
+- **IPC field coercion** — `projects:update` now coerces all incoming fields via `String()` instead of blindly casting unknown types.
+- **`scanAllPipelines` concurrency cap** — pipeline scans now run in chunks of 5 instead of all at once, preventing request avalanches on large portfolios.
+- **ESM compatibility** — replaced `import.meta.dirname` (Node 21.2+ only) with `dirname(fileURLToPath(import.meta.url))` for broader Node version support.
+
+### For contributors
+- `packages/workspace/src/client-repository.test.ts` — 8 tests covering all public methods including slug deduplication edge case
+
 ## [4.0.20.3] - 2026-04-01
 
 ### Added
