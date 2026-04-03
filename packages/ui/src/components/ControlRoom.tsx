@@ -84,7 +84,7 @@ export function ControlRoom() {
     if (id) reExtractItem(itemId, "project", id);
   };
   const handleCopyKnowledge = (text: string) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text).catch(() => {});
   };
   const handleApplyToBrief = (knowledgeId: string) => {
     if (id) applyToBrief(id, knowledgeId);

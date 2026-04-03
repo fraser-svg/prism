@@ -74,7 +74,9 @@ function ClientProfileBanner({
           )}
           {summary?.brandColors && summary.brandColors.length > 0 && (
             <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
-              {summary.brandColors.map((color) => (
+              {summary.brandColors
+                .filter((c) => /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(c))
+                .map((color) => (
                 <div
                   key={color}
                   style={{

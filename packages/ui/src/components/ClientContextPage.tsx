@@ -79,8 +79,8 @@ export function ClientContextPage() {
           onAddNote={(text) => clientId && addContextNote("client", clientId, text)}
           onDeleteItem={(id) => clientId && deleteContextItem(id, "client", clientId)}
           onReExtract={(id) => clientId && reExtractItem(id, "client", clientId)}
-          onCopyKnowledge={(text) => navigator.clipboard.writeText(text)}
-          onApplyToBrief={(knowledgeId) => flagKnowledge(knowledgeId)}
+          onCopyKnowledge={(text) => void navigator.clipboard.writeText(text).catch(() => {})}
+          onApplyToBrief={() => {}}
           onFlagWrong={(knowledgeId) => flagKnowledge(knowledgeId)}
           onLinkPreviousAttempt={() => {}}
         />
