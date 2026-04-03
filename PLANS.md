@@ -142,25 +142,33 @@ Scope:
 Exit criteria:
 - Prism Core can power a real desktop workspace without losing continuity ✓
 
-### M5. Direction Reset + Hardening ← NEXT
+### M5. Electron Portfolio MVP ← ACTIVE
 
 Goal:
-- align repo docs to agency-first ICP and Electron shell decision
-- harden gate evaluator and resume engine for real user sessions
-- add structured session logging for user proof evidence
-- write vision doc for the Prism OS roadmap (9-stage lifecycle, entity expansion, desktop shell)
+- build the desktop app that IS the YC demo
+- client management, project portfolio, 7-stage pipeline visualization, session drawer
+- local-first Electron + Vite + React + TypeScript at apps/desktop/
+
+Scope:
+- ClientAccount entity in packages/core, workspace migration, client repository
+- Electron main process with WorkspaceFacade + extractPipelineSnapshot via IPC
+- Portfolio view (grouped by client), Project Control Room (pipeline strip + detail), Session Drawer
+- Zustand state, scan-on-launch pipeline cache, unified event-log with desktop types
+- 7 stages shown honestly (existing backend phases), not faking 9
 
 Exit criteria:
-- repo tells one coherent story (agency operators, Electron, 9-stage target)
-- gate evaluator and resume engine handle corrupt/missing artifacts gracefully
-- Patrick session produces structured evidence via session logging
-- vision doc committed to docs/designs/prism-os-roadmap.md
+- create client, create project, see it in portfolio grouped correctly
+- click project, see 7-stage pipeline with real data from extractPipelineSnapshot()
+- open session drawer, trigger actions, see structured events
+- workspace restart preserves all state
+
+See `.context/attachments/plan.md` for full spec.
 
 ## Priority Stack
 
 ### Now
 
-- M5 Direction Reset + Hardening (gate/resume resilience, session logging, doc alignment)
+- M5 Electron Portfolio MVP — the desktop app IS the YC demo
 - Patrick session — first real user proof
 - Record a demo-ready walkthrough of the agency workflow
 - Sharpen the one-liner and YC application narrative around agency operators
@@ -171,12 +179,12 @@ Exit criteria:
 - Deprecate OpenSpec for core spec storage
 - Implement 9-stage lifecycle migration (see docs/designs/prism-os-roadmap.md)
 - Deployment entity (Tier 1) — IntakeBrief shipped in v4.0.13.0
+- Extract packages/ui service boundary from desktop main process imports
 
 ### Later
 
-- Agency entity expansion (ClientAccount, FeedbackRecord — Tier 2) — SolutionThesis shipped in v4.0.13.0
-- App-facing service layer (packages/ui AppService facade)
-- Electron desktop shell
+- FeedbackRecord entity (Tier 2) — SolutionThesis shipped in v4.0.13.0
+- Electron auto-update + code signing
 - Sync/cloud features
 
 ### Not Now
@@ -201,9 +209,9 @@ Exit criteria:
 
 ## Immediate Next Moves
 
-1. Ship M5 hardening (gate/resume resilience, session logging, doc alignment).
+1. Ship Electron Portfolio MVP (apps/desktop/) — the YC demo.
 2. Get Patrick through a full Prism session with structured session logging.
-3. Record demo walkthrough: Socratic discovery → spec → research → build → verification → ship.
+3. Record demo walkthrough using the desktop app.
 4. Sharpen YC one-liner around agency operators hitting the 80% wall.
 5. Collect user proof from real dogfood sessions.
 

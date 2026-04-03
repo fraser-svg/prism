@@ -13,6 +13,7 @@ export default defineConfig({
       "@prism/orchestrator": workspacePath("./packages/orchestrator/src/index.ts"),
       "@prism/guardian": workspacePath("./packages/guardian/src/index.ts"),
       "@prism/execution": workspacePath("./packages/execution/src/index.ts"),
+      "@prism/ui": workspacePath("./packages/ui/src/index.ts"),
     },
   },
   test: {

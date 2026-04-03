@@ -1,0 +1,35 @@
+{
+  "name": "@prism/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"tsx watch --tsconfig tsconfig.server.json server/index.ts\"",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "preview": "node dist/server/index.js"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.5.0",
+    "zustand": "^5.0.5",
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "zod": "^3.24.0",
+    "@prism/ui": "*",
+    "@prism/core": "*",
+    "@prism/workspace": "*",
+    "@prism/orchestrator": "*",
+    "@prism/memory": "*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@vitejs/plugin-react": "^4.5.2",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5"
+  }
+}

@@ -9,11 +9,13 @@ import type {
   NamedEntity,
   PrimaryPlatform,
   ProductType,
+  ProjectPriority,
   ProjectStatus,
   ReleaseDecision,
   RelativePath,
   ReviewType,
   ReviewVerdict,
+  RiskState,
   RouteHint,
   RunStatus,
   ScopeMode,
@@ -47,6 +49,19 @@ export interface Project extends AuditStamp {
   rootPath: AbsolutePath;
   primaryPlatform: PrimaryPlatform;
   productType: ProductType;
+  clientAccountId: EntityId | null;
+  owner: string | null;
+  priority: ProjectPriority | null;
+  riskState: RiskState | null;
+  deployUrl: string | null;
+}
+
+export interface ClientAccount extends AuditStamp {
+  id: EntityId;
+  name: string;
+  slug: string;
+  status: "active" | "archived";
+  notes: string | null;
 }
 
 export interface ProductBrief extends AuditStamp {

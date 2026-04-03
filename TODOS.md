@@ -1,5 +1,29 @@
 # Prism TODOs
 
+## ~~Portfolio MVP — Shared UI + Web App~~ — DONE in fraser-svg/portfolio-mvp
+
+`packages/ui/` extracted as shared React component library. `apps/web/` created (Vite + Express). `apps/desktop/` refactored to import from `@prism/ui`. Transport adapter pattern (`IpcTransport` / `FetchTransport`) enables both apps to share the same Zustand store.
+
+### P1 deferred items from portfolio-mvp
+
+- **Favicon**: Add `apps/web/public/favicon.svg` + `apps/desktop/` icon
+- **Skeleton loading**: Show placeholder cards while portfolio loads instead of blank screen
+- **Keyboard shortcuts**: `⌘K` to focus search, `⌘N` to open new project dialog
+- **Zustand persist**: Persist `searchQuery` + `activeProjectId` across page reloads in web app
+- **`dev:app` script**: Add root-level `npm run dev:app` that starts both web server and Vite concurrently
+
+## Batch Portfolio Endpoint (P3)
+
+**What:** Add `GET /api/portfolio/full` endpoint that returns portfolio data + all pipeline snapshots in a single response, replacing the current N+1 request pattern.
+
+**Why:** The Portfolio page currently fires one `GET /api/portfolio` then N separate `GET /api/projects/:id/pipeline` requests (one per project). At demo scale (<20 projects on localhost), latency is negligible. At real scale or over a network, this becomes a visible page load delay.
+
+**When:** When page load on the Portfolio page is noticeably slow, or when the web app is used over a network (not localhost).
+
+**How:** Add a new Express route that calls `facade.registry.list()`, `clients.list()`, and `extractPipelineSnapshot()` for each project server-side, returning the combined result. Update `FetchTransport.listPortfolioFull()` to call it. Keep the existing separate endpoints for granular refresh.
+
+**Depends on:** Web app MVP shipped (`apps/web/`).
+
 ## Monorepo Target Directory Resolution (P2)
 
 **What:** Add framework detection to `scripts/prism-inject.sh` for monorepo projects where `.env.local` needs to go in a subdirectory (e.g., `app/`, `packages/web/`).
@@ -302,6 +326,30 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Add `activeExperiments` field to `PipelineSnapshot`. Read experiment registry + active experiments, include metric summaries. Render as a table in the HTML with baseline vs test averages and session counts.
 
 **Depends on:** Autoresearch Level 1 shipped + Pipeline Visualizer Session History Sparklines.
+
+## Electron Auto-Update + Code Signing (P2)
+
+**What:** Add electron-updater with code signing for macOS distribution.
+
+**Why:** Without auto-update, every bug fix requires users to manually download a new build. Without code signing, macOS Gatekeeper blocks the app entirely. Not needed for the YC demo (run from dev mode or local build), but required before any external user touches it.
+
+**When:** After MVP is shipped and before first external user.
+
+**How:** Add electron-updater, configure GitHub Releases as update source, set up Apple Developer signing with notarization. Build pipeline via electron-builder.
+
+**Depends on:** Electron Portfolio MVP shipped.
+
+## Event-Log Schema Versioning (P2)
+
+**What:** Add a schemaVersion field to event-log entries and a migration path for desktop event types.
+
+**Why:** The unified event-log now serves both orchestrator internals and desktop UI. If the schema changes again, old entries need to remain readable. Without versioning, unrecognized entries could crash the drawer.
+
+**When:** Before the next event-log schema change after MVP.
+
+**How:** Add `schemaVersion: 1` to event entries. On read, check version and apply transforms for older entries. Keep a version changelog in event-log.ts comments.
+
+**Depends on:** Event-log desktop extension (Electron MVP PR).
 
 ## Pipeline Visualizer: Session History Sparklines (P2)
 
