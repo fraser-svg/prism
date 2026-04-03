@@ -10,6 +10,7 @@ coverage/
 
 # Environment
 .env*
+!.env.example
 
 # Stitch MCP proxy
 scripts/stitch-mcp/node_modules/

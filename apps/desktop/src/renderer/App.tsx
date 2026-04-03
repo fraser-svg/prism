@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
-import { PrismStoreContext, AppShell, Portfolio, ControlRoom, ClientContextPage } from "@prism/ui";
+import { PrismStoreContext, AppShell, Portfolio, ControlRoom, ClientContextPage, Providers } from "@prism/ui";
 import { useStore } from "./store";
 import { DesktopHeader } from "./DesktopHeader";
 
@@ -18,6 +18,7 @@ export function App() {
             <Route path="/" element={<Portfolio onBrowse={handleBrowse} />} />
             <Route path="/project/:id" element={<ControlRoom />} />
             <Route path="/clients/:clientId/context" element={<ClientContextPage />} />
+            <Route path="/providers" element={<Providers />} />
           </Route>
         </Routes>
       </HashRouter>

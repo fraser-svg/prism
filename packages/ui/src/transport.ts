@@ -14,6 +14,9 @@ export interface PrismTransport {
   getProjectPipeline(projectId: string): Promise<IpcResult>;
   getProjectTimeline(projectId: string): Promise<IpcResult>;
   runAction(projectId: string, action: string): Promise<IpcResult>;
+  // Providers
+  listProviders(): Promise<IpcResult>;
+  checkProviderHealth(): Promise<IpcResult>;
   // Context dump
   getContextItems(entityType: "project" | "client", entityId: string): Promise<IpcResult>;
   addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }): Promise<IpcResult>;
@@ -36,6 +39,8 @@ export class IpcTransport implements PrismTransport {
   getProjectPipeline(projectId: string) { return window.prism.getProjectPipeline(projectId); }
   getProjectTimeline(projectId: string) { return window.prism.getProjectTimeline(projectId); }
   runAction(projectId: string, action: string) { return window.prism.runAction(projectId, action); }
+  listProviders() { return window.prism.listProviders(); }
+  checkProviderHealth() { return window.prism.checkProviderHealth(); }
   getContextItems(entityType: "project" | "client", entityId: string) { return window.prism.getContextItems(entityType, entityId); }
   addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }) { return window.prism.addContextItem(item); }
   deleteContextItem(id: string) { return window.prism.deleteContextItem(id); }
@@ -98,6 +103,8 @@ export class FetchTransport implements PrismTransport {
   runAction(projectId: string, action: string) {
     return this.request(`/projects/${projectId}/actions`, { method: "POST", body: JSON.stringify({ action }) });
   }
+  listProviders() { return this.request("/providers"); }
+  checkProviderHealth() { return this.request("/providers/check-health", { method: "POST" }); }
   getContextItems(entityType: "project" | "client", entityId: string) {
     return this.request(`/context/${entityType}/${entityId}/items`);
   }

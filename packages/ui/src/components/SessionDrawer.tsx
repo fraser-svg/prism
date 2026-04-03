@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button, Chip, Separator, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
 import type { TimelineEvent } from "../types";
 
@@ -45,251 +46,99 @@ export function SessionDrawer() {
   };
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        justifyContent: "flex-end",
-        zIndex: 50,
-      }}
-    >
+    <div className="absolute inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(0,0,0,0.4)",
-        }}
+        className="absolute inset-0 bg-[var(--backdrop)]"
         onClick={() => toggleDrawer()}
       />
 
       {/* Drawer panel */}
-      <div
-        className="slide-in-right"
-        style={{
-          position: "relative",
-          width: 380,
-          height: "100%",
-          background: "var(--bg-elevated)",
-          borderLeft: "1px solid var(--border-subtle)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
+      <div className="slide-in-right relative flex h-full w-[380px] flex-col overflow-hidden border-l border-[var(--separator)] bg-[var(--surface-secondary)]">
         {/* Header */}
-        <div
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--border-subtle)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexShrink: 0,
-          }}
-        >
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--separator)] px-5 py-4">
           <div>
-            <h2
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "var(--text-primary)",
-                marginBottom: 2,
-              }}
-            >
-              Session
-            </h2>
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">Session</h2>
             {project && (
-              <span
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-tertiary)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
+              <span className="font-mono text-[11px] text-[var(--field-placeholder)]">
                 {project.name}
               </span>
             )}
           </div>
-          <button
-            onClick={() => toggleDrawer()}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--text-tertiary)",
-              fontSize: 18,
-              cursor: "pointer",
-              padding: "4px 8px",
-              lineHeight: 1,
-            }}
+          <Button
+            isIconOnly
+            variant="ghost"
+            size="sm"
+            onPress={() => toggleDrawer()}
+            aria-label="Close drawer"
           >
             {"\u2715"}
-          </button>
+          </Button>
         </div>
 
         {/* Actions */}
-        <div
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--border-subtle)",
-            flexShrink: 0,
-          }}
-        >
-          <h3
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--text-secondary)",
-              marginBottom: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
+        <div className="shrink-0 border-b border-[var(--separator)] px-5 py-4">
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
             Actions
           </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="flex flex-col gap-1.5">
             {ACTIONS.map((action) => (
-              <button
+              <Button
                 key={action.key}
-                onClick={() => handleAction(action.key)}
-                disabled={!!runningAction}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 12px",
-                  background:
-                    runningAction === action.key
-                      ? "var(--bg-active)"
-                      : "var(--bg-surface)",
-                  border: "none",
-                  borderRadius: "var(--radius-sm)",
-                  cursor: runningAction ? "not-allowed" : "pointer",
-                  opacity: runningAction && runningAction !== action.key ? 0.5 : 1,
-                  textAlign: "left",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background 0.15s",
-                  width: "100%",
-                }}
+                variant="tertiary"
+                className="h-auto justify-start px-3 py-2 text-left"
+                isDisabled={!!runningAction && runningAction !== action.key}
+                onPress={() => handleAction(action.key)}
               >
-                <div>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: "var(--text-primary)",
-                      display: "block",
-                    }}
-                  >
-                    {action.label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "var(--text-tertiary)",
-                    }}
-                  >
-                    {action.description}
-                  </span>
+                <div className="flex w-full items-center justify-between">
+                  <div>
+                    <span className="block text-sm text-[var(--foreground)]">
+                      {action.label}
+                    </span>
+                    <span className="text-[11px] text-[var(--field-placeholder)]">
+                      {action.description}
+                    </span>
+                  </div>
+                  {runningAction === action.key && <Spinner size="sm" />}
                 </div>
-                {runningAction === action.key && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "var(--accent-blue)",
-                    }}
-                  >
-                    Running...
-                  </span>
-                )}
-              </button>
+              </Button>
             ))}
           </div>
 
           {actionError && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: "6px 10px",
-                background: "rgba(239,68,68,0.1)",
-                borderRadius: "var(--radius-sm)",
-                fontSize: 12,
-                color: "var(--accent-red)",
-              }}
-            >
+            <div className="mt-2 rounded-md bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-2.5 py-1.5 text-xs text-danger">
               {actionError}
             </div>
           )}
         </div>
 
         {/* Event stream */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            padding: "16px 20px",
-          }}
-        >
-          <h3
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--text-secondary)",
-              marginBottom: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
             Event Stream
           </h3>
 
           {activeTimeline.length === 0 ? (
-            <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+            <span className="text-xs text-[var(--field-placeholder)]">
               No events yet. Run an action to get started.
             </span>
           ) : (
             activeTimeline.map((event: TimelineEvent) => (
-              <div
-                key={event.id}
-                style={{
-                  marginBottom: 10,
-                  paddingBottom: 10,
-                  borderBottom: "1px solid var(--border-subtle)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 3,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: eventTypeColor(event.eventType),
-                      fontFamily: "var(--font-mono)",
-                    }}
+              <div key={event.id} className="mb-2.5 pb-2.5">
+                <div className="mb-1 flex items-center justify-between">
+                  <Chip
+                    size="sm"
+                    color={eventTypeChipColor(event.eventType)}
+                    variant="soft"
                   >
-                    {event.eventType}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-tertiary)",
-                    }}
-                  >
+                    <span className="font-mono text-[10px]">{event.eventType}</span>
+                  </Chip>
+                  <span className="text-[10px] text-[var(--field-placeholder)]">
                     {new Date(event.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  {event.summary}
-                </span>
+                <span className="text-xs text-[var(--muted)]">{event.summary}</span>
+                <Separator className="mt-2.5" />
               </div>
             ))
           )}
@@ -299,12 +148,12 @@ export function SessionDrawer() {
   );
 }
 
-function eventTypeColor(type: string): string {
+function eventTypeChipColor(
+  type: string,
+): "success" | "danger" | "accent" | "default" {
   if (type.includes("completed") || type.includes("session_end"))
-    return "var(--accent-green)";
-  if (type.includes("failed") || type.includes("blocked"))
-    return "var(--accent-red)";
-  if (type.includes("started") || type.includes("pipeline"))
-    return "var(--accent-blue)";
-  return "var(--text-tertiary)";
+    return "success";
+  if (type.includes("failed") || type.includes("blocked")) return "danger";
+  if (type.includes("started") || type.includes("pipeline")) return "accent";
+  return "default";
 }

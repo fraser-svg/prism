@@ -14,16 +14,18 @@
     "postinstall": "electron-rebuild"
   },
   "dependencies": {
+    "@heroui/react": "^3.0.2",
     "@prism/core": "*",
     "@prism/memory": "*",
     "@prism/orchestrator": "*",
     "@prism/ui": "*",
     "@prism/workspace": "*",
     "@tailwindcss/vite": "^4.2.2",
+    "framer-motion": "^12.38.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.5.0",
-    "tailwindcss": "^4.2.2",
+    "tailwindcss": "4",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

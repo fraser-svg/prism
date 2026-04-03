@@ -4,11 +4,39 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.23.0] - 2026-04-03
+
+### Added
+- **Authentication** — signup and login via Google, GitHub, or email/password using Better Auth. All API routes now require a valid session. The web app shows a login page when unauthenticated.
+- **Login page** — centered card with social login buttons (Google, GitHub), email/password form with sign-up/sign-in toggle, inline error messages, and loading states.
+- **User menu** — avatar dropdown in the web header with initials fallback and sign-out action.
+- **Auth migration** — `003-auth.sql` creates Better Auth tables (user, session, account, verification) in the workspace SQLite database.
+- **Dev bypass** — `SKIP_AUTH=true` skips auth checks in development. Hard guard prevents this in non-development environments.
+- **Auth tests** — 6 integration tests covering requireAuth middleware, session bypass, signup flow, and protected route enforcement.
+
 ### Changed
-- **Stitch capability truth** — Prism now distinguishes between host-managed Stitch tools already exposed by the active runtime and the repo-managed Stitch proxy in `scripts/stitch-mcp/`.
+- **Server refactored to `createApp()`** — Express app creation extracted into a factory function for testability. Module-level side effects guarded so test imports don't start the server.
+- **Error responses hardened** — `safeHandle` now returns generic "Internal server error" to clients instead of leaking raw error messages. Details logged server-side only.
+
+## [4.0.22.0] - 2026-04-03
+
+### Added
+- **LLM agnosticism** — Prism can now route tasks to multiple AI providers instead of depending solely on Claude Code. Three provider adapters (Anthropic, Google/Gemini, Stitch) implement the new `ProviderAdapter` interface.
+- **Model router** — static capability-based routing with health-check fallback. Tasks declare what they need (reasoning, code generation, visual design, verification, tool use), and the router picks the best available provider. If the primary is down, it falls through to the fallback.
+- **Provider dashboard** — new "Providers" tab in the Electron app and web UI showing each provider's status, task count, and last health check. Data flows through the Zustand store via the transport layer.
+- **Runtime mode detection** — `RuntimeMode.SKILL` (inside Claude Code) vs `RuntimeMode.HEADLESS` (CLI/API). Adapters behave differently depending on context.
+- **Pricing table** — static cost estimates per model for token-level cost tracking in telemetry.
+
+### Changed
+- **Provider views extracted** — display name mapping and health-to-view building moved from duplicated inline code in web server and desktop IPC into shared `provider-views.ts`.
+- **Routing telemetry** — `routing:completed` events logged with provider, fallback status, token usage, and estimated cost.
 
 ### Fixed
-- **Stitch troubleshooting clarity** — Prism now explains the specific repo-managed Stitch failure mode, including the missing-SDK symptom (`cd scripts/stitch-mcp && npm install`), instead of collapsing all Stitch issues into a generic "not integrated" response.
+- **TOCTOU race in integration registration** — `ensureRegistered()` now uses `INSERT OR IGNORE` instead of SELECT-then-INSERT, eliminating race conditions under parallel routing.
+- **Path traversal in Google adapter** — `task.id` is now sanitized to `[a-zA-Z0-9_-]` before being used in staging directory paths.
+- **Router fallback on execution failure** — if the primary adapter returns `failed` or throws, the router now falls through to the fallback instead of returning the failure immediately.
+- **SQLite connection leak** — `facade.close()` now runs in a `finally` block in the route-task CLI command.
+
 ## [4.0.21.0] - 2026-04-03
 
 ### Added

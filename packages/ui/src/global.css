@@ -1,54 +1,90 @@
-/* Tailwind CSS v4 — must be first */
 @import "tailwindcss";
 
 /* Scan sibling component files for Tailwind class usage */
 @source ".";
 
-/* HeroUI v3 styles — must be after Tailwind */
 @import "@heroui/styles";
 
-/* ─── Kinetic Workspace Dark Theme ─── */
-/* Override HeroUI dark theme variables with our palette */
+/* Tell Tailwind v4 to scan these directories for utility classes */
+@source "../src";
+@source "../../../apps/desktop/src";
+@source "../../../apps/web/src";
 
-:root,
+/* Prism — Kinetic Workspace dark theme overrides */
+.dark,
 [data-theme="dark"] {
-  /* HeroUI semantic overrides mapped to Kinetic Workspace */
-  --background: oklch(0.1095 0.0115 277.57); /* #0a0a0f */
-  --foreground: oklch(0.9303 0.0046 286.07); /* #e8e8ed */
-  --surface: oklch(0.1495 0.0103 277.83); /* #111118 */
-  --surface-foreground: oklch(0.9303 0.0046 286.07);
-  --surface-secondary: oklch(0.1897 0.0084 278.54); /* #1a1a24 */
-  --surface-tertiary: oklch(0.2198 0.0062 278.10); /* #222230 */
-  --overlay: oklch(0.1897 0.0084 278.54);
-  --overlay-foreground: oklch(0.9303 0.0046 286.07);
-  --muted: oklch(0.5988 0.0223 281.93); /* #8888a0 */
-  --accent: oklch(0.6145 0.1827 258.41); /* #4d8eff */
-  --accent-foreground: oklch(0.9911 0 0);
-  --success: oklch(0.7693 0.1554 163.22); /* #34d399 */
-  --success-foreground: oklch(0.1095 0.0115 277.57);
-  --warning: oklch(0.7407 0.1681 66.93); /* #f59e0b */
-  --warning-foreground: oklch(0.1095 0.0115 277.57);
-  --danger: oklch(0.5774 0.2297 27.33); /* #ef4444 */
-  --danger-foreground: oklch(0.9911 0 0);
-  --border: oklch(0.2198 0.0062 278.10); /* #2a2a3a */
-  --separator: oklch(0.1699 0.0094 277.61); /* #1e1e2a */
-  --focus: oklch(0.6145 0.1827 258.41);
-  --field-background: oklch(0.1495 0.0103 277.83);
-  --field-foreground: oklch(0.9303 0.0046 286.07);
-  --field-placeholder: oklch(0.5988 0.0223 281.93);
-  --field-border: oklch(0.2198 0.0062 278.10);
-  --radius: 0.5rem; /* 8px, matches --radius-md */
+  --background: #0a0a0f;
+  --foreground: #e8e8ed;
+
+  /* Surface */
+  --surface: #111118;
+  --surface-foreground: #e8e8ed;
+  --surface-secondary: #1a1a24;
+  --surface-tertiary: #222230;
+
+  /* Overlay */
+  --overlay: #1a1a24;
+  --overlay-foreground: #e8e8ed;
+
+  /* Muted */
+  --muted: #8888a0;
+
+  /* Default */
+  --default: #2a2a3a;
+  --default-foreground: #e8e8ed;
+
+  /* Accent / Primary */
+  --accent: #4d8eff;
+  --accent-foreground: #ffffff;
+
+  /* Status */
+  --success: #34d399;
+  --success-foreground: #0a0a0f;
+  --warning: #f59e0b;
+  --warning-foreground: #0a0a0f;
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  /* Form fields */
+  --field-background: #111118;
+  --field-foreground: #e8e8ed;
+  --field-placeholder: #5a5a70;
+  --field-border: #2a2a3a;
+
+  /* Borders & separators */
+  --border: #2a2a3a;
+  --separator: #1e1e2a;
+
+  /* Focus ring */
+  --focus: #4d8eff;
+
+  /* Backdrop */
+  --backdrop: rgba(0, 0, 0, 0.6);
+
+  /* Scrollbar */
+  --scrollbar: #3a3a4a;
+
+  /* Segment (tabs, toggles) */
+  --segment: #2a2a3a;
+  --segment-foreground: #e8e8ed;
 }
 
-/* Force dark mode since Prism is dark-only */
-html {
+/* Force dark mode */
+:root {
   color-scheme: dark;
 }
-/* data-theme="dark" is set on <html> in index.html */
 
-/* ─── Legacy Kinetic Workspace tokens ─── */
-/* Kept for existing inline-styled components during migration */
+/* Prism-specific tokens (used by custom components) */
 :root {
+  --stage-completed: #34d399;
+  --stage-current: #4d8eff;
+  --stage-blocked: #ef4444;
+  --stage-upcoming: #3a3a4a;
+
+  --font-sans: "Lexend", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", monospace;
+
+  /* Legacy tokens kept for existing inline-styled components */
   --bg-base: #0a0a0f;
   --bg-surface: #111118;
   --bg-elevated: #1a1a24;
@@ -69,24 +105,6 @@ html {
   --accent-amber: #f59e0b;
   --accent-red: #ef4444;
   --accent-purple: #a78bfa;
-
-  --stage-completed: #34d399;
-  --stage-current: #4d8eff;
-  --stage-blocked: #ef4444;
-  --stage-upcoming: #3a3a4a;
-
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-
-  --font-sans: "Lexend", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "SF Mono", "Fira Code", monospace;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
 }
 
 html,
@@ -94,8 +112,8 @@ body,
 #root {
   height: 100%;
   font-family: var(--font-sans);
-  background: var(--bg-base);
-  color: var(--text-primary);
+  background: var(--background);
+  color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -107,11 +125,11 @@ body,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-default);
+  background: var(--scrollbar);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
+  background: var(--border);
 }
 
 .titlebar-drag {
@@ -178,6 +196,6 @@ body,
 input:focus-visible,
 select:focus-visible,
 button:focus-visible {
-  outline: 2px solid var(--accent-blue);
+  outline: 2px solid var(--focus);
   outline-offset: -1px;
 }

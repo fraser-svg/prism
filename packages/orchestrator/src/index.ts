@@ -9,3 +9,4 @@ export * from "./pipeline-visualizer";
 export * from "./project-snapshot";
 export * from "./project-visualizer";
 export * from "./visualizer-common";
+export * from "./model-router";

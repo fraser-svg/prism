@@ -60,6 +60,10 @@ const api = {
 
   // Dialog
   selectDirectory: () => ipcRenderer.invoke("dialog:selectDirectory"),
+
+  // Providers
+  listProviders: () => ipcRenderer.invoke("providers:list"),
+  checkProviderHealth: () => ipcRenderer.invoke("providers:check-health"),
 };
 
 contextBridge.exposeInMainWorld("prism", api);
