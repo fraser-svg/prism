@@ -360,7 +360,7 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
   if (process.env.NODE_ENV === "production") {
     const clientDist = resolve(dirname(fileURLToPath(import.meta.url)), "../client");
     app.use(express.static(clientDist));
-    app.get("*", (_req, res) => {
+    app.get("/{*path}", (_req, res) => {
       res.sendFile(join(clientDist, "index.html"));
     });
   }

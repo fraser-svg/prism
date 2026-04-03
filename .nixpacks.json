@@ -1,0 +1,12 @@
+{
+  "providers": ["node"],
+  "phases": {
+    "install": {
+      "cmds": ["npm install"]
+    },
+    "build": {
+      "cmds": ["npm run build:web"]
+    }
+  },
+  "start": "node apps/web/dist/server/index.js"
+}

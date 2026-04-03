@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"vite\" \"tsx watch --env-file .env --tsconfig tsconfig.server.json server/index.ts\"",
-    "build": "vite build && tsc -p tsconfig.server.json",
-    "preview": "node dist/server/index.js"
+    "build": "vite build && node build-server.mjs",
+    "preview": "node dist/server/index.js",
+    "start": "node dist/server/index.js"
   },
   "dependencies": {
     "@heroui/react": "^3.0.2",
@@ -34,6 +35,7 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.5.2",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.28.0",
     "typescript": "^5.9.3",
     "vite": "^6.3.5"
   }
