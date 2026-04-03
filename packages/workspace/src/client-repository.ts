@@ -31,23 +31,27 @@ export class ClientRepository {
 
   create(name: string, notes?: string): ClientRow {
     const id = randomUUID();
-    const slug = this.generateSlug(name);
 
-    this.db
-      .prepare(
-        "INSERT INTO client_accounts (id, name, slug, notes) VALUES (?, ?, ?, ?)",
-      )
-      .run(id, name, slug, notes ?? null);
+    // Wrap slug generation + insert in a transaction to prevent TOCTOU race
+    // when two concurrent creates use the same name
+    const row = this.db.transaction(() => {
+      const slug = this.generateSlug(name);
+      this.db
+        .prepare(
+          "INSERT INTO client_accounts (id, name, slug, notes) VALUES (?, ?, ?, ?)",
+        )
+        .run(id, name, slug, notes ?? null);
+      return this.db
+        .prepare("SELECT * FROM client_accounts WHERE id = ?")
+        .get(id) as RawClientRow;
+    })();
 
     this.eventLog.append({
       eventType: "client:created",
       summary: `Created client: ${name}`,
-      metadata: { clientId: id, slug },
+      metadata: { clientId: id, slug: row.slug },
     });
 
-    const row = this.db
-      .prepare("SELECT * FROM client_accounts WHERE id = ?")
-      .get(id) as RawClientRow;
     return this.toClientRow(row);
   }
 
