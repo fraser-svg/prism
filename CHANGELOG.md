@@ -7,6 +7,15 @@ All notable changes to Prism are documented here.
 ### Added
 - **Prismatic app branding** — web and desktop app chrome now use the new Prismatic mark and wordmark, and top-level runtime surfaces now show the Prismatic product name.
 
+## [4.0.24.1] - 2026-04-03
+
+### Added
+- **HeroUI v3 AI instructions** — all 4 AI instruction surfaces (CLAUDE.md, SKILL.md worker dispatch, Gemini worker system prompt, research protocol) now declare HeroUI v3 as the default frontend library. Workers will use HeroUI components instead of raw HTML/Tailwind.
+- **HeroUI eval scenarios** — 3 manual eval scenarios to validate worker output uses HeroUI components (simple component, form, Gemini data table).
+
+### Changed
+- **Dockerfile** — Node 22 base image, `npm ci --build-from-source` for deterministic builds with native module compilation, improved verification comments.
+
 ## [4.0.24.0] - 2026-04-03
 
 ### Added

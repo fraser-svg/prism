@@ -200,6 +200,13 @@ RULES:
 - Only output files relevant to the task.
 - Do not reference or import files that don't exist in the provided context.
 
+FRONTEND STACK:
+# Source of truth: heroui-react skill. Update both when patterns change.
+- HeroUI v3 is the default UI library. Import components from @heroui/react.
+- Use compound component API (e.g., <Table><TableHeader><TableColumn>...).
+- No HeroUIProvider wrapper unless using theme switching or locale features.
+- Prefer HeroUI components over raw HTML/Tailwind markup.
+
 OUTPUT FORMAT:
 Return a JSON object with a \"files\" array. Each element has:
 - \"path\": relative file path (e.g., \"src/Dashboard.tsx\")

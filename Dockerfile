@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 
 WORKDIR /app
 
@@ -16,8 +16,8 @@ COPY packages/workspace/package.json packages/workspace/
 COPY packages/ui/package.json packages/ui/
 COPY apps/web/package.json apps/web/
 
-# Install dependencies and force rebuild native modules from source
-RUN npm install --build-from-source
+# Install dependencies (ci = deterministic, fails if lockfile mismatches)
+RUN npm ci --build-from-source
 
 # Copy source
 COPY . .
@@ -25,7 +25,7 @@ COPY . .
 # Build
 RUN npm run build:web
 
-# Verify Node version matches the native module at build time
+# Verify native module loads at build time (not runtime)
 RUN node -e "require('better-sqlite3')" && echo "better-sqlite3 OK"
 
 ENV NODE_ENV=production

@@ -79,3 +79,13 @@ Key routing rules:
 - GITHUB_CLIENT_ID=(set in Railway)
 - GITHUB_CLIENT_SECRET=(set in Railway)
 - BETTER_AUTH_URL=https://prismatic.build
+
+## Frontend Stack
+
+HeroUI v3 is the default UI library for all Prism frontend work.
+
+- Import components from `@heroui/react` (barrel export)
+- Use compound component API (e.g., `<Table><TableHeader>...`)
+- No `HeroUIProvider` wrapper unless using theme switching or locale features
+- For component docs, invoke the `heroui-react` skill
+- Prefer HeroUI components over raw HTML/Tailwind. Only drop to raw markup when HeroUI has no suitable component.
