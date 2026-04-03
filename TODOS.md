@@ -12,6 +12,18 @@
 - **Zustand persist**: Persist `searchQuery` + `activeProjectId` across page reloads in web app
 - **`dev:app` script**: Add root-level `npm run dev:app` that starts both web server and Vite concurrently
 
+## Canonical Orchestration Spec — YAML Compiler (P1)
+
+**What:** Extract root SKILL.md into `compiler/skills/prism-orchestrator.yaml`. Phase 1: manifest + static sections. Phase 2: stage logic extraction. Phase 3: Codex AGENTS.md compile target. CLI manifest stub at `compiler/output/cli/prism-orchestrator/manifest.json`.
+
+**Why:** Planned as part of the LLM Decoupling work but deferred from the first PR to keep scope manageable. The adapter/routing/dashboard work shipped, but the compiler extraction is the highest YC narrative impact item: proving Prism's orchestration logic is portable across model runtimes.
+
+**When:** Next PR after decouple-prism-llm lands.
+
+**How:** See the CEO plan at `~/.gstack/projects/fraser-svg-prism/ceo-plans/2026-04-03-decouple-prism-llm.md` for full phased extraction plan with gate checks.
+
+**Depends on:** LLM Decoupling PR 1 (fraser-svg/decouple-prism-llm) shipped. Deferred from plan: `2026-04-03-decouple-prism-llm.md`.
+
 ## Batch Portfolio Endpoint (P3)
 
 **What:** Add `GET /api/portfolio/full` endpoint that returns portfolio data + all pipeline snapshots in a single response, replacing the current N+1 request pattern.
@@ -387,6 +399,18 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + Tool Routing TODO.
 
+## Provider Dashboard E2E Tests (P1)
+
+**What:** Playwright E2E tests for the Providers tab: render with 2+ providers, refresh triggers health checks and badge updates, provider disconnect turns badge red.
+
+**Why:** The Providers dashboard is the YC demo surface for LLM agnosticism. Untested UI is demo risk. Unit tests cover adapters and router logic, but the full stack (IPC -> cabinet -> adapters -> UI badges) needs integration coverage. Eng review identified 3 E2E gaps.
+
+**When:** After Phase 3 (Provider Dashboard) implementation is complete, before YC demo.
+
+**How:** Add Playwright tests targeting the Electron app's Providers route. Test: (1) tab renders with provider list from cabinet, (2) refresh button calls `providers:check-health` IPC and updates badges, (3) simulated provider disconnect (mock adapter returning unavailable) shows red badge. Follows the same Electron E2E pattern as any future desktop tests.
+
+**Depends on:** LLM Decoupling PR 1 (fraser-svg/decouple-prism-llm) — Phase 3 dashboard shipped.
+
 ## Proof-Check Gate Accuracy Tracking (P2)
 
 **What:** After 10+ sessions with proof_check_pass/fix telemetry, analyse the fix rate and false positive rate to determine if the gate is effective.
@@ -398,3 +422,27 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Read `proof_check_pass` and `proof_check_fix` events from telemetry. Compute: total runs, fix count, fix rate (fixes/total), category breakdown (coherence vs ux vs fidelity). If fix rate is very low, consider simplifying the gate. If high, investigate whether the gate is catching genuine issues or being overly cautious.
 
 **Depends on:** Consultant Communication + Self-Review shipped + 10 sessions with telemetry data.
+
+## Orphaned Context File Cleanup (P3)
+
+**What:** A background scan that finds files in `~/.prism/clients/*/context/` and `{project}/.prism/context/` that don't have matching `context_items` rows in the DB.
+
+**Why:** The DB-first delete strategy intentionally leaves orphaned files on disk when `fs.unlink` fails. Over time these accumulate and waste disk space silently.
+
+**When:** After Phase 1 of Context Dump is shipped and in regular use.
+
+**How:** On app startup (or manual trigger), scan managed context directories. For each file, check if a `context_items` row exists with matching `file_path`. If not, delete the orphan. Log count of cleaned files.
+
+**Depends on:** Context Dump Phase 1 (fraser-svg/context-dump).
+
+## IntakeBrief → ExtractedKnowledge Migration (P3)
+
+**What:** When IntakeBrief data exists for a project, auto-convert `clientContext`, `painPoints`, and `assumptions` into `ExtractedKnowledge` entries so the context system benefits from historical session data.
+
+**Why:** IntakeBrief captures per-session discovery data that's currently ephemeral. Converting these to persistent knowledge means returning clients benefit from all previous Prism sessions, not just dropped files.
+
+**When:** After Context Dump Phase 2 (extraction pipeline) is shipped and proven.
+
+**How:** Map IntakeBrief fields to ExtractedKnowledge categories: `painPoints` → category 'business', `assumptions` → category 'business', `clientContext` → category 'business'. Set confidence to 0.7 (lower than AI extraction since these are user-reported, not verified). Run as a one-time migration or on-demand per project.
+
+**Depends on:** Context Dump Phase 2 (fraser-svg/context-dump) + IntakeBrief having real data from sessions.

@@ -1,6 +1,6 @@
 import { ipcMain, dialog } from "electron";
 import type { WorkspaceFacade } from "@prism/workspace";
-import { ClientRepository } from "@prism/workspace";
+import { ClientRepository, buildProviderViews } from "@prism/workspace";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath } from "@prism/core";
 import { existsSync } from "node:fs";
@@ -170,6 +170,39 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
     },
   );
 
+  // ─── Context Dump (stubs — backend wired in next PR) ───
+  safeHandle("context:getItems", (_entityType: unknown, _entityId: unknown) => {
+    return [];
+  });
+
+  safeHandle("context:addItem", (_item: unknown) => {
+    return { id: crypto.randomUUID(), status: "stored" };
+  });
+
+  safeHandle("context:deleteItem", (_id: unknown) => {
+    return { ok: true };
+  });
+
+  safeHandle("context:reExtract", (_id: unknown) => {
+    return { ok: true };
+  });
+
+  safeHandle("context:getKnowledge", (_entityType: unknown, _entityId: unknown) => {
+    return [];
+  });
+
+  safeHandle("context:getSummary", (_entityType: unknown, _entityId: unknown) => {
+    return null;
+  });
+
+  safeHandle("context:flagKnowledge", (_knowledgeId: unknown) => {
+    return { ok: true };
+  });
+
+  safeHandle("context:applyToBrief", (_projectId: unknown, _knowledgeId: unknown) => {
+    return { ok: true };
+  });
+
   // Directory picker
   safeHandle("dialog:selectDirectory", async () => {
     const result = await dialog.showOpenDialog({
@@ -179,4 +212,8 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
   });
+
+  // Provider dashboard
+  safeHandle("providers:list", () => buildProviderViews(facade.integrations));
+  safeHandle("providers:check-health", () => buildProviderViews(facade.integrations));
 }

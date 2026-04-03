@@ -569,6 +569,9 @@ TOOLS_JSON=$(bash "$SKILL_DIR/scripts/prism-research.sh" check "$PROJECT_ROOT" 2
 ```
 Extract `skipped_sources` from the temp file. If all tools unavailable, skip to planning review.
 
+For any UI/frontend/React task, HeroUI v3 is the project default. Research should treat
+it as baseline — only recommend alternatives if HeroUI can't satisfy a specific requirement.
+
 **Catalogue query + complexity gating:**
 ```bash
 bash "$SKILL_DIR/scripts/prism-research.sh" run "$PROJECT_ROOT" "{change}" '["{req1}","{req2}",...]'
@@ -911,6 +914,9 @@ Each worker via Agent tool:
 > RESEARCH CONTEXT: {recommended packages, catalogue matches, approach constraints from .prism/research/{change}/decision.md}.
 > Prefer the recommended libraries/patterns unless they don't fit. If you discover
 > a better approach, note why.
+> FRONTEND DEFAULT: HeroUI v3 is the project UI library. Import from @heroui/react.
+> Use compound component API. No HeroUIProvider unless using theme/locale features.
+> Invoke the heroui-react skill for component docs when needed.
 > TESTING: Write 1-3 unit tests per requirement you implement (no network calls, no
 > database, no external services — tests must complete in under 10 seconds total).
 > Check package.json/pyproject.toml for existing test framework before writing tests

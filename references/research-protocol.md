@@ -51,6 +51,7 @@ When running Deep research, check if any of these Prism-compatible skills match 
 | `ship` | Deployment, PR creation |
 | `browse` | Web scraping, site testing |
 | `codex` | Code review, second opinion |
+| `heroui-react` | UI components, frontend, React, forms, modals, cards |
 
 Match skill domain against requirement keywords. If a skill would help at any Prism stage, include it in findings with `"type": "skill"`.
 

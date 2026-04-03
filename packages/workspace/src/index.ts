@@ -13,6 +13,8 @@ export { ProjectHealth } from "./health";
 export { ResumeBuilder } from "./resume";
 export { IntegrationCabinet } from "./integration-cabinet";
 export type { IntegrationRow, HealthResult, HealthAdapter } from "./integration-cabinet";
+export { buildProviderViews, PROVIDER_DISPLAY_NAMES } from "./provider-views";
+export type { ProviderViewData } from "./provider-views";
 export { ProjectTemplates } from "./templates";
 export { WorkspaceFacade } from "./workspace-facade";
 export type {

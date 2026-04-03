@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"tsx watch --tsconfig tsconfig.server.json server/index.ts\"",
-    "build": "vite build && tsc -p tsconfig.server.json",
-    "preview": "node dist/server/index.js"
+    "dev": "concurrently \"vite\" \"tsx watch --env-file .env --tsconfig tsconfig.server.json server/index.ts\"",
+    "build": "vite build && node build-server.mjs",
+    "preview": "node dist/server/index.js",
+    "start": "node dist/server/index.js"
   },
   "dependencies": {
     "@heroui/react": "^3.0.2",
@@ -16,6 +17,7 @@
     "@prism/ui": "*",
     "@prism/workspace": "*",
     "@tailwindcss/vite": "^4.2.2",
+    "better-auth": "1.2.8",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "framer-motion": "^12.38.0",
@@ -27,12 +29,13 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "@types/express": "^5.0.0",
-    "@types/cors": "^2.8.17",
     "@vitejs/plugin-react": "^4.5.2",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.28.0",
     "typescript": "^5.9.3",
     "vite": "^6.3.5"
   }

@@ -10,10 +10,12 @@ export default defineConfig({
     alias: {
       "@prism/core": workspacePath("./packages/core/src/index.ts"),
       "@prism/memory": workspacePath("./packages/memory/src/index.ts"),
+      "@prism/orchestrator/pipeline-snapshot": workspacePath("./packages/orchestrator/src/pipeline-snapshot.ts"),
       "@prism/orchestrator": workspacePath("./packages/orchestrator/src/index.ts"),
       "@prism/guardian": workspacePath("./packages/guardian/src/index.ts"),
       "@prism/execution": workspacePath("./packages/execution/src/index.ts"),
       "@prism/ui": workspacePath("./packages/ui/src/index.ts"),
+      "@prism/workspace": workspacePath("./packages/workspace/src/index.ts"),
     },
   },
   test: {

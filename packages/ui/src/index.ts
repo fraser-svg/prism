@@ -5,8 +5,12 @@ export { CreateClientModal } from "./components/CreateClientModal";
 export { CreateProjectModal } from "./components/CreateProjectModal";
 export { PipelineStrip } from "./components/PipelineStrip";
 export { Portfolio } from "./components/Portfolio";
+export { Providers } from "./components/Providers";
 export { ProjectCard } from "./components/ProjectCard";
 export { SessionDrawer } from "./components/SessionDrawer";
+export { ClientContextPage } from "./components/ClientContextPage";
+export { ContextTab } from "./components/ContextTab";
+export { PrismaticLogo } from "./branding/PrismaticLogo";
 
 // Store
 export { createPrismStore, buildPortfolioGroups } from "./store";
@@ -28,5 +32,10 @@ export type {
   ProjectView,
   ClientView,
   PortfolioGroup,
+  ProviderView,
   TimelineEvent,
+  ContextItem,
+  ExtractedKnowledge,
+  KnowledgeSummary,
+  ContextHealth,
 } from "./types";

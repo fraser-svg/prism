@@ -5,6 +5,11 @@ import type {
   PortfolioGroup,
   PipelineView,
   TimelineEvent,
+  ProviderView,
+  ContextItem,
+  ExtractedKnowledge,
+  KnowledgeSummary,
+  ContextHealth,
 } from "./types";
 import type { PrismTransport } from "./transport";
 
@@ -29,8 +34,19 @@ export interface PrismStore {
   drawerOpen: boolean;
   drawerProjectId: string | null;
 
+  // Providers
+  providers: ProviderView[];
+  providersLoading: boolean;
+
   // Search
   searchQuery: string;
+
+  // Context dump
+  contextItems: ContextItem[];
+  contextKnowledge: ExtractedKnowledge[];
+  contextSummary: KnowledgeSummary | null;
+  contextHealth: ContextHealth | null;
+  extractionQueue: { extracting: number; total: number };
 
   // Actions
   loadPortfolio: () => Promise<void>;
@@ -48,6 +64,19 @@ export interface PrismStore {
   ) => Promise<void>;
   linkProject: (rootPath: string, clientAccountId?: string) => Promise<void>;
   runAction: (projectId: string, action: string) => Promise<void>;
+
+  // Provider actions
+  loadProviders: () => Promise<void>;
+  refreshProviders: () => Promise<void>;
+
+  // Context actions
+  loadContext: (entityType: "project" | "client", entityId: string) => Promise<void>;
+  addContextFiles: (entityType: "project" | "client", entityId: string, files: File[]) => Promise<void>;
+  addContextNote: (entityType: "project" | "client", entityId: string, text: string) => Promise<void>;
+  deleteContextItem: (id: string, entityType: "project" | "client", entityId: string) => Promise<void>;
+  reExtractItem: (id: string, entityType: "project" | "client", entityId: string) => Promise<void>;
+  flagKnowledge: (knowledgeId: string) => Promise<void>;
+  applyToBrief: (projectId: string, knowledgeId: string) => Promise<void>;
 }
 
 // Safe transport wrapper — catches transport-level errors
@@ -59,6 +88,19 @@ async function safeInvoke<T>(
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+function computeHealthScore(
+  items: ContextItem[],
+  knowledge: ExtractedKnowledge[],
+  summary: KnowledgeSummary | null,
+): number {
+  let score = 0;
+  if (summary) score += 25;
+  if (items.length >= 3) score += 25;
+  if (items.some((i) => Date.now() - new Date(i.createdAt).getTime() < 30 * 86400000)) score += 25;
+  if (new Set(knowledge.map((k) => k.category)).size >= 2) score += 25;
+  return score;
 }
 
 export function createPrismStore(transport: PrismTransport) {
@@ -75,7 +117,14 @@ export function createPrismStore(transport: PrismTransport) {
     activeTimeline: [],
     drawerOpen: false,
     drawerProjectId: null,
+    providers: [],
+    providersLoading: false,
     searchQuery: "",
+    contextItems: [],
+    contextKnowledge: [],
+    contextSummary: null,
+    contextHealth: null,
+    extractionQueue: { extracting: 0, total: 0 },
 
     loadPortfolio: async () => {
       set({ portfolioLoading: true, portfolioError: null });
@@ -186,6 +235,112 @@ export function createPrismStore(transport: PrismTransport) {
       const result = await safeInvoke(() => transport.runAction(projectId, action));
       if (result.error) throw new Error(result.error);
       await get().loadTimeline(projectId);
+    },
+
+    loadProviders: async () => {
+      set({ providersLoading: true });
+      try {
+        const result = await safeInvoke(() => transport.listProviders());
+        if (result.error) throw new Error(result.error);
+        set({ providers: (result.data as ProviderView[]) || [] });
+      } catch {
+        set({ providers: [] });
+      } finally {
+        set({ providersLoading: false });
+      }
+    },
+
+    refreshProviders: async () => {
+      try {
+        const result = await safeInvoke(() => transport.checkProviderHealth());
+        if (result.error) throw new Error(result.error);
+        set({ providers: (result.data as ProviderView[]) || [] });
+      } catch {
+        // Keep existing providers on refresh failure
+      }
+    },
+
+    loadContext: async (entityType, entityId) => {
+      try {
+        const [itemsResult, knowledgeResult, summaryResult] = await Promise.all([
+          safeInvoke(() => transport.getContextItems(entityType, entityId)),
+          safeInvoke(() => transport.getKnowledge(entityType, entityId)),
+          safeInvoke(() => transport.getSummary(entityType, entityId)),
+        ]);
+
+        const items = (itemsResult.data as ContextItem[] | undefined) || [];
+        const knowledge = (knowledgeResult.data as ExtractedKnowledge[] | undefined) || [];
+        const summary = (summaryResult.data as KnowledgeSummary | undefined) || null;
+
+        const extracting = items.filter((i) => i.extractionStatus === "extracting").length;
+        const queued = items.filter((i) => i.extractionStatus === "queued").length;
+        const categories = new Set(knowledge.map((k) => k.category));
+
+        const health: ContextHealth = {
+          score: computeHealthScore(items, knowledge, summary),
+          hasProfile: summary !== null,
+          hasDocs: items.length >= 3,
+          recent: items.some((i) => Date.now() - new Date(i.createdAt).getTime() < 30 * 86400000),
+          hasCategories: categories.size >= 2,
+        };
+
+        set({
+          contextItems: items,
+          contextKnowledge: knowledge,
+          contextSummary: summary,
+          contextHealth: health,
+          extractionQueue: { extracting, total: extracting + queued },
+        });
+      } catch {
+        set({ contextItems: [], contextKnowledge: [], contextSummary: null, contextHealth: null });
+      }
+    },
+
+    addContextFiles: async (entityType, entityId, files) => {
+      for (const file of files) {
+        await safeInvoke(() =>
+          transport.addContextItem({
+            entityType,
+            entityId,
+            itemType: "file",
+            title: file.name,
+            fileSizeBytes: file.size,
+            mimeType: file.type || undefined,
+          }),
+        );
+      }
+      await get().loadContext(entityType, entityId);
+    },
+
+    addContextNote: async (entityType, entityId, text) => {
+      await safeInvoke(() =>
+        transport.addContextItem({
+          entityType,
+          entityId,
+          itemType: "text_note",
+          title: text.slice(0, 60) + (text.length > 60 ? "..." : ""),
+          content: text,
+        }),
+      );
+      await get().loadContext(entityType, entityId);
+    },
+
+    deleteContextItem: async (id, entityType, entityId) => {
+      await safeInvoke(() => transport.deleteContextItem(id));
+      await get().loadContext(entityType, entityId);
+    },
+
+    reExtractItem: async (id, entityType, entityId) => {
+      await safeInvoke(() => transport.reExtractItem(id));
+      await get().loadContext(entityType, entityId);
+    },
+
+    flagKnowledge: async (knowledgeId) => {
+      await safeInvoke(() => transport.flagKnowledge(knowledgeId));
+    },
+
+    applyToBrief: async (projectId, knowledgeId) => {
+      await safeInvoke(() => transport.applyToBrief(projectId, knowledgeId));
     },
   }));
 }
