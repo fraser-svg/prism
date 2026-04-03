@@ -386,8 +386,9 @@ if (isMainModule || process.env.PRISM_START_SERVER === "true") {
   if (facade && clients) {
     const { app } = createApp(facade, clients);
     const PORT = Number(process.env.PORT) || 3001;
-    app.listen(PORT, "127.0.0.1", () => {
-      console.log(`Prism API server running at http://127.0.0.1:${PORT}`);
+    const HOST = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+    app.listen(PORT, HOST, () => {
+      console.log(`Prism API server running at http://${HOST}:${PORT}`);
     });
   }
 
