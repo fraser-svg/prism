@@ -16,6 +16,12 @@ if (process.env.SKIP_AUTH === "true" && process.env.NODE_ENV !== "development") 
   process.exit(1);
 }
 
+// Hard guard: BETTER_AUTH_SECRET must be set in production (library falls back to a known default)
+if (process.env.NODE_ENV === "production" && (!process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32)) {
+  console.error("FATAL: BETTER_AUTH_SECRET must be a 32+ character secret in production");
+  process.exit(1);
+}
+
 // --- Zod schemas ---
 const CreateClientSchema = z.object({
   name: z.string().min(1).max(200),
@@ -85,8 +91,8 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
 
   // Mount Better Auth BEFORE express.json() — OAuth callbacks need raw body parsing
   const authHandler = toNodeHandler(auth);
-  app.all("/api/auth/*splat", (req, res) => {
-    authHandler(req, res);
+  app.all("/api/auth/*splat", (req, res, next) => {
+    authHandler(req, res).catch(next);
   });
 
   // express.json() AFTER auth mount to avoid breaking OAuth callbacks
@@ -381,6 +387,7 @@ if (isMainModule || process.env.PRISM_START_SERVER === "true") {
     console.log("Workspace initialized");
   } catch (err) {
     console.error("Failed to initialize workspace:", err);
+    process.exit(1);
   }
 
   if (facade && clients) {
