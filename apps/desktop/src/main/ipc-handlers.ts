@@ -1,6 +1,6 @@
 import { ipcMain, dialog } from "electron";
 import type { WorkspaceFacade } from "@prism/workspace";
-import { ClientRepository } from "@prism/workspace";
+import { ClientRepository, buildProviderViews } from "@prism/workspace";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath } from "@prism/core";
 import { existsSync } from "node:fs";
@@ -179,4 +179,8 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
   });
+
+  // Provider dashboard
+  safeHandle("providers:list", () => buildProviderViews(facade.integrations));
+  safeHandle("providers:check-health", () => buildProviderViews(facade.integrations));
 }

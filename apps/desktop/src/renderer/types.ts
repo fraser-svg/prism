@@ -1,27 +1,7 @@
-export interface PrismAPI {
-  listPortfolio: () => Promise<IpcResult>;
-  createClient: (name: string, notes?: string) => Promise<IpcResult>;
-  updateClient: (id: string, fields: Record<string, unknown>) => Promise<IpcResult>;
-  createProject: (name: string, rootPath: string, clientAccountId?: string) => Promise<IpcResult>;
-  linkProject: (rootPath: string, clientAccountId?: string) => Promise<IpcResult>;
-  updateProject: (id: string, fields: Record<string, unknown>) => Promise<IpcResult>;
-  getProjectPipeline: (projectId: string) => Promise<IpcResult>;
-  getProjectTimeline: (projectId: string) => Promise<IpcResult>;
-  runAction: (projectId: string, action: string) => Promise<IpcResult>;
-  onEvent: (callback: (event: unknown) => void) => () => void;
-  selectDirectory: () => Promise<IpcResult>;
-}
+// PrismAPI and Window.prism declaration live in @prism/ui/types.ts
+// Local types only — view interfaces for desktop-specific components
 
-export interface IpcResult {
-  data?: unknown;
-  error?: string;
-}
-
-declare global {
-  interface Window {
-    prism: PrismAPI;
-  }
-}
+export type { IpcResult } from "@prism/ui";
 
 // Pipeline types matching PipelineSnapshot from @prism/orchestrator
 export interface StageView {

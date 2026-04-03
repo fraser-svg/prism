@@ -14,6 +14,8 @@ export interface PrismTransport {
   getProjectPipeline(projectId: string): Promise<IpcResult>;
   getProjectTimeline(projectId: string): Promise<IpcResult>;
   runAction(projectId: string, action: string): Promise<IpcResult>;
+  listProviders(): Promise<IpcResult>;
+  checkProviderHealth(): Promise<IpcResult>;
 }
 
 /** Electron IPC transport — delegates to window.prism.* preload API */
@@ -27,6 +29,8 @@ export class IpcTransport implements PrismTransport {
   getProjectPipeline(projectId: string) { return window.prism.getProjectPipeline(projectId); }
   getProjectTimeline(projectId: string) { return window.prism.getProjectTimeline(projectId); }
   runAction(projectId: string, action: string) { return window.prism.runAction(projectId, action); }
+  listProviders() { return window.prism.listProviders(); }
+  checkProviderHealth() { return window.prism.checkProviderHealth(); }
 }
 
 /** HTTP fetch transport — calls Express API endpoints */
@@ -81,4 +85,6 @@ export class FetchTransport implements PrismTransport {
   runAction(projectId: string, action: string) {
     return this.request(`/projects/${projectId}/actions`, { method: "POST", body: JSON.stringify({ action }) });
   }
+  listProviders() { return this.request("/providers"); }
+  checkProviderHealth() { return this.request("/providers/check-health", { method: "POST" }); }
 }

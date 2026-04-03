@@ -39,6 +39,25 @@ export function DesktopHeader() {
           Portfolio
         </Button>
       )}
+
+      <div style={{ marginLeft: "auto" }}>
+        <button
+          className="titlebar-no-drag"
+          onClick={() => navigate("/providers")}
+          style={{
+            background: "none",
+            border: "none",
+            color: location.pathname === "/providers"
+              ? "var(--accent-blue)"
+              : "var(--text-secondary)",
+            fontSize: 12,
+            cursor: "pointer",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
+          Providers
+        </button>
+      </div>
     </div>
   );
 }

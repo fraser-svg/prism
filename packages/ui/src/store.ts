@@ -5,6 +5,7 @@ import type {
   PortfolioGroup,
   PipelineView,
   TimelineEvent,
+  ProviderView,
 } from "./types";
 import type { PrismTransport } from "./transport";
 
@@ -29,6 +30,10 @@ export interface PrismStore {
   drawerOpen: boolean;
   drawerProjectId: string | null;
 
+  // Providers
+  providers: ProviderView[];
+  providersLoading: boolean;
+
   // Search
   searchQuery: string;
 
@@ -48,6 +53,8 @@ export interface PrismStore {
   ) => Promise<void>;
   linkProject: (rootPath: string, clientAccountId?: string) => Promise<void>;
   runAction: (projectId: string, action: string) => Promise<void>;
+  loadProviders: () => Promise<void>;
+  refreshProviders: () => Promise<void>;
 }
 
 // Safe transport wrapper — catches transport-level errors
@@ -75,6 +82,8 @@ export function createPrismStore(transport: PrismTransport) {
     activeTimeline: [],
     drawerOpen: false,
     drawerProjectId: null,
+    providers: [],
+    providersLoading: false,
     searchQuery: "",
 
     loadPortfolio: async () => {
@@ -186,6 +195,29 @@ export function createPrismStore(transport: PrismTransport) {
       const result = await safeInvoke(() => transport.runAction(projectId, action));
       if (result.error) throw new Error(result.error);
       await get().loadTimeline(projectId);
+    },
+
+    loadProviders: async () => {
+      set({ providersLoading: true });
+      try {
+        const result = await safeInvoke(() => transport.listProviders());
+        if (result.error) throw new Error(result.error);
+        set({ providers: (result.data as ProviderView[]) || [] });
+      } catch {
+        set({ providers: [] });
+      } finally {
+        set({ providersLoading: false });
+      }
+    },
+
+    refreshProviders: async () => {
+      try {
+        const result = await safeInvoke(() => transport.checkProviderHealth());
+        if (result.error) throw new Error(result.error);
+        set({ providers: (result.data as ProviderView[]) || [] });
+      } catch {
+        // Keep existing providers on refresh failure
+      }
     },
   }));
 }
