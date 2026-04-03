@@ -4,6 +4,20 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.23.0] - 2026-04-03
+
+### Added
+- **Authentication** — signup and login via Google, GitHub, or email/password using Better Auth. All API routes now require a valid session. The web app shows a login page when unauthenticated.
+- **Login page** — centered card with social login buttons (Google, GitHub), email/password form with sign-up/sign-in toggle, inline error messages, and loading states.
+- **User menu** — avatar dropdown in the web header with initials fallback and sign-out action.
+- **Auth migration** — `003-auth.sql` creates Better Auth tables (user, session, account, verification) in the workspace SQLite database.
+- **Dev bypass** — `SKIP_AUTH=true` skips auth checks in development. Hard guard prevents this in non-development environments.
+- **Auth tests** — 6 integration tests covering requireAuth middleware, session bypass, signup flow, and protected route enforcement.
+
+### Changed
+- **Server refactored to `createApp()`** — Express app creation extracted into a factory function for testability. Module-level side effects guarded so test imports don't start the server.
+- **Error responses hardened** — `safeHandle` now returns generic "Internal server error" to clients instead of leaking raw error messages. Details logged server-side only.
+
 ## [4.0.22.0] - 2026-04-03
 
 ### Added
