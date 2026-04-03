@@ -1,6 +1,7 @@
 import { build } from "esbuild";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cpSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkgs = resolve(__dirname, "../../packages");
@@ -30,4 +31,12 @@ await build({
   },
 });
 
+// Copy migration SQL files — the bundled server reads them via readdirSync/readFileSync
+cpSync(
+  join(pkgs, "workspace/src/migrations"),
+  join(__dirname, "dist/server/migrations"),
+  { recursive: true },
+);
+
 console.log("Server bundled -> dist/server/index.js");
+console.log("Migrations copied -> dist/server/migrations/");
