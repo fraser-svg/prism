@@ -18,10 +18,11 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.5.0",
     "zustand": "^5.0.5",
-    "@prism/core": "workspace:*",
-    "@prism/workspace": "workspace:*",
-    "@prism/orchestrator": "workspace:*",
-    "@prism/memory": "workspace:*"
+    "@prism/ui": "*",
+    "@prism/core": "*",
+    "@prism/workspace": "*",
+    "@prism/orchestrator": "*",
+    "@prism/memory": "*"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

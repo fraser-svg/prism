@@ -53,10 +53,11 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
   safeHandle(
     "projects:create",
     (name: unknown, rootPath: unknown, clientAccountId: unknown) => {
-      const project = facade.registry.register(
-        String(rootPath),
-        String(name),
-      );
+      const path = String(rootPath);
+      if (!existsSync(path)) {
+        throw new Error("Path not found: directory does not exist");
+      }
+      const project = facade.registry.register(path, String(name));
       if (clientAccountId) {
         facade.registry.updateProject(project.id, {
           clientAccountId: String(clientAccountId),
@@ -69,7 +70,12 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
   safeHandle("projects:link", (rootPath: unknown, clientAccountId: unknown) => {
     const path = String(rootPath);
 
-    // Critical gap #2: validate .prism/ exists before linking
+    // Validate path exists and is readable before checking for .prism/
+    if (!existsSync(path)) {
+      throw new Error("Path not found: directory does not exist");
+    }
+
+    // Validate .prism/ exists before linking
     const prismDir = join(path, ".prism");
     if (!existsSync(prismDir)) {
       throw new Error(
@@ -88,18 +94,15 @@ export function registerIpcHandlers(facade: WorkspaceFacade): void {
 
   safeHandle("projects:update", (id: unknown, fields: unknown) => {
     const f = fields as Record<string, unknown>;
+    const coerce = (v: unknown): string | null =>
+      v === null ? null : String(v);
     return facade.registry.updateProject(String(id), {
       clientAccountId:
-        f.clientAccountId !== undefined
-          ? (f.clientAccountId as string | null)
-          : undefined,
-      owner: f.owner !== undefined ? (f.owner as string | null) : undefined,
-      priority:
-        f.priority !== undefined ? (f.priority as string | null) : undefined,
-      riskState:
-        f.riskState !== undefined ? (f.riskState as string | null) : undefined,
-      deployUrl:
-        f.deployUrl !== undefined ? (f.deployUrl as string | null) : undefined,
+        f.clientAccountId !== undefined ? coerce(f.clientAccountId) : undefined,
+      owner: f.owner !== undefined ? coerce(f.owner) : undefined,
+      priority: f.priority !== undefined ? coerce(f.priority) : undefined,
+      riskState: f.riskState !== undefined ? coerce(f.riskState) : undefined,
+      deployUrl: f.deployUrl !== undefined ? coerce(f.deployUrl) : undefined,
     });
   });
 
