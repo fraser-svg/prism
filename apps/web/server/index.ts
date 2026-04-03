@@ -5,6 +5,7 @@ import { WorkspaceFacade, ClientRepository } from "@prism/workspace";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath } from "@prism/core";
 import { existsSync } from "node:fs";
+import { selectDirectory } from "./native-dialog.js";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
@@ -285,6 +286,21 @@ app.post(
     });
 
     res.json({ data: { status: "completed", action } });
+  }),
+);
+
+// Native directory picker
+// Security: req.body is intentionally ignored — dialog is server-initiated only
+app.post(
+  "/api/dialog/select-directory",
+  safeHandle(async (_req, res) => {
+    try {
+      const selected = await selectDirectory();
+      res.json({ data: selected });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
   }),
 );
 

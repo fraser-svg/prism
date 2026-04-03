@@ -22,6 +22,8 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [initialProjectPath, setInitialProjectPath] = useState("");
+  const [browsing, setBrowsing] = useState(false);
 
   useEffect(() => {
     loadPortfolio().then(() => scanAllPipelines());
@@ -68,6 +70,30 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   const isEmpty = filteredGroups.length === 0 && !searchQuery;
 
+  const openCreateProject = async () => {
+    if (!onBrowse) {
+      setInitialProjectPath("");
+      setShowCreateProject(true);
+      return;
+    }
+
+    if (browsing) return;
+    setBrowsing(true);
+    try {
+      const selected = await onBrowse();
+      if (!selected) return;
+      setInitialProjectPath(selected);
+      setShowCreateProject(true);
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
+  const closeCreateProject = () => {
+    setShowCreateProject(false);
+    setInitialProjectPath("");
+  };
+
   return (
     <div className="h-full overflow-auto px-8 py-6">
       {/* Actions bar */}
@@ -84,9 +110,10 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
           <Button
             size="sm"
             variant="primary"
-            onPress={() => setShowCreateProject(true)}
+            isDisabled={browsing}
+            onPress={openCreateProject}
           >
-            + Project
+            {browsing ? "Opening..." : "+ Project"}
           </Button>
         </div>
       </div>
@@ -107,9 +134,10 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
             </Button>
             <Button
               variant="primary"
-              onPress={() => setShowCreateProject(true)}
+              isDisabled={browsing}
+              onPress={openCreateProject}
             >
-              Link Project
+              {browsing ? "Opening..." : "Link Project"}
             </Button>
           </div>
         </div>
@@ -148,8 +176,9 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       )}
       {showCreateProject && (
         <CreateProjectModal
-          onClose={() => setShowCreateProject(false)}
+          onClose={closeCreateProject}
           onBrowse={onBrowse}
+          initialRootPath={initialProjectPath}
         />
       )}
     </div>
