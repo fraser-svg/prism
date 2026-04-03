@@ -9,7 +9,7 @@ All notable changes to Prism are documented here.
 ### Added
 - **LLM agnosticism** — Prism can now route tasks to multiple AI providers instead of depending solely on Claude Code. Three provider adapters (Anthropic, Google/Gemini, Stitch) implement the new `ProviderAdapter` interface.
 - **Model router** — static capability-based routing with health-check fallback. Tasks declare what they need (reasoning, code generation, visual design, verification, tool use), and the router picks the best available provider. If the primary is down, it falls through to the fallback.
-- **Provider dashboard** — new "Providers" tab in the Electron app and web UI showing each provider's status, task count, and last health check. Data flows through the Zustand store via the transport layer.
+- **Provider dashboard** — new "Providers" tab in the Electron app and web UI showing each provider's status, task count, and last health check. Works in both desktop and browser.
 - **Runtime mode detection** — `RuntimeMode.SKILL` (inside Claude Code) vs `RuntimeMode.HEADLESS` (CLI/API). Adapters behave differently depending on context.
 - **Pricing table** — static cost estimates per model for token-level cost tracking in telemetry.
 

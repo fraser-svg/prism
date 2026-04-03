@@ -21,7 +21,7 @@ Primary: **Agency operators** delivering software outcomes for clients. Semi-tec
 
 Do not work on these until the priority stack is resolved:
 - 9-stage lifecycle migration (vision doc written, implementation deferred — show 7 stages honestly in desktop app)
-- Provider abstractions
+- ~~Provider abstractions~~ — shipped in v4.0.22.0 (adapters, router, dashboard)
 - Broad integrations
 - Enterprise governance
 

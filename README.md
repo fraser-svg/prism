@@ -6,7 +6,7 @@
     ██║     ██║  ██║██║███████║██║ ╚═╝ ██║
     ╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝
 
-PRISMATIC v{version}
+PRISMATIC v4.0.22.0
 For agency operators who need to turn client briefs into shipped software without engineers.
 Prismatic finds the real problem, shapes the right solution, then specs, builds, verifies, ships and deploys it.
 To begin: describe your need...
@@ -39,6 +39,8 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - An **Electron desktop app** (`apps/desktop/`) — Portfolio MVP with client management, project portfolio, 7-stage pipeline view, and session drawer. This is the YC demo.
 - A **web app** (`apps/web/`) — Vite SPA + Express API server sharing the same React component library via `@prism/ui`
 - A **shared UI package** (`packages/ui/`) — React components, Zustand store, and transport adapters for IPC (desktop) and fetch (web)
+- **Multi-provider routing** — three provider adapters (Anthropic, Google/Gemini, Stitch) with capability-based task routing and automatic health-check fallback. Prism can orchestrate multiple LLMs, not just Claude.
+- A **provider dashboard** in both the Electron app and web UI showing provider status, task count, and health checks
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
@@ -185,7 +187,7 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.21.0
+├── VERSION               # 4.0.22.0
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config
@@ -195,10 +197,10 @@ prism/
 ├── packages/             # Typed core — code-enforced lifecycle
 │   ├── core/             # Domain model (branded types, lifecycle entities)
 │   ├── memory/           # Artifact repositories (.prism/ storage)
-│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI, self-healing, pipeline visualizer
+│   ├── orchestrator/     # Gate evaluator, resume engine, bridge CLI, model router, pipeline visualizer
 │   ├── guardian/         # Review matrix, release-state derivation
-│   ├── execution/        # Intent policy, execution adapters
-│   ├── ui/               # Shared React components (PortfolioView, ControlRoom, SessionDrawer)
+│   ├── execution/        # Provider adapters (Anthropic, Google, Stitch), runtime mode, pricing
+│   ├── ui/               # Shared React components (Portfolio, ControlRoom, Providers, SessionDrawer)
 │   └── workspace/        # SQLite workspace, project registry, FTS5 search
 ├── scripts/              # Deterministic bookkeeping (16 scripts)
 │   ├── prism-registry.sh # Task registry (state, workers, events)
@@ -223,7 +225,7 @@ prism/
 
 ### Typed Core (packages/)
 
-Six TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The bridge CLI supports 18 commands including gate checks, artifact writes, ship, deploy, and session lifecycle. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, and health tracking. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
+Seven TypeScript packages run alongside the shell scripts via a dual-write bridge. At every stage transition, SKILL.md calls `npx tsx packages/orchestrator/src/cli.ts <command>` to write typed artifacts to `.prism/`. The bridge CLI supports commands including gate checks, artifact writes, ship, deploy, model routing (`route-task`), and session lifecycle. The workspace package provides the SQLite substrate for multi-project state, FTS5 search, provider registration, and health tracking. The execution package provides the provider adapter protocol for multi-LLM routing. Gates are advisory in M3 (failures are silent). The core catches things the scripts miss: missing specs before planning, incomplete reviews before release, unverified builds before shipping.
 
 ---
 
