@@ -28,6 +28,7 @@ import { execDeployDetect, execDeployTrigger } from "./deploy";
 import { execRecordShip } from "./ship-receipt";
 import { runSelfHealingPipeline, runCrashRecovery } from "./self-healing";
 import { extractPipelineSnapshot } from "./pipeline-snapshot";
+import { ModelRouter } from "./model-router";
 import { generatePipelineHtml } from "./pipeline-visualizer";
 import { extractProjectSnapshot } from "./project-snapshot";
 import { generateProjectHtml } from "./project-visualizer";
@@ -479,6 +480,84 @@ async function cmdProject(args: string[]): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Route task — model routing via provider adapters
+// ---------------------------------------------------------------------------
+
+interface RouteTaskInput {
+  task: import("@prism/core").TaskNode;
+  context: import("@prism/execution").ExecutionContext;
+}
+
+async function execRouteTask(_args: string[], stdin?: unknown): Promise<unknown> {
+  const input = stdin as RouteTaskInput | undefined;
+  if (!input?.task || !input?.context) {
+    throw new Error("route-task requires { task, context } on stdin");
+  }
+
+  const { WorkspaceFacade } = await import("@prism/workspace");
+  const { AnthropicAdapter, GoogleAdapter, StitchAdapter } = await import("@prism/execution");
+
+  const facade = new WorkspaceFacade(input.context.projectRoot);
+  const cabinet = facade.integrations;
+
+  const router = new ModelRouter(cabinet);
+
+  const anthropic = new AnthropicAdapter();
+  const google = new GoogleAdapter();
+  const stitch = new StitchAdapter();
+
+  router.registerAdapter(anthropic);
+  router.registerAdapter(google);
+  router.registerAdapter(stitch);
+
+  // Register health adapters with cabinet
+  cabinet.registerHealthAdapter("anthropic", async () => ({
+    status: "connected" as const,
+    message: "Anthropic API available",
+  }));
+  cabinet.registerHealthAdapter("google", async () => ({
+    status: "connected" as const,
+    message: "Gemini API available",
+  }));
+  cabinet.registerHealthAdapter("stitch", async () => {
+    const health = await stitch.checkStitchHealth();
+    return {
+      status: health.repo_status === "ready" ? ("connected" as const) : ("unavailable" as const),
+      message: health.reason || health.repo_status,
+    };
+  });
+
+  try {
+    const result = await router.route(input.task, input.context);
+
+    // Telemetry: log routing decision with provider, cost, and token data
+    facade.eventLog.append({
+      projectId: null,
+      eventType: "routing:completed",
+      summary: `Routed ${input.task.id} → ${result.routedTo || "none"} (${result.status})`,
+      metadata: {
+        taskId: input.task.id,
+        capability: input.task.capabilities?.[0] || input.task.routeHint || "code_generation",
+        routedTo: result.routedTo,
+        usedFallback: result.usedFallback,
+        status: result.status,
+        tokensUsed: result.tokensUsed || null,
+        estimatedCostUsd: result.estimatedCostUsd,
+      },
+    });
+
+    return result;
+  } finally {
+    facade.close();
+  }
+}
+
+async function cmdRouteTask(): Promise<void> {
+  const input = await readStdinJson<RouteTaskInput>();
+  output(await execRouteTask([], input));
+}
+
+// ---------------------------------------------------------------------------
 // Batch command — executes multiple commands in a single Node.js process
 // ---------------------------------------------------------------------------
 
@@ -508,6 +587,7 @@ const EXEC_HANDLERS: Record<string, (args: string[], stdin?: unknown) => Promise
   "session-report": execSessionReport as (args: string[], stdin?: unknown) => Promise<unknown>,
   pipeline: execPipeline as (args: string[], stdin?: unknown) => Promise<unknown>,
   project: execProject as (args: string[], stdin?: unknown) => Promise<unknown>,
+  "route-task": execRouteTask,
 };
 
 async function cmdBatch(): Promise<void> {
@@ -560,6 +640,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   "session-report": cmdSessionReport,
   pipeline: cmdPipeline,
   project: cmdProject,
+  "route-task": cmdRouteTask,
   batch: cmdBatch,
 };
 
