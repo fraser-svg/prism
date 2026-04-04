@@ -9,6 +9,8 @@ import { ProjectHealth } from "./health";
 import { ResumeBuilder } from "./resume";
 import { IntegrationCabinet } from "./integration-cabinet";
 import { ProjectTemplates } from "./templates";
+import { ContextRepository } from "./context-repository";
+import { ExtractionPipeline } from "./extraction-pipeline";
 import type { WorkspaceStatus, ProjectBadge } from "./types";
 
 export class WorkspaceFacade {
@@ -20,6 +22,8 @@ export class WorkspaceFacade {
   readonly resume: ResumeBuilder;
   readonly integrations: IntegrationCabinet;
   readonly templates: ProjectTemplates;
+  readonly contextRepo: ContextRepository;
+  readonly extractionPipeline: ExtractionPipeline;
 
   constructor(homePath?: AbsolutePath) {
     this.context = WorkspaceManager.initialize(homePath);
@@ -41,6 +45,18 @@ export class WorkspaceFacade {
     this.templates = new ProjectTemplates(
       `${this.context.homePath}/templates`,
     );
+    this.contextRepo = new ContextRepository(db);
+    this.extractionPipeline = new ExtractionPipeline(db, () => {
+      // Lazy API key getter: check IntegrationCabinet for Anthropic provider
+      try {
+        const row = db
+          .prepare("SELECT api_key FROM integrations WHERE provider_id = 'anthropic' AND status = 'connected'")
+          .get() as { api_key: string } | undefined;
+        return row?.api_key ?? null;
+      } catch {
+        return null;
+      }
+    });
   }
 
   createWriteCallback(projectId: string): ArtifactWriteCallback {
