@@ -1,6 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { Chip, ProgressBar, Tooltip, Button, ButtonGroup, TextArea } from "@heroui/react";
 import type { ContextItem, ExtractedKnowledge, KnowledgeSummary } from "../types";
 
 interface ContextTabProps {
@@ -20,25 +19,25 @@ interface ContextTabProps {
 }
 
 const FILE_ICONS: Record<string, string> = {
-  file: "\u{1F4C4}",
-  directory: "\u{1F4C1}",
-  text_note: "\u{1F4DD}",
-  url: "\u{1F517}",
+  file: "description",
+  directory: "folder",
+  text_note: "edit_note",
+  url: "link",
 };
 
 const STATUS_CONFIG = {
-  extracted: { label: "\u2713 Extracted", color: "success" as const },
-  extracting: { label: "\u27F3 Extracting...", color: "warning" as const },
-  queued: { label: "\u23F3 Queued", color: "default" as const },
-  failed: { label: "\u2717 Failed", color: "danger" as const },
-  stored: { label: "\u2014 Stored", color: "default" as const },
+  extracted: { label: "Extracted", bg: "bg-emerald-50", text: "text-emerald-600" },
+  extracting: { label: "Extracting...", bg: "bg-[#91A6FF]/20", text: "text-[#4A5A99]" },
+  queued: { label: "Queued", bg: "bg-amber-50", text: "text-amber-600" },
+  failed: { label: "Failed", bg: "bg-red-50", text: "text-red-500" },
+  stored: { label: "Stored", bg: "bg-[#91A6FF]/10", text: "text-[#5B6BAA]" },
 };
 
-const CATEGORY_BORDERS: Record<string, string> = {
-  business: "border-l-[var(--accent-blue)]",
-  technical: "border-l-[var(--accent-green)]",
-  design: "border-l-[var(--accent-purple)]",
-  history: "border-l-[var(--accent-amber)]",
+const CATEGORY_CONFIG: Record<string, { border: string; text: string; label: string }> = {
+  business: { border: "border-l-stone-400", text: "text-black", label: "BUSINESS" },
+  technical: { border: "border-l-emerald-400", text: "text-emerald-600", label: "TECHNICAL" },
+  design: { border: "border-l-purple-400", text: "text-purple-600", label: "DESIGN" },
+  history: { border: "border-l-amber-400", text: "text-amber-600", label: "HISTORY" },
 };
 
 function groupKnowledgeByCategory(knowledge: ExtractedKnowledge[]) {
@@ -67,53 +66,26 @@ function KnowledgeEntry({
 
   return (
     <div
-      className="group py-1.5 transition-all duration-150"
+      className="group py-1.5"
       style={{ opacity: lowConfidence ? 0.6 : 1 }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
-      onFocus={() => setShowActions(true)}
-      onBlur={() => setShowActions(false)}
       tabIndex={0}
     >
-      <Tooltip>
-        <Tooltip.Trigger>
-          <div className="text-sm leading-relaxed" style={{ color: "var(--text-primary)", fontSize: 14, lineHeight: 1.6 }}>
-            <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>{entry.key}:</span>{" "}
-            {entry.value}
-          </div>
-        </Tooltip.Trigger>
-        <Tooltip.Content>
-          {`Confidence: ${Math.round(entry.confidence * 100)}% | Source: ${entry.sourceItemId}`}
-        </Tooltip.Content>
-      </Tooltip>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[15px] leading-relaxed text-black">
+          <span className="text-[13px] text-stone-700">{entry.key}:</span>{" "}
+          {entry.value}
+        </p>
+        <span className="shrink-0 text-[13px] font-medium text-stone-700">
+          {Math.round(entry.confidence * 100)}%
+        </span>
+      </div>
       {showActions && (
-        <div className="mt-1 flex gap-2 fade-in">
-          <ButtonGroup size="sm" variant="ghost">
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={() => onCopy(`${entry.key}: ${entry.value}`)}
-              style={{ fontSize: 11, color: "var(--text-tertiary)" }}
-            >
-              Copy
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={() => onApply(entry.id)}
-              style={{ fontSize: 11, color: "var(--text-tertiary)" }}
-            >
-              Apply to Brief
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={() => onFlag(entry.id)}
-              style={{ fontSize: 11, color: "var(--text-tertiary)" }}
-            >
-              Flag Wrong
-            </Button>
-          </ButtonGroup>
+        <div className="mt-1 flex gap-1">
+          <button className="rounded px-2 py-0.5 text-[13px] text-stone-700 transition-colors hover:bg-stone-100 hover:text-black" onClick={() => onCopy(`${entry.key}: ${entry.value}`)}>Copy</button>
+          <button className="rounded px-2 py-0.5 text-[13px] text-stone-700 transition-colors hover:bg-stone-100 hover:text-black" onClick={() => onApply(entry.id)}>Apply to Brief</button>
+          <button className="rounded px-2 py-0.5 text-[13px] text-stone-700 transition-colors hover:bg-stone-100 hover:text-black" onClick={() => onFlag(entry.id)}>Flag Wrong</button>
         </div>
       )}
     </div>
@@ -137,12 +109,11 @@ export function ContextTab({
 }: ContextTabProps) {
   const [noteText, setNoteText] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEmpty = contextItems.length === 0;
 
   const onDropAccepted = useCallback(
-    (acceptedFiles: File[]) => {
-      onDrop(acceptedFiles);
-    },
+    (acceptedFiles: File[]) => { onDrop(acceptedFiles); },
     [onDrop],
   );
 
@@ -163,239 +134,139 @@ export function ContextTab({
   const knowledgeGroups = groupKnowledgeByCategory(knowledge);
   const categories = ["business", "technical", "design", "history"];
 
+  const healthColor = contextHealth
+    ? contextHealth.score >= 76 ? "#10B981" : contextHealth.score >= 26 ? "#F59E0B" : "#EF4444"
+    : "#d4d4d4";
+  const healthRadius = 32;
+  const healthCircumference = 2 * Math.PI * healthRadius;
+  const healthOffset = contextHealth
+    ? healthCircumference - (contextHealth.score / 100) * healthCircumference
+    : healthCircumference;
+
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+    <div className="flex h-full overflow-hidden">
       {/* Left: Drop zone + items */}
-      <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
-        {/* Drop zone */}
+      <div className="flex-1 overflow-auto p-5 pr-6">
         <div
           {...getRootProps()}
           role="region"
           aria-label="File drop zone"
-          style={{
-            height: isEmpty ? 160 : 100,
-            border: isDragActive
-              ? "2px solid var(--accent-blue)"
-              : "2px dashed var(--border-default)",
-            borderRadius: "var(--radius-md)",
-            background: isDragActive ? "rgba(77,142,255,0.05)" : "transparent",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-            marginBottom: 16,
-          }}
+          className={`mb-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-all ${
+            isDragActive ? "border-stone-400 bg-stone-100" : "border-stone-200 bg-[var(--bg-surface)] hover:border-stone-300"
+          }`}
+          style={{ height: isEmpty ? 140 : 90 }}
         >
           <input {...getInputProps()} />
-          <span
-            style={{
-              fontSize: isDragActive ? 28 : 24,
-              color: "var(--text-tertiary)",
-              marginBottom: 8,
-              transition: "font-size 0.15s ease",
-            }}
-          >
-            {"\u2B06"}
+          <span className="material-symbols-outlined mb-1.5 text-stone-700" style={{ fontSize: isDragActive ? 28 : 24 }}>
+            {isDragActive ? "file_download" : "cloud_upload"}
           </span>
-          <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-            {isDragActive
-              ? "Release to add"
-              : "Drop files, folders, or paste notes"}
+          <span className="text-[15px] text-stone-900">
+            {isDragActive ? "Release to add" : "Drop files, folders, or paste notes"}
           </span>
         </div>
 
-        {/* Text note input */}
-        <div style={{ marginBottom: 16 }}>
-          <TextArea
-            placeholder="Add a note about this client..."
+        {/* Note input */}
+        <div className="mb-4">
+          <textarea
+            ref={textareaRef}
+            placeholder="Add a note..."
             value={noteText}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNoteText(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-              if (e.key === "Enter" && e.metaKey) handleAddNote();
-            }}
-            style={{
-              background: "var(--bg-surface)",
-              color: "var(--text-primary)",
-              fontSize: 13,
-            }}
+            onChange={(e) => setNoteText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && e.metaKey) handleAddNote(); }}
+            rows={3}
+            className="w-full resize-none rounded-lg border border-stone-200 bg-[var(--bg-surface)] p-3 text-[15px] text-black placeholder:text-stone-700 transition-colors focus:border-stone-800 focus:outline-none"
           />
           {noteText.trim() && (
-            <Button
-              size="sm"
-              variant="primary"
-              onPress={handleAddNote}
-              className="mt-2"
-            >
-              Add Note
-            </Button>
+            <div className="mt-2 flex justify-end">
+              <button className="rounded-lg bg-stone-800 px-3 py-1.5 text-[15px] font-medium text-white transition-colors hover:bg-stone-700" onClick={handleAddNote}>
+                Save
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Empty state */}
         {isEmpty && (
-          <div style={{ color: "var(--text-secondary)", fontSize: 13, lineHeight: 1.8 }}>
-            <p style={{ marginBottom: 4 }}>1. Drop a pitch deck or brief to teach Prism about this client</p>
-            <p style={{ marginBottom: 4 }}>2. Paste call notes or meeting summaries</p>
-            <p style={{ marginBottom: 16 }}>3. Link a previous project folder for tech stack analysis</p>
+          <div className="text-[15px] leading-7 text-stone-900">
+            <p>1. Drop a pitch deck or brief to teach Prism about this client</p>
+            <p>2. Paste call notes or meeting summaries</p>
+            <p>3. Link a previous project folder for tech stack analysis</p>
           </div>
         )}
 
-        {/* Context items list */}
         {contextItems.length > 0 && (
           <div>
-            <h3
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--text-secondary)",
-                marginBottom: 12,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-              aria-label="Context items"
-            >
+            <h3 className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">
               {extractionQueue.extracting > 0
                 ? `Extracting ${extractionQueue.extracting} of ${extractionQueue.total}...`
-                : `Context Items (${contextItems.length})`}
+                : `Context Items \u00b7 ${contextItems.length}`}
             </h3>
-            <div role="list" aria-label="Context items">
-            {contextItems.map((item) => {
-              const status = item.extractionStatus || "stored";
-              const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.stored;
-              return (
-                <div
-                  key={item.id}
-                  className="group flex items-center gap-3 py-2 px-2 rounded-md transition-colors duration-150"
-                  style={{ borderBottom: "1px solid var(--border-subtle)" }}
-                >
-                  <span style={{ fontSize: 16 }}>
-                    {FILE_ICONS[item.itemType] || FILE_ICONS.file}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {item.title}
+            <div role="list" className="space-y-0.5">
+              {contextItems.map((item) => {
+                const status = item.extractionStatus || "stored";
+                const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.stored;
+                return (
+                  <div key={item.id} className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-stone-50">
+                    <span className="material-symbols-outlined text-stone-700" style={{ fontSize: 18 }}>{FILE_ICONS[item.itemType] || FILE_ICONS.file}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[15px] font-medium text-black">{item.title}</div>
+                      <div className="flex gap-2 text-[13px] text-stone-700">
+                        {item.fileSizeBytes && <span>{(item.fileSizeBytes / 1024).toFixed(0)} KB</span>}
+                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", display: "flex", gap: 8 }}>
-                      {item.fileSizeBytes && (
-                        <span>{(item.fileSizeBytes / 1024).toFixed(0)}KB</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[13px] font-medium ${config.bg} ${config.text} ${status === "extracting" ? "stage-current" : ""}`}>
+                      {config.label}
+                    </span>
+                    <div className="hidden gap-1 group-hover:flex">
+                      {(status === "failed" || status === "stored") && (
+                        <button className="rounded px-2 py-1 text-[13px] text-stone-700 transition-colors hover:bg-stone-100 hover:text-black" onClick={() => onReExtract(item.id)}>Re-extract</button>
                       )}
-                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                      {deletingId === item.id ? (
+                        <>
+                          <button className="rounded bg-red-50 px-2 py-1 text-[13px] text-red-500 hover:bg-red-100" onClick={() => { onDeleteItem(item.id); setDeletingId(null); }}>Delete?</button>
+                          <button className="rounded px-2 py-1 text-[13px] text-stone-700 hover:bg-stone-100" onClick={() => setDeletingId(null)}>Cancel</button>
+                        </>
+                      ) : (
+                        <button className="rounded px-2 py-1 text-[13px] text-stone-700 transition-colors hover:bg-stone-100 hover:text-black" onClick={() => setDeletingId(item.id)}>Delete</button>
+                      )}
                     </div>
                   </div>
-                  <Chip
-                    size="sm"
-                    color={config.color}
-                    variant="soft"
-                    className={status === "extracting" ? "stage-current" : ""}
-                  >
-                    {config.label}
-                  </Chip>
-                  {/* Hover actions */}
-                  <div className="hidden group-hover:flex gap-1">
-                    {(status === "failed" || status === "stored") && (
-                      <Button size="sm" variant="ghost" onPress={() => onReExtract(item.id)}>
-                        Re-extract
-                      </Button>
-                    )}
-                    {deletingId === item.id ? (
-                      <>
-                        <Button size="sm" variant="danger-soft" onPress={() => { onDeleteItem(item.id); setDeletingId(null); }}>
-                          Delete?
-                        </Button>
-                        <Button size="sm" variant="ghost" onPress={() => setDeletingId(null)}>
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <Button size="sm" variant="ghost" onPress={() => setDeletingId(item.id)}>
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Link previous attempt */}
-        <Button
-          variant="ghost"
-          onPress={onLinkPreviousAttempt}
-          className="mt-4"
-          style={{ color: "var(--accent-blue)", fontSize: 13 }}
-        >
-          + Link Previous Attempt
-        </Button>
+        <button className="mt-4 flex items-center gap-1 text-[15px] text-black transition-colors hover:text-stone-900" onClick={onLinkPreviousAttempt}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
+          Link Previous Attempt
+        </button>
       </div>
 
-      {/* Right sidebar: What Prism Knows + Health */}
-      <div
-        role="complementary"
-        aria-label="Extracted knowledge"
-        style={{
-          width: 300,
-          borderLeft: "1px solid var(--border-subtle)",
-          overflow: "auto",
-          padding: "20px 16px",
-          flexShrink: 0,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--text-secondary)",
-            marginBottom: 16,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
+      {/* Right sidebar */}
+      <div role="complementary" className="w-[280px] shrink-0 overflow-auto border-l border-stone-200 bg-[var(--bg-surface)] p-5">
+        <h2 className="mb-4 text-[13px] font-medium uppercase tracking-widest text-stone-700">
           What Prism Knows
         </h2>
 
         {knowledge.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+          <p className="text-[15px] leading-6 text-stone-900">
             {isEmpty
               ? "Prism learns about your clients from the files and notes you share. The more context you provide, the smarter your builds get."
-              : "Prism hasn't extracted knowledge yet. Drop files or add notes to teach Prism about this client."}
+              : "Drop files or add notes to teach Prism about this client."}
           </p>
         ) : (
           categories.map((category) => {
             const entries = knowledgeGroups[category];
-            const borderClass = CATEGORY_BORDERS[category] || "";
+            const cfg = CATEGORY_CONFIG[category];
             return (
-              <div key={category} style={{ marginBottom: 16 }}>
-                <h3
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    marginBottom: 8,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {category}
-                </h3>
-                <div className={`border-l-2 pl-3 ${borderClass}`}>
-                  {entries ? (
-                    entries.map((entry) => (
-                      <KnowledgeEntry
-                        key={entry.id}
-                        entry={entry}
-                        onCopy={onCopyKnowledge}
-                        onApply={onApplyToBrief}
-                        onFlag={onFlagWrong}
-                      />
-                    ))
-                  ) : (
-                    <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-                      No {category} info extracted yet
-                    </span>
+              <div key={category} className="mb-5">
+                <h3 className={`mb-2 text-[13px] font-medium uppercase tracking-widest ${cfg.text}`}>{cfg.label}</h3>
+                <div className={`border-l-2 pl-3 ${cfg.border}`}>
+                  {entries ? entries.map((entry) => (
+                    <KnowledgeEntry key={entry.id} entry={entry} onCopy={onCopyKnowledge} onApply={onApplyToBrief} onFlag={onFlagWrong} />
+                  )) : (
+                    <span className="text-[15px] text-stone-700">No {category} info yet</span>
                   )}
                 </div>
               </div>
@@ -403,53 +274,31 @@ export function ContextTab({
           })
         )}
 
-        {/* Context health */}
         {contextHealth && contextItems.length > 0 && (
-          <div style={{ marginTop: 20, padding: 12, background: "var(--bg-surface)", borderRadius: "var(--radius-md)" }}>
-            <Tooltip>
-              <Tooltip.Trigger>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ fontSize: 11, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      Context Health
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color:
-                          contextHealth.score >= 76
-                            ? "var(--accent-green)"
-                            : contextHealth.score >= 26
-                              ? "var(--accent-amber)"
-                              : "var(--accent-red)",
-                      }}
-                    >
-                      {contextHealth.score}/100
-                    </span>
-                  </div>
-                  <ProgressBar
-                    value={contextHealth.score}
-                    color={
-                      contextHealth.score >= 76
-                        ? "success"
-                        : contextHealth.score >= 26
-                          ? "warning"
-                          : "danger"
-                    }
-                    size="sm"
-                  />
-                </div>
-              </Tooltip.Trigger>
-              <Tooltip.Content>
-                <div style={{ padding: 8 }}>
-                  <div>{contextHealth.hasProfile ? "\u2713" : "\u2717"} Client profile generated</div>
-                  <div>{contextHealth.hasDocs ? "\u2713" : "\u2717"} At least 3 context items</div>
-                  <div>{contextHealth.recent ? "\u2713" : "\u2717"} Updated within 30 days</div>
-                  <div>{contextHealth.hasCategories ? "\u2713" : "\u2717"} 2+ knowledge categories</div>
-                </div>
-              </Tooltip.Content>
-            </Tooltip>
+          <div className="mt-6 rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <div className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">Context Health</div>
+            <div className="flex items-center gap-3">
+              <svg width="76" height="76" viewBox="0 0 76 76" className="shrink-0">
+                <circle cx="38" cy="38" r={healthRadius} fill="none" stroke="#e5e5e5" strokeWidth="5" />
+                <circle cx="38" cy="38" r={healthRadius} fill="none" stroke={healthColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={healthCircumference} strokeDashoffset={healthOffset} transform="rotate(-90 38 38)" className="transition-all duration-500" />
+                <text x="38" y="35" textAnchor="middle" fill={healthColor} fontSize="16" fontWeight="600">{contextHealth.score}</text>
+                <text x="38" y="47" textAnchor="middle" fill="#a3a3a3" fontSize="9">/100</text>
+              </svg>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
+                {[
+                  { ok: contextHealth.hasProfile, label: "Profile" },
+                  { ok: contextHealth.hasDocs, label: "Docs" },
+                  { ok: contextHealth.recent, label: "Recent" },
+                  { ok: contextHealth.hasCategories, label: "Categories" },
+                ].map((c) => (
+                  <span key={c.label} className={c.ok ? "text-emerald-600" : "text-stone-700"}>
+                    <span className="material-symbols-outlined align-middle" style={{ fontSize: 13 }}>
+                      {c.ok ? "check_circle" : "radio_button_unchecked"}
+                    </span>{" "}{c.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

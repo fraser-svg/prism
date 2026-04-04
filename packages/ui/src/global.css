@@ -10,101 +10,112 @@
 @source "../../../apps/desktop/src";
 @source "../../../apps/web/src";
 
-/* Prism — Kinetic Workspace dark theme overrides */
-.dark,
-[data-theme="dark"] {
-  --background: #0a0a0f;
-  --foreground: #e8e8ed;
+/* Prismatic — Warm cream theme (littlebird-inspired) */
+:root {
+  color-scheme: light;
 
-  /* Surface */
-  --surface: #111118;
-  --surface-foreground: #e8e8ed;
-  --surface-secondary: #1a1a24;
-  --surface-tertiary: #222230;
+  --background: #f4edd9;
+  --foreground: #000000;
+
+  /* Surfaces */
+  --surface: #fff9e9;
+  --surface-foreground: #000000;
+  --surface-secondary: #F9F7F4;
+  --surface-tertiary: #F2EEE6;
+
+  /* Containers */
+  --surface-container: #fff9e9;
+  --surface-container-low: #faf5e5;
+  --surface-container-high: #f4edd9;
+  --surface-container-highest: #ece5d1;
+  --surface-container-lowest: #fff9e9;
 
   /* Overlay */
-  --overlay: #1a1a24;
-  --overlay-foreground: #e8e8ed;
+  --overlay: rgba(27, 28, 21, 0.5);
+  --overlay-foreground: #FEFCF9;
 
   /* Muted */
-  --muted: #8888a0;
+  --muted: #8A8A7E;
+  --on-surface-variant: #6B6B60;
 
   /* Default */
-  --default: #2a2a3a;
-  --default-foreground: #e8e8ed;
+  --default: #E5E0D8;
+  --default-foreground: #1B1C15;
 
   /* Accent / Primary */
-  --accent: #4d8eff;
-  --accent-foreground: #ffffff;
+  --accent: #1B1C15;
+  --accent-foreground: #FEFCF9;
+  --primary: #1B1C15;
+  --primary-container: #E5E0D8;
 
   /* Status */
-  --success: #34d399;
-  --success-foreground: #0a0a0f;
-  --warning: #f59e0b;
-  --warning-foreground: #0a0a0f;
-  --danger: #ef4444;
+  --success: #4A9B6E;
+  --success-foreground: #ffffff;
+  --warning: #C4882A;
+  --warning-foreground: #ffffff;
+  --danger: #C45040;
   --danger-foreground: #ffffff;
 
   /* Form fields */
-  --field-background: #111118;
-  --field-foreground: #e8e8ed;
-  --field-placeholder: #5a5a70;
-  --field-border: #2a2a3a;
+  --field-background: #FEFCF9;
+  --field-foreground: #1B1C15;
+  --field-placeholder: #A0A095;
+  --field-border: #DDD8D0;
 
   /* Borders & separators */
-  --border: #2a2a3a;
-  --separator: #1e1e2a;
+  --border: #DDD8D0;
+  --separator: #EBE6DE;
+  --outline-variant: #CCC7BF;
 
   /* Focus ring */
-  --focus: #4d8eff;
+  --focus: #1B1C15;
 
   /* Backdrop */
-  --backdrop: rgba(0, 0, 0, 0.6);
+  --backdrop: rgba(27, 28, 21, 0.3);
 
   /* Scrollbar */
-  --scrollbar: #3a3a4a;
+  --scrollbar: #CCC7BF;
 
   /* Segment (tabs, toggles) */
-  --segment: #2a2a3a;
-  --segment-foreground: #e8e8ed;
+  --segment: #EBE6DE;
+  --segment-foreground: #1B1C15;
 }
 
-/* Force dark mode */
+/* Prism-specific tokens */
 :root {
-  color-scheme: dark;
-}
+  --stage-completed: #4A9B6E;
+  --stage-current: #1B1C15;
+  --stage-blocked: #C45040;
+  --stage-upcoming: #DDD8D0;
 
-/* Prism-specific tokens (used by custom components) */
-:root {
-  --stage-completed: #34d399;
-  --stage-current: #4d8eff;
-  --stage-blocked: #ef4444;
-  --stage-upcoming: #3a3a4a;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", "Fira Code", monospace;
 
-  --font-sans: "Lexend", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "SF Mono", "Fira Code", monospace;
+  /* Semantic aliases */
+  --bg-base: #f4edd9;
+  --bg-surface: #fff9e9;
+  --bg-elevated: #fff9e9;
+  --bg-hover: #f4edd9;
+  --bg-active: #ece5d1;
 
-  /* Legacy tokens kept for existing inline-styled components */
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-elevated: #1a1a24;
-  --bg-hover: #222230;
-  --bg-active: #2a2a3a;
+  --text-primary: #000000;
+  --text-secondary: #4A4A42;
+  --text-tertiary: #8A8A7E;
+  --text-inverse: #FEFCF9;
 
-  --text-primary: #e8e8ed;
-  --text-secondary: #8888a0;
-  --text-tertiary: #5a5a70;
-  --text-inverse: #0a0a0f;
+  --border-subtle: #EBE6DE;
+  --border-default: #DDD8D0;
+  --border-strong: #CCC7BF;
 
-  --border-subtle: #1e1e2a;
-  --border-default: #2a2a3a;
-  --border-strong: #3a3a4a;
+  --accent-blue: #4A7BBF;
+  --accent-green: #4A9B6E;
+  --accent-amber: #C4882A;
+  --accent-red: #C45040;
+  --accent-purple: #7B6BA5;
 
-  --accent-blue: #4d8eff;
-  --accent-green: #34d399;
-  --accent-amber: #f59e0b;
-  --accent-red: #ef4444;
-  --accent-purple: #a78bfa;
+  /* Sidebar */
+  --sidebar-width: 240px;
+  --sidebar-bg: #fff9e9;
 }
 
 html,
@@ -116,8 +127,11 @@ body,
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -126,10 +140,10 @@ body,
 }
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar);
-  border-radius: 3px;
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border);
+  background: var(--border-strong);
 }
 
 .titlebar-drag {
@@ -139,82 +153,57 @@ body,
   -webkit-app-region: no-drag;
 }
 
-.prismatic-lockup {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  color: var(--foreground);
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
-.prismatic-lockup-mark {
-  width: 1.8rem;
-  height: 1.8rem;
-  flex: none;
+/* Card hover lift */
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(27, 28, 21, 0.08);
 }
 
-.prismatic-lockup-text {
-  height: 2.2rem;
-  width: auto;
-  flex: none;
+/* Active glow for current pipeline stage */
+.active-glow {
+  box-shadow: 0 0 0 3px rgba(27, 28, 21, 0.15);
 }
 
-@media (max-width: 720px) {
-  .prismatic-lockup-text {
-    display: none;
-  }
+/* Pulse for current stage */
+.pulse-glow {
+  box-shadow: 0 0 0 4px rgba(27, 28, 21, 0.1);
+  animation: pulse-glow-anim 2s ease-in-out infinite;
+}
+@keyframes pulse-glow-anim {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(27, 28, 21, 0.1); }
+  50% { box-shadow: 0 0 0 8px rgba(27, 28, 21, 0.05); }
 }
 
 @keyframes stage-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 .stage-current {
   animation: stage-pulse 2s ease-in-out infinite;
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .fade-in {
   animation: fade-in 0.2s ease-out;
 }
 
 @keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 .slide-in-right {
-  animation: slide-in-right 0.25s ease-out;
-}
-
-/* Knowledge highlight animation (context dump) */
-@keyframes knowledge-highlight {
-  from {
-    border-left-color: var(--accent-blue);
-  }
-  to {
-    border-left-color: transparent;
-  }
-}
-.knowledge-new {
-  border-left: 2px solid var(--accent-blue);
-  animation: knowledge-highlight 3s ease-out forwards;
+  animation: slide-in-right 0.2s ease-out;
 }
 
 /* Restore focus visibility for keyboard navigation */
@@ -222,5 +211,5 @@ input:focus-visible,
 select:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: -1px;
+  outline-offset: 2px;
 }

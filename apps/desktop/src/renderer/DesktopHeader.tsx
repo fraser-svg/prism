@@ -1,70 +1,39 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import { Button, TextField, Input } from "@heroui/react";
-import { PrismaticLogo, usePrismStore } from "@prism/ui";
+import { useLocation } from "react-router-dom";
+import { usePrismStore } from "@prism/ui";
 
 export function DesktopHeader() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { searchQuery, setSearchQuery } = usePrismStore();
 
   const isPortfolio = location.pathname === "/";
 
   return (
-    <div
-      className="titlebar-drag flex h-[38px] shrink-0 items-center gap-3 bg-[var(--surface)] pl-[78px] pr-4"
-    >
-      <button
-        className="titlebar-no-drag flex cursor-pointer items-center border-none bg-transparent p-0 text-[var(--foreground)]"
-        onClick={() => navigate("/")}
-        aria-label="Prismatic home"
-      >
-        <PrismaticLogo
-          className="prismatic-lockup"
-          markClassName="prismatic-lockup-mark"
-          textClassName="prismatic-lockup-text"
-          variant="lockup"
-          theme="dark"
-        />
-      </button>
-
-      {isPortfolio ? (
-        <TextField className="titlebar-no-drag max-w-[360px] flex-1">
-          <Input
-            placeholder="Search clients and projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="text-xs"
-          />
-        </TextField>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => navigate("/")}
-          className="titlebar-no-drag"
-        >
-          Portfolio
-        </Button>
-      )}
-
-      <div style={{ marginLeft: "auto" }}>
-        <button
-          className="titlebar-no-drag"
-          onClick={() => navigate("/providers")}
-          style={{
-            background: "none",
-            border: "none",
-            color: location.pathname === "/providers"
-              ? "var(--accent-blue)"
-              : "var(--text-secondary)",
-            fontSize: 12,
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-          }}
-        >
-          Providers
-        </button>
+    <header className="titlebar-drag flex h-12 shrink-0 items-center justify-between border-b border-stone-200 bg-[var(--bg-surface)] pl-[78px] pr-6">
+      <div className="titlebar-no-drag flex items-center gap-3">
+        {isPortfolio && (
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-700" style={{ fontSize: 16 }}>
+              search
+            </span>
+            <input
+              className="w-56 rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-8 pr-3 text-[15px] text-black placeholder:text-stone-700 transition-colors focus:border-stone-600 focus:bg-[var(--bg-surface)] focus:outline-none"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        )}
       </div>
-    </div>
+
+      <div className="titlebar-no-drag flex items-center gap-2">
+        <span
+          className="material-symbols-outlined cursor-pointer rounded-md p-1.5 text-stone-700 transition-colors hover:bg-stone-100 hover:text-stone-800"
+          title="Settings"
+          style={{ fontSize: 18 }}
+        >
+          settings
+        </span>
+      </div>
+    </header>
   );
 }

@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
-import { Button, Chip, Separator, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
 import type { TimelineEvent } from "../types";
 
 const ACTIONS = [
-  { key: "resume", label: "Resume Project", description: "Continue from last checkpoint" },
-  { key: "check_gate", label: "Check Next Gate", description: "Evaluate gate requirements" },
-  { key: "verify", label: "Run Verification", description: "Verify current stage deliverables" },
-  { key: "detect_deploy", label: "Detect Deploy", description: "Check for new deployments" },
-  { key: "save_milestone", label: "Save Milestone", description: "Snapshot current progress" },
+  { key: "resume", label: "Resume Project", icon: "play_arrow", description: "Continue from last checkpoint" },
+  { key: "check_gate", label: "Check Next Gate", icon: "fact_check", description: "Evaluate gate requirements" },
+  { key: "verify", label: "Run Verification", icon: "verified", description: "Verify current stage deliverables" },
+  { key: "detect_deploy", label: "Detect Deploy", icon: "rocket_launch", description: "Check for new deployments" },
+  { key: "save_milestone", label: "Save Milestone", icon: "flag", description: "Snapshot current progress" },
 ] as const;
+
+function getEventChipStyle(type: string): { bg: string; text: string } {
+  if (type.includes("completed") || type.includes("session_end"))
+    return { bg: "bg-emerald-50", text: "text-emerald-600" };
+  if (type.includes("failed") || type.includes("blocked"))
+    return { bg: "bg-red-50", text: "text-red-500" };
+  if (type.includes("started") || type.includes("pipeline"))
+    return { bg: "bg-[#91A6FF]/20", text: "text-[#4A5A99]" };
+  return { bg: "bg-[#91A6FF]/10", text: "text-[#5B6BAA]" };
+}
 
 export function SessionDrawer() {
   const {
@@ -49,64 +58,60 @@ export function SessionDrawer() {
     <div className="absolute inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[var(--backdrop)]"
+        className="absolute inset-0 bg-black/20"
         onClick={() => toggleDrawer()}
       />
 
       {/* Drawer panel */}
-      <div className="slide-in-right relative flex h-full w-[380px] flex-col overflow-hidden border-l border-[var(--separator)] bg-[var(--surface-secondary)]">
+      <div className="slide-in-right relative flex h-full w-[360px] flex-col overflow-hidden border-l border-stone-200 bg-[var(--bg-surface)]">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-[var(--separator)] px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-200 px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--foreground)]">Session</h2>
+            <h2 className="text-[15px] font-semibold text-black">Session</h2>
             {project && (
-              <span className="font-mono text-[11px] text-[var(--field-placeholder)]">
-                {project.name}
-              </span>
+              <span className="font-mono text-[13px] text-stone-700">{project.name}</span>
             )}
           </div>
-          <Button
-            isIconOnly
-            variant="ghost"
-            size="sm"
-            onPress={() => toggleDrawer()}
+          <button
+            className="flex h-7 w-7 items-center justify-center rounded-md text-stone-700 transition-colors hover:bg-stone-100 hover:text-black"
+            onClick={() => toggleDrawer()}
             aria-label="Close drawer"
           >
-            {"\u2715"}
-          </Button>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+          </button>
         </div>
 
         {/* Actions */}
-        <div className="shrink-0 border-b border-[var(--separator)] px-5 py-4">
-          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+        <div className="shrink-0 border-b border-stone-100 px-5 py-4">
+          <h3 className="mb-2 text-[13px] font-medium uppercase tracking-widest text-stone-700">
             Actions
           </h3>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-0.5">
             {ACTIONS.map((action) => (
-              <Button
+              <button
                 key={action.key}
-                variant="tertiary"
-                className="h-auto justify-start px-3 py-2 text-left"
-                isDisabled={!!runningAction && runningAction !== action.key}
-                onPress={() => handleAction(action.key)}
+                disabled={!!runningAction && runningAction !== action.key}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-stone-50 disabled:opacity-40"
+                onClick={() => handleAction(action.key)}
               >
-                <div className="flex w-full items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-stone-700" style={{ fontSize: 16 }}>
+                    {action.icon}
+                  </span>
                   <div>
-                    <span className="block text-sm text-[var(--foreground)]">
-                      {action.label}
-                    </span>
-                    <span className="text-[11px] text-[var(--field-placeholder)]">
-                      {action.description}
-                    </span>
+                    <span className="block text-[15px] text-black">{action.label}</span>
+                    <span className="text-[13px] text-stone-700">{action.description}</span>
                   </div>
-                  {runningAction === action.key && <Spinner size="sm" />}
                 </div>
-              </Button>
+                {runningAction === action.key && (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-stone-800 border-t-transparent" />
+                )}
+              </button>
             ))}
           </div>
 
           {actionError && (
-            <div className="mt-2 rounded-md bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-2.5 py-1.5 text-xs text-danger">
+            <div className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[14px] text-red-500">
               {actionError}
             </div>
           )}
@@ -114,46 +119,37 @@ export function SessionDrawer() {
 
         {/* Event stream */}
         <div className="flex-1 overflow-auto px-5 py-4">
-          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+          <h3 className="mb-2 text-[13px] font-medium uppercase tracking-widest text-stone-700">
             Event Stream
           </h3>
 
           {activeTimeline.length === 0 ? (
-            <span className="text-xs text-[var(--field-placeholder)]">
+            <span className="text-[15px] text-stone-700">
               No events yet. Run an action to get started.
             </span>
           ) : (
-            activeTimeline.map((event: TimelineEvent) => (
-              <div key={event.id} className="mb-2.5 pb-2.5">
-                <div className="mb-1 flex items-center justify-between">
-                  <Chip
-                    size="sm"
-                    color={eventTypeChipColor(event.eventType)}
-                    variant="soft"
-                  >
-                    <span className="font-mono text-[10px]">{event.eventType}</span>
-                  </Chip>
-                  <span className="text-[10px] text-[var(--field-placeholder)]">
-                    {new Date(event.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--muted)]">{event.summary}</span>
-                <Separator className="mt-2.5" />
-              </div>
-            ))
+            <div className="space-y-3">
+              {activeTimeline.map((event: TimelineEvent) => {
+                const chip = getEventChipStyle(event.eventType);
+                return (
+                  <div key={event.id} className="relative border-l border-stone-200 pl-4">
+                    <div className="absolute -left-[3px] top-1 h-1.5 w-1.5 rounded-full bg-black" />
+                    <div className="mb-0.5 flex items-center justify-between">
+                      <span className={`rounded px-1.5 py-0.5 text-[12px] font-semibold uppercase ${chip.bg} ${chip.text}`}>
+                        {event.eventType}
+                      </span>
+                      <span className="text-[12px] text-stone-700">
+                        {new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <span className="text-[14px] text-stone-800">{event.summary}</span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
     </div>
   );
-}
-
-function eventTypeChipColor(
-  type: string,
-): "success" | "danger" | "accent" | "default" {
-  if (type.includes("completed") || type.includes("session_end"))
-    return "success";
-  if (type.includes("failed") || type.includes("blocked")) return "danger";
-  if (type.includes("started") || type.includes("pipeline")) return "accent";
-  return "default";
 }
