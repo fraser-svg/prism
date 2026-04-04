@@ -9,6 +9,7 @@ export { Providers } from "./components/Providers";
 export { ProjectCard } from "./components/ProjectCard";
 export { SessionDrawer } from "./components/SessionDrawer";
 export { ClientContextPage } from "./components/ClientContextPage";
+export { ClientsPage } from "./components/ClientsPage";
 export { ContextTab } from "./components/ContextTab";
 export { PrismaticLogo } from "./branding/PrismaticLogo";
 

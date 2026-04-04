@@ -1,12 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { PrismStoreContext, AppShell, Portfolio, ControlRoom, ClientContextPage, Providers } from "@prism/ui";
+import { PrismStoreContext, AppShell, Portfolio, ControlRoom, ClientContextPage, ClientsPage, Providers } from "@prism/ui";
 import { useStore } from "./store";
 import { WebHeader } from "./WebHeader";
 import { LoginPage } from "./LoginPage";
-
-const BYPASS_AUTH = true;
-
-const MOCK_USER = { name: "Fraser", email: "fraser@prismatic.build", image: null };
+import { authClient } from "./auth-client";
 
 async function handleBrowse(): Promise<string | null> {
   try {
@@ -21,18 +18,28 @@ async function handleBrowse(): Promise<string | null> {
 }
 
 export function App() {
-  if (!BYPASS_AUTH) {
-    // Auth flow would go here
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#f4edd9]">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-stone-800 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
   }
 
   return (
     <PrismStoreContext.Provider value={useStore}>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<AppShell header={<WebHeader user={MOCK_USER} />} />}>
+          <Route element={<AppShell header={<WebHeader user={session.user} />} />}>
             <Route path="/" element={<Portfolio onBrowse={handleBrowse} />} />
             <Route path="/project/:id" element={<ControlRoom />} />
+            <Route path="/clients" element={<ClientsPage />} />
             <Route path="/clients/:clientId/context" element={<ClientContextPage />} />
             <Route path="/providers" element={<Providers />} />
           </Route>

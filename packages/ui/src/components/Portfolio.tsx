@@ -52,8 +52,29 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   if (portfolioLoading && portfolioGroups.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-stone-800 border-t-transparent" />
+      <div className="h-full overflow-auto px-8 py-10">
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <div className="h-5 w-20 animate-pulse rounded bg-stone-200" />
+            <div className="mt-2 h-4 w-36 animate-pulse rounded bg-stone-100" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-8 w-20 animate-pulse rounded-lg bg-stone-100" />
+            <div className="h-8 w-24 animate-pulse rounded-lg bg-stone-200" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-stone-200 bg-[var(--bg-surface)] p-5"
+            >
+              <div className="mb-3 h-4 w-32 animate-pulse rounded bg-stone-200" />
+              <div className="mb-2 h-3 w-48 animate-pulse rounded bg-stone-100" />
+              <div className="mt-4 h-2 w-full animate-pulse rounded-full bg-stone-100" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

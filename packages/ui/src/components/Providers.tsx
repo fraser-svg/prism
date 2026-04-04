@@ -4,6 +4,7 @@ import { usePrismStore } from "../context";
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   connected: { bg: "bg-emerald-50", text: "text-emerald-600", label: "Healthy" },
   degraded: { bg: "bg-amber-50", text: "text-amber-600", label: "Degraded" },
+  needs_reauth: { bg: "bg-orange-50", text: "text-orange-600", label: "Needs Re-auth" },
   unavailable: { bg: "bg-red-50", text: "text-red-500", label: "Unavailable" },
   unknown: { bg: "bg-[#91A6FF]/20", text: "text-[#4A5A99]", label: "Unknown" },
 };
@@ -27,6 +28,7 @@ export function Providers() {
 
   const healthy = providers.filter((p) => p.status === "connected").length;
   const degraded = providers.filter((p) => p.status === "degraded").length;
+  const needsReauth = providers.filter((p) => p.status === "needs_reauth").length;
   const unavailable = providers.filter((p) => p.status === "unavailable").length;
 
   return (
@@ -75,11 +77,11 @@ export function Providers() {
             {providers.map((provider) => {
               const style = STATUS_STYLES[provider.status] || STATUS_STYLES.unknown;
               return (
-                <tr key={provider.id} className="border-b border-stone-50 last:border-0">
+                <tr key={provider.providerId} className="border-b border-stone-50 last:border-0">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-stone-700" style={{ fontSize: 18 }}>smart_toy</span>
-                      <span className="text-[15px] font-medium text-black">{provider.name}</span>
+                      <span className="text-[15px] font-medium text-black">{provider.displayName}</span>
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
@@ -88,11 +90,11 @@ export function Providers() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-right text-[15px] text-stone-900">
-                    {provider.tasksCompleted ?? 0}
+                    {provider.taskCount ?? 0}
                   </td>
                   <td className="px-5 py-3.5 text-right text-[15px] text-stone-700">
-                    {provider.lastCheckAt
-                      ? new Date(provider.lastCheckAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    {provider.lastHealthCheck
+                      ? new Date(provider.lastHealthCheck).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       : "\u2014"}
                   </td>
                 </tr>
@@ -106,6 +108,7 @@ export function Providers() {
       <p className="mt-3 text-[14px] text-stone-700">
         {providers.length} providers configured &middot; {healthy} healthy
         {degraded > 0 && ` \u00b7 ${degraded} degraded`}
+        {needsReauth > 0 && ` \u00b7 ${needsReauth} needs re-auth`}
         {unavailable > 0 && ` \u00b7 ${unavailable} unavailable`}
       </p>
     </div>
