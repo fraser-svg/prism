@@ -4,8 +4,11 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
-### Added
-- **Prismatic app branding** — web and desktop app chrome now use the new Prismatic mark and wordmark, and top-level runtime surfaces now show the Prismatic product name.
+## [4.0.25.1] - 2026-04-04
+
+### Changed
+- **Web-only pivot** — desktop app/Electron development paused indefinitely. All product work now targets the web app.
+- **Prismatic app branding** — web and desktop app chrome now use the new Prismatic mark and wordmark.
 
 ## [4.0.25.0] - 2026-04-04
 
