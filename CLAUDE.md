@@ -12,7 +12,7 @@ Primary: **Agency operators** delivering software outcomes for clients. Semi-tec
 
 ## Priority Stack (current)
 
-1. **Electron Portfolio MVP** — the desktop app IS the YC demo. Build at `apps/desktop/`. See `.context/attachments/plan.md` for full spec.
+1. **Web app is the product** — all product work happens in the web app. No desktop/Electron work.
 2. **Patrick session** — first real user proof with structured evidence capture
 3. **Record a demo-ready walkthrough** of the agency workflow (Socratic discovery → spec → build → verification → deploy)
 4. **Sharpen the one-liner and YC application narrative** around agency operators
@@ -20,7 +20,8 @@ Primary: **Agency operators** delivering software outcomes for clients. Semi-tec
 ## Stop Building
 
 Do not work on these until the priority stack is resolved:
-- 9-stage lifecycle migration (vision doc written, implementation deferred — show 7 stages honestly in desktop app)
+- Desktop app / Electron shell (on hold indefinitely — web-only for now)
+- 9-stage lifecycle migration (vision doc written, implementation deferred)
 - Provider abstractions
 - Broad integrations
 - Enterprise governance
