@@ -15,7 +15,7 @@ export interface PrismAPI {
   checkProviderHealth: () => Promise<IpcResult>;
   // Context dump
   getContextItems: (entityType: "project" | "client", entityId: string) => Promise<IpcResult>;
-  addContextItem: (item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }) => Promise<IpcResult>;
+  addContextItem: (item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string; file?: File }) => Promise<IpcResult>;
   deleteContextItem: (id: string) => Promise<IpcResult>;
   reExtractItem: (id: string) => Promise<IpcResult>;
   getKnowledge: (entityType: "project" | "client", entityId: string) => Promise<IpcResult>;
