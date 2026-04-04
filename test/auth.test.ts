@@ -1,15 +1,21 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { WorkspaceFacade, ClientRepository } from "@prism/workspace";
 import { createApp } from "../apps/web/server/index";
 import request from "supertest";
+import type { AbsolutePath } from "@prism/core";
 
 let facade: WorkspaceFacade;
 let clients: ClientRepository;
 let app: ReturnType<typeof createApp>["app"];
+let tmpDir: string;
 
 beforeAll(() => {
-  // Use in-memory workspace for tests
-  facade = new WorkspaceFacade();
+  // Use a temp directory so all migrations run fresh (including 004-context)
+  tmpDir = mkdtempSync(join(tmpdir(), "prism-auth-test-"));
+  facade = new WorkspaceFacade(tmpDir as AbsolutePath);
   clients = new ClientRepository(facade.context.db.inner);
   const result = createApp(facade, clients);
   app = result.app;
@@ -17,6 +23,7 @@ beforeAll(() => {
 
 afterAll(() => {
   facade.close();
+  rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe("requireAuth middleware", () => {
