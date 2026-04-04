@@ -147,6 +147,9 @@ export function CreateProjectModal({
                   </SelectTrigger>
                   <SelectPopover>
                     <ListBox>
+                      <ListBoxItem key="" id="">
+                        None
+                      </ListBoxItem>
                       {clients.map((c) => (
                         <ListBoxItem key={c.id} id={c.id}>
                           {c.name}

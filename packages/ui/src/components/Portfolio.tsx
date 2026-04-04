@@ -5,6 +5,7 @@ import { usePrismStore } from "../context";
 import { ProjectCard } from "./ProjectCard";
 import { CreateClientModal } from "./CreateClientModal";
 import { CreateProjectModal } from "./CreateProjectModal";
+import { OnboardingGuide } from "./OnboardingGuide";
 import type { ClientView, KnowledgeSummary, ContextHealth } from "../types";
 
 interface ClientProfileData {
@@ -165,6 +166,8 @@ interface PortfolioProps {
 
 export function Portfolio({ onBrowse }: PortfolioProps) {
   const {
+    clients,
+    projects,
     portfolioGroups,
     portfolioLoading,
     portfolioError,
@@ -236,7 +239,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
     );
   }
 
-  const isEmpty = filteredGroups.length === 0 && !searchQuery;
+  const showOnboarding = projects.length === 0 && !searchQuery;
 
   return (
     <div className="h-full overflow-auto px-8 py-6">
@@ -261,32 +264,18 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
         </div>
       </div>
 
-      {/* Empty state */}
-      {isEmpty && (
-        <div className="flex h-[60%] flex-col items-center justify-center gap-4">
-          <span className="text-lg font-medium text-[var(--foreground)]">
-            Welcome to Prismatic
-          </span>
-          <span className="max-w-[400px] text-center text-sm text-[var(--muted)]">
-            Create a client and link your first project to see its pipeline
-            progress here.
-          </span>
-          <div className="mt-2 flex gap-2">
-            <Button variant="tertiary" onPress={() => setShowCreateClient(true)}>
-              Create Client
-            </Button>
-            <Button
-              variant="primary"
-              onPress={() => setShowCreateProject(true)}
-            >
-              Link Project
-            </Button>
-          </div>
-        </div>
+      {/* Onboarding guide for new users */}
+      {showOnboarding && (
+        <OnboardingGuide
+          hasClients={clients.length > 0}
+          hasProjects={projects.length > 0}
+          onCreateClient={() => setShowCreateClient(true)}
+          onCreateProject={() => setShowCreateProject(true)}
+        />
       )}
 
       {/* Client groups */}
-      {filteredGroups.map((group, idx) => {
+      {!showOnboarding && filteredGroups.map((group, idx) => {
         const profile = group.client
           ? clientProfiles.get(group.client.id)
           : undefined;
@@ -331,6 +320,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
         <CreateProjectModal
           onClose={() => setShowCreateProject(false)}
           onBrowse={onBrowse}
+          defaultClientId={clients.length === 1 ? clients[0].id : undefined}
         />
       )}
     </div>
