@@ -19,7 +19,7 @@ export interface PrismTransport {
   checkProviderHealth(): Promise<IpcResult>;
   // Context dump
   getContextItems(entityType: "project" | "client", entityId: string): Promise<IpcResult>;
-  addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }): Promise<IpcResult>;
+  addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string; file?: File }): Promise<IpcResult>;
   deleteContextItem(id: string): Promise<IpcResult>;
   reExtractItem(id: string): Promise<IpcResult>;
   getKnowledge(entityType: "project" | "client", entityId: string): Promise<IpcResult>;
@@ -42,7 +42,7 @@ export class IpcTransport implements PrismTransport {
   listProviders() { return window.prism.listProviders(); }
   checkProviderHealth() { return window.prism.checkProviderHealth(); }
   getContextItems(entityType: "project" | "client", entityId: string) { return window.prism.getContextItems(entityType, entityId); }
-  addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }) { return window.prism.addContextItem(item); }
+  addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string; file?: File }) { return window.prism.addContextItem(item); }
   deleteContextItem(id: string) { return window.prism.deleteContextItem(id); }
   reExtractItem(id: string) { return window.prism.reExtractItem(id); }
   getKnowledge(entityType: "project" | "client", entityId: string) { return window.prism.getKnowledge(entityType, entityId); }
@@ -58,8 +58,12 @@ export class FetchTransport implements PrismTransport {
   private async request(path: string, opts?: RequestInit): Promise<IpcResult> {
     let res: Response;
     try {
+      // Don't set Content-Type for FormData — browser sets it with multipart boundary
+      const headers: Record<string, string> = opts?.body instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" };
       res = await fetch(`${this.baseUrl}/api${path}`, {
-        headers: { "Content-Type": "application/json" },
+        headers,
         ...opts,
       });
     } catch {
@@ -108,7 +112,15 @@ export class FetchTransport implements PrismTransport {
   getContextItems(entityType: "project" | "client", entityId: string) {
     return this.request(`/context/${entityType}/${entityId}/items`);
   }
-  addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string }) {
+  addContextItem(item: { entityType: "project" | "client"; entityId: string; itemType: string; title: string; content?: string; sourcePath?: string; fileSizeBytes?: number; mimeType?: string; file?: File }) {
+    if (item.file) {
+      const formData = new FormData();
+      formData.append("file", item.file);
+      formData.append("itemType", item.itemType);
+      formData.append("title", item.title);
+      if (item.mimeType) formData.append("mimeType", item.mimeType);
+      return this.request(`/context/${item.entityType}/${item.entityId}/items`, { method: "POST", body: formData });
+    }
     return this.request(`/context/${item.entityType}/${item.entityId}/items`, { method: "POST", body: JSON.stringify(item) });
   }
   deleteContextItem(id: string) {

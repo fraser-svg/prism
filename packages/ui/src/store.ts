@@ -307,6 +307,7 @@ export function createPrismStore(transport: PrismTransport) {
             title: file.name,
             fileSizeBytes: file.size,
             mimeType: file.type || undefined,
+            file,
           }),
         );
       }
