@@ -1,5 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { usePrismStore } from "@prism/ui";
+import { authClient } from "./auth-client";
 
 interface WebHeaderProps {
   user: { name: string; email: string; image?: string | null };
@@ -7,7 +8,7 @@ interface WebHeaderProps {
 
 export function WebHeader({ user }: WebHeaderProps) {
   const location = useLocation();
-  const { searchQuery, setSearchQuery } = usePrismStore();
+  const { searchQuery, setSearchQuery, resetStore } = usePrismStore();
 
   const isPortfolio = location.pathname === "/";
 
@@ -58,7 +59,14 @@ export function WebHeader({ user }: WebHeaderProps) {
             <div className="my-1 h-px bg-stone-100" />
             <button
               className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[15px] text-red-500 transition-colors hover:bg-red-50"
-              onClick={() => {}}
+              onClick={async () => {
+                try {
+                  await authClient.signOut();
+                } finally {
+                  resetStore();
+                  window.location.href = "/";
+                }
+              }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>logout</span>
               Sign out
