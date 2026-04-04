@@ -1,5 +1,17 @@
 # Prism TODOs
 
+## Path-Free Project Creation for Web (P2)
+
+**What:** Allow project creation in the web app without requiring a server-local filesystem path. Options: scaffold a project directory server-side, support URL-only projects (GitHub repo URL), or create a "demo project" with sample data.
+
+**Why:** Web project creation currently validates that `rootPath` exists on the server filesystem (`apps/web/server/index.ts:189`). Remote users evaluating Prism (or YC reviewers) can't provide a local path, which blocks activation regardless of onboarding quality. Identified by Codex outside voice during onboarding CEO review.
+
+**When:** Before any remote user testing or YC demo where the reviewer isn't on the same machine as the server.
+
+**How:** Simplest: accept a GitHub repo URL and clone it server-side to a temp directory. Medium: scaffold an empty `.prism/` project directory at a server-managed location. Full: decouple project identity from filesystem paths entirely.
+
+**Depends on:** Onboarding flow (fraser-svg/user-onboarding-flow) shipped.
+
 ## ~~Portfolio MVP — Shared UI + Web App~~ — DONE in fraser-svg/portfolio-mvp
 
 `packages/ui/` extracted as shared React component library. `apps/web/` created (Vite + Express). `apps/desktop/` refactored to import from `@prism/ui`. Transport adapter pattern (`IpcTransport` / `FetchTransport`) enables both apps to share the same Zustand store.

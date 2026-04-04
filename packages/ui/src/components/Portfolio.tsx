@@ -4,6 +4,7 @@ import { usePrismStore } from "../context";
 import { ProjectCard } from "./ProjectCard";
 import { CreateClientModal } from "./CreateClientModal";
 import { CreateProjectModal } from "./CreateProjectModal";
+import { OnboardingGuide } from "./OnboardingGuide";
 
 interface PortfolioProps {
   onBrowse?: () => Promise<string | null>;
@@ -11,6 +12,8 @@ interface PortfolioProps {
 
 export function Portfolio({ onBrowse }: PortfolioProps) {
   const {
+    clients,
+    projects,
     portfolioGroups,
     portfolioLoading,
     portfolioError,
@@ -93,7 +96,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
     );
   }
 
-  const isEmpty = filteredGroups.length === 0 && !searchQuery;
+  const showOnboarding = projects.length === 0 && !searchQuery;
 
   const openCreateProject = async () => {
     if (!onBrowse) {
@@ -149,35 +152,18 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
         </div>
       </header>
 
-      {/* Empty state */}
-      {isEmpty && (
-        <div className="flex h-[60%] flex-col items-center justify-center gap-3">
-          <span className="text-[17px] font-medium text-black">
-            Welcome to Prismatic
-          </span>
-          <span className="max-w-[360px] text-center text-[15px] text-stone-900">
-            Create a client and link your first project to see its pipeline progress here.
-          </span>
-          <div className="mt-2 flex gap-2">
-            <button
-              className="rounded-lg border border-stone-200 px-4 py-2 text-[15px] text-stone-800 transition-colors hover:bg-stone-50"
-              onClick={() => setShowCreateClient(true)}
-            >
-              Create Client
-            </button>
-            <button
-              className="rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
-              disabled={browsing}
-              onClick={openCreateProject}
-            >
-              {browsing ? "Opening..." : "Link Project"}
-            </button>
-          </div>
-        </div>
+      {/* Onboarding guide for new users */}
+      {showOnboarding && (
+        <OnboardingGuide
+          hasClients={clients.length > 0}
+          hasProjects={projects.length > 0}
+          onCreateClient={() => setShowCreateClient(true)}
+          onCreateProject={openCreateProject}
+        />
       )}
 
       {/* Client groups */}
-      {filteredGroups.map((group, idx) => (
+      {!showOnboarding && filteredGroups.map((group, idx) => (
         <section key={group.client?.id || `ungrouped-${idx}`} className="mb-12">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -217,6 +203,7 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
         <CreateProjectModal
           onClose={closeCreateProject}
           onBrowse={onBrowse}
+          defaultClientId={clients.length === 1 ? clients[0].id : undefined}
           initialRootPath={initialProjectPath}
         />
       )}
