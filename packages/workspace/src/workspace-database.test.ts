@@ -21,7 +21,7 @@ describe("WorkspaceDatabase", () => {
       const row = db.inner
         .prepare("SELECT MAX(version) as v FROM _migrations")
         .get() as { v: number };
-      expect(row.v).toBe(3);
+      expect(row.v).toBe(4);
     } finally {
       db.close();
     }
@@ -60,24 +60,28 @@ describe("WorkspaceDatabase", () => {
       expect(tableNames).toContain("integrations");
       expect(tableNames).toContain("events");
       expect(tableNames).toContain("artifact_index");
+      expect(tableNames).toContain("context_items");
+      expect(tableNames).toContain("extracted_knowledge");
+      expect(tableNames).toContain("knowledge_summaries");
     } finally {
       db.close();
     }
   });
 
-  it("creates FTS5 virtual table", async () => {
+  it("creates FTS5 virtual tables", async () => {
     tmpDir = await mkdtemp(join(tmpdir(), "prism-test-db-"));
     const dbPath = join(tmpDir, "workspace.db");
 
     const db = WorkspaceDatabase.open(dbPath);
     try {
-      // FTS5 tables appear as virtual tables in sqlite_master
       const tables = db.inner
         .prepare(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name='artifact_fts'",
+          "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('artifact_fts', 'knowledge_fts') ORDER BY name",
         )
         .all() as Array<{ name: string }>;
-      expect(tables.length).toBe(1);
+      expect(tables.length).toBe(2);
+      expect(tables.map(t => t.name)).toContain("artifact_fts");
+      expect(tables.map(t => t.name)).toContain("knowledge_fts");
     } finally {
       db.close();
     }
@@ -95,7 +99,7 @@ describe("WorkspaceDatabase", () => {
       const rows = db2.inner
         .prepare("SELECT COUNT(*) as c FROM _migrations")
         .get() as { c: number };
-      expect(rows.c).toBe(3);
+      expect(rows.c).toBe(4);
     } finally {
       db2.close();
     }
@@ -110,13 +114,15 @@ describe("WorkspaceDatabase", () => {
       const rows = db.inner
         .prepare("SELECT version, applied_at FROM _migrations")
         .all() as Array<{ version: number; applied_at: string }>;
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(4);
       expect(rows[0].version).toBe(1);
       expect(rows[0].applied_at).toBeTruthy();
       expect(rows[1].version).toBe(2);
       expect(rows[1].applied_at).toBeTruthy();
       expect(rows[2].version).toBe(3);
       expect(rows[2].applied_at).toBeTruthy();
+      expect(rows[3].version).toBe(4);
+      expect(rows[3].applied_at).toBeTruthy();
     } finally {
       db.close();
     }

@@ -10,6 +10,18 @@ All notable changes to Prism are documented here.
 - **Web-only pivot** — desktop app/Electron development paused indefinitely. All product work now targets the web app.
 - **Prismatic app branding** — web and desktop app chrome now use the new Prismatic mark and wordmark.
 
+## [4.0.26.0] - 2026-04-04
+
+### Added
+- **Context Dump backend** — full backend for dumping client/project context (transcripts, notes, files) into Prism and extracting structured knowledge via Haiku. SQLite storage with FTS5 search, automatic extraction pipeline with retry/backoff, and 8 new API routes.
+- **Knowledge extraction pipeline** — async extraction queue with max 3 concurrent Haiku calls, transcript detection, content truncation, and structured JSON parsing with confidence scoring.
+- **Context API routes** — CRUD for context items (text notes, file uploads via multipart), knowledge retrieval, FTS search, flagging, summary generation, and cross-package bridge to intake briefs.
+- **File upload support** — multer integration with MIME type allowlist, 10MB limit, structured error handling for oversized files.
+
+### Fixed
+- **FetchTransport FormData** — transport layer now detects FormData bodies and skips Content-Type header, enabling multipart file uploads from the web UI.
+- **Auth test isolation** — auth tests now use temp directories instead of the real workspace DB, preventing migration version collisions.
+
 ## [4.0.25.0] - 2026-04-04
 
 ### Added
