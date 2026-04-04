@@ -20,6 +20,17 @@
 **Depends on:** Phase 1 implementation (need to observe actual conflicts before defining rules).
 **Added:** 2026-03-20 (eng review)
 
+## Web Server Testability
+
+### Extract createApp() factory from web server
+**What:** Refactor `apps/web/server/index.ts` to export a `createApp()` factory that returns the Express app without binding to a port or opening a DB connection. The current top-level module does both on import.
+**Why:** Side effects on import make it impossible to write integration tests for route handlers without starting a real server. Every new endpoint (including `select-directory`) can only be tested by mocking `child_process`, not by actually hitting the route.
+**Pros:** Enables proper route-level integration tests. Standard Express testing pattern.
+**Cons:** Small refactor (~20 lines moved into a factory function).
+**Context:** Prior learning [server-side-effects-block-tests] flagged this. The pattern is: export `createApp(facade, clients)`, call it in `index.ts` for production, import it in tests with test fixtures.
+**Depends on:** Nothing. Can be done independently.
+**Added:** 2026-04-03 (eng review, autofill-file-path branch)
+
 ## Included in Phase 1 (from eng review)
 
 ### Acceptance criteria self-check

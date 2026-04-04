@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { ProjectCard } from "./ProjectCard";
@@ -23,6 +23,9 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
   const navigate = useNavigate();
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [initialProjectPath, setInitialProjectPath] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+  const browsingRef = useRef(false);
 
   useEffect(() => {
     loadPortfolio().then(() => scanAllPipelines());
@@ -71,6 +74,31 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   const isEmpty = filteredGroups.length === 0 && !searchQuery;
 
+  const openCreateProject = async () => {
+    if (!onBrowse) {
+      setInitialProjectPath("");
+      setShowCreateProject(true);
+      return;
+    }
+
+    if (browsingRef.current) return;
+    browsingRef.current = true;
+    setBrowsing(true);
+    try {
+      const selected = await onBrowse();
+      setInitialProjectPath(selected || "");
+      setShowCreateProject(true);
+    } finally {
+      browsingRef.current = false;
+      setBrowsing(false);
+    }
+  };
+
+  const closeCreateProject = () => {
+    setShowCreateProject(false);
+    setInitialProjectPath("");
+  };
+
   return (
     <div className="h-full overflow-auto px-8 py-10">
       {/* Header */}
@@ -91,10 +119,11 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
             + Client
           </button>
           <button
-            className="rounded-lg bg-stone-800 px-3 py-1.5 text-[15px] font-medium text-white transition-colors hover:bg-stone-700"
-            onClick={() => setShowCreateProject(true)}
+            className="rounded-lg bg-stone-800 px-3 py-1.5 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
+            disabled={browsing}
+            onClick={openCreateProject}
           >
-            + Project
+            {browsing ? "Opening..." : "+ Project"}
           </button>
         </div>
       </header>
@@ -108,6 +137,21 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
           <span className="max-w-[360px] text-center text-[15px] text-stone-900">
             Create a client and link your first project to see its pipeline progress here.
           </span>
+          <div className="mt-2 flex gap-2">
+            <button
+              className="rounded-lg border border-stone-200 px-4 py-2 text-[15px] text-stone-800 transition-colors hover:bg-stone-50"
+              onClick={() => setShowCreateClient(true)}
+            >
+              Create Client
+            </button>
+            <button
+              className="rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
+              disabled={browsing}
+              onClick={openCreateProject}
+            >
+              {browsing ? "Opening..." : "Link Project"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -150,8 +194,9 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       )}
       {showCreateProject && (
         <CreateProjectModal
-          onClose={() => setShowCreateProject(false)}
+          onClose={closeCreateProject}
           onBrowse={onBrowse}
+          initialRootPath={initialProjectPath}
         />
       )}
     </div>

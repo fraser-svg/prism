@@ -5,6 +5,7 @@ import { WorkspaceFacade, ClientRepository, buildProviderViews } from "@prism/wo
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath } from "@prism/core";
 import { existsSync } from "node:fs";
+import { selectDirectory } from "./native-dialog.js";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { toNodeHandler } from "better-auth/node";
@@ -348,6 +349,17 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
     requireWorkspace,
     safeHandle(async (_req, res) => {
       res.json({ data: await buildProviderViews(facade.integrations) });
+    }),
+  );
+
+  // Native directory picker
+  // Security: req.body is intentionally ignored — dialog is server-initiated only
+  app.post(
+    "/api/dialog/select-directory",
+    requireAuth,
+    safeHandle(async (_req, res) => {
+      const selected = await selectDirectory();
+      res.json({ data: selected });
     }),
   );
 
