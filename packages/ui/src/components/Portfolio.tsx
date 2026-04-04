@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, ProgressBar, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
@@ -176,6 +176,9 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [initialProjectPath, setInitialProjectPath] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+  const browsingRef = useRef(false);
   const [clientProfiles, setClientProfiles] = useState<Map<string, ClientProfileData>>(new Map());
 
   useEffect(() => {
@@ -238,6 +241,31 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   const isEmpty = filteredGroups.length === 0 && !searchQuery;
 
+  const openCreateProject = async () => {
+    if (!onBrowse) {
+      setInitialProjectPath("");
+      setShowCreateProject(true);
+      return;
+    }
+
+    if (browsingRef.current) return;
+    browsingRef.current = true;
+    setBrowsing(true);
+    try {
+      const selected = await onBrowse();
+      setInitialProjectPath(selected || "");
+      setShowCreateProject(true);
+    } finally {
+      browsingRef.current = false;
+      setBrowsing(false);
+    }
+  };
+
+  const closeCreateProject = () => {
+    setShowCreateProject(false);
+    setInitialProjectPath("");
+  };
+
   return (
     <div className="h-full overflow-auto px-8 py-6">
       {/* Actions bar */}
@@ -254,9 +282,10 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
           <Button
             size="sm"
             variant="primary"
-            onPress={() => setShowCreateProject(true)}
+            isDisabled={browsing}
+            onPress={openCreateProject}
           >
-            + Project
+            {browsing ? "Opening..." : "+ Project"}
           </Button>
         </div>
       </div>
@@ -277,9 +306,10 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
             </Button>
             <Button
               variant="primary"
-              onPress={() => setShowCreateProject(true)}
+              isDisabled={browsing}
+              onPress={openCreateProject}
             >
-              Link Project
+              {browsing ? "Opening..." : "Link Project"}
             </Button>
           </div>
         </div>
@@ -329,8 +359,9 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       )}
       {showCreateProject && (
         <CreateProjectModal
-          onClose={() => setShowCreateProject(false)}
+          onClose={closeCreateProject}
           onBrowse={onBrowse}
+          initialRootPath={initialProjectPath}
         />
       )}
     </div>

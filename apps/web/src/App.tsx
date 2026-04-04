@@ -6,6 +6,18 @@ import { WebHeader } from "./WebHeader";
 import { LoginPage } from "./LoginPage";
 import { authClient } from "./auth-client";
 
+async function handleBrowse(): Promise<string | null> {
+  try {
+    const res = await fetch("/api/dialog/select-directory", { method: "POST" });
+    if (!res.ok) return null;
+    const body = await res.json();
+    if (body?.data) return String(body.data);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function App() {
   const { data: session, isPending } = authClient.useSession();
 
@@ -26,7 +38,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppShell header={<WebHeader user={session.user} />} />}>
-            <Route path="/" element={<Portfolio />} />
+            <Route path="/" element={<Portfolio onBrowse={handleBrowse} />} />
             <Route path="/project/:id" element={<ControlRoom />} />
             <Route path="/clients/:clientId/context" element={<ClientContextPage />} />
           </Route>

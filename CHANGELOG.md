@@ -7,6 +7,14 @@ All notable changes to Prism are documented here.
 ### Added
 - **Prismatic app branding** — web and desktop app chrome now use the new Prismatic mark and wordmark, and top-level runtime surfaces now show the Prismatic product name.
 
+## [4.0.25.0] - 2026-04-04
+
+### Added
+- **Web directory picker** — clicking "+ Project" in the web app now opens a native OS folder picker through the local Prism server, prefilling the project path in the modal. Supports macOS (osascript), Linux (zenity), and Windows (PowerShell).
+- **Double-click guard** — the "+ Project" button disables while the OS picker is open, preventing duplicate dialog spawning.
+- **Cross-platform native dialog adapter** — `apps/web/server/native-dialog.ts` with platform detection and actionable error messages for missing tools.
+- **10 unit tests** for native dialog adapter covering all platforms, cancel behavior, and error paths.
+
 ## [4.0.24.1] - 2026-04-03
 
 ### Added

@@ -29,17 +29,20 @@ interface CreateProjectModalProps {
   onClose: () => void;
   defaultClientId?: string;
   onBrowse?: () => Promise<string | null>;
+  initialRootPath?: string;
 }
 
 export function CreateProjectModal({
   onClose,
   defaultClientId,
   onBrowse,
+  initialRootPath = "",
 }: CreateProjectModalProps) {
-  const [name, setName] = useState("");
+  const initialName = initialRootPath.split(/[/\\]/).filter(Boolean).pop() || "";
+  const [name, setName] = useState(initialName);
   const [clientId, setClientId] = useState(defaultClientId || "");
   const [mode, setMode] = useState<"link" | "create">("link");
-  const [rootPath, setRootPath] = useState("");
+  const [rootPath, setRootPath] = useState(initialRootPath);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { clients, createProject, linkProject } = usePrismStore();
