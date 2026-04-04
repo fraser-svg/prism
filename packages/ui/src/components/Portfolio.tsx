@@ -1,164 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, ProgressBar, Spinner } from "@heroui/react";
 import { usePrismStore } from "../context";
 import { ProjectCard } from "./ProjectCard";
 import { CreateClientModal } from "./CreateClientModal";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { OnboardingGuide } from "./OnboardingGuide";
-import type { ClientView, KnowledgeSummary, ContextHealth } from "../types";
-
-interface ClientProfileData {
-  summary: KnowledgeSummary | null;
-  health: ContextHealth | null;
-}
-
-function ClientProfileBanner({
-  client,
-  profile,
-}: {
-  client: ClientView;
-  profile: ClientProfileData;
-}) {
-  const navigate = useNavigate();
-  const { summary, health } = profile;
-  if (!summary && !health) return null;
-
-  const healthColor =
-    health && health.score >= 76
-      ? "success"
-      : health && health.score >= 26
-        ? "warning"
-        : "danger";
-
-  return (
-    <div
-      style={{
-        background: "var(--bg-surface)",
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 12,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <span
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-              color: "var(--text-primary)",
-            }}
-          >
-            {client.name}
-          </span>
-          {summary && (
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--text-secondary)",
-                marginTop: 4,
-                lineHeight: 1.5,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {summary.summaryText}
-            </p>
-          )}
-          {summary?.brandColors && summary.brandColors.length > 0 && (
-            <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
-              {summary.brandColors
-                .filter((c) => /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(c))
-                .map((color) => (
-                <div
-                  key={color}
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 3,
-                    background: color,
-                    border: "1px solid var(--border-default)",
-                  }}
-                  title={color}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            gap: 8,
-            marginLeft: 16,
-            flexShrink: 0,
-          }}
-        >
-          {health && (
-            <div style={{ width: 120 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "var(--text-tertiary)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Context
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color:
-                      health.score >= 76
-                        ? "var(--accent-green)"
-                        : health.score >= 26
-                          ? "var(--accent-amber)"
-                          : "var(--accent-red)",
-                  }}
-                >
-                  {health.score}%
-                </span>
-              </div>
-              <ProgressBar value={health.score} color={healthColor} size="sm" />
-            </div>
-          )}
-          <button
-            onClick={() => navigate(`/clients/${client.id}/context`)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--accent-blue)",
-              fontSize: 13,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-              padding: 0,
-            }}
-          >
-            View Knowledge &rarr;
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface PortfolioProps {
   onBrowse?: () => Promise<string | null>;
@@ -177,30 +23,17 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
     scanAllPipelines,
   } = usePrismStore();
 
+  const navigate = useNavigate();
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
-  const [clientProfiles, setClientProfiles] = useState<Map<string, ClientProfileData>>(new Map());
+  const [initialProjectPath, setInitialProjectPath] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+  const browsingRef = useRef(false);
 
   useEffect(() => {
     loadPortfolio().then(() => scanAllPipelines());
   }, [loadPortfolio, scanAllPipelines]);
 
-  // Fetch client profile data for banner display
-  useEffect(() => {
-    const clients = portfolioGroups
-      .map((g) => g.client)
-      .filter((c): c is ClientView => c !== null);
-    if (clients.length === 0) return;
-
-    // Build profiles from available data — backend will populate when context APIs are wired
-    const profiles = new Map<string, ClientProfileData>();
-    for (const client of clients) {
-      profiles.set(client.id, { summary: null, health: null });
-    }
-    setClientProfiles(profiles);
-  }, [portfolioGroups]);
-
-  // Filter by search
   const filteredGroups = searchQuery
     ? portfolioGroups
         .map((group) => ({
@@ -222,8 +55,29 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   if (portfolioLoading && portfolioGroups.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner size="lg" />
+      <div className="h-full overflow-auto px-8 py-10">
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <div className="h-5 w-20 animate-pulse rounded bg-stone-200" />
+            <div className="mt-2 h-4 w-36 animate-pulse rounded bg-stone-100" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-8 w-20 animate-pulse rounded-lg bg-stone-100" />
+            <div className="h-8 w-24 animate-pulse rounded-lg bg-stone-200" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-stone-200 bg-[var(--bg-surface)] p-5"
+            >
+              <div className="mb-3 h-4 w-32 animate-pulse rounded bg-stone-200" />
+              <div className="mb-2 h-3 w-48 animate-pulse rounded bg-stone-100" />
+              <div className="mt-4 h-2 w-full animate-pulse rounded-full bg-stone-100" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -231,38 +85,72 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
   if (portfolioError) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
-        <span className="text-sm text-danger">{portfolioError}</span>
-        <Button size="sm" variant="tertiary" onPress={() => loadPortfolio()}>
+        <span className="text-sm text-red-500">{portfolioError}</span>
+        <button
+          className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-800 transition-colors hover:bg-stone-50"
+          onClick={() => loadPortfolio()}
+        >
           Retry
-        </Button>
+        </button>
       </div>
     );
   }
 
   const showOnboarding = projects.length === 0 && !searchQuery;
 
+  const openCreateProject = async () => {
+    if (!onBrowse) {
+      setInitialProjectPath("");
+      setShowCreateProject(true);
+      return;
+    }
+
+    if (browsingRef.current) return;
+    browsingRef.current = true;
+    setBrowsing(true);
+    try {
+      const selected = await onBrowse();
+      setInitialProjectPath(selected || "");
+      setShowCreateProject(true);
+    } finally {
+      browsingRef.current = false;
+      setBrowsing(false);
+    }
+  };
+
+  const closeCreateProject = () => {
+    setShowCreateProject(false);
+    setInitialProjectPath("");
+  };
+
   return (
-    <div className="h-full overflow-auto px-8 py-6">
-      {/* Actions bar */}
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Portfolio</h1>
+    <div className="h-full overflow-auto px-8 py-10">
+      {/* Header */}
+      <header className="mb-10 flex items-end justify-between">
+        <div>
+          <h1 className="text-[17px] font-medium text-black">
+            Portfolio
+          </h1>
+          <p className="text-[15px] text-stone-900">
+            Your active projects
+          </p>
+        </div>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="tertiary"
-            onPress={() => setShowCreateClient(true)}
+          <button
+            className="rounded-lg border border-stone-200 px-3 py-1.5 text-[15px] text-stone-800 transition-colors hover:bg-stone-50"
+            onClick={() => setShowCreateClient(true)}
           >
             + Client
-          </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            onPress={() => setShowCreateProject(true)}
+          </button>
+          <button
+            className="rounded-lg bg-stone-800 px-3 py-1.5 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
+            disabled={browsing}
+            onClick={openCreateProject}
           >
-            + Project
-          </Button>
+            {browsing ? "Opening..." : "+ Project"}
+          </button>
         </div>
-      </div>
+      </header>
 
       {/* Onboarding guide for new users */}
       {showOnboarding && (
@@ -270,36 +158,33 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
           hasClients={clients.length > 0}
           hasProjects={projects.length > 0}
           onCreateClient={() => setShowCreateClient(true)}
-          onCreateProject={() => setShowCreateProject(true)}
+          onCreateProject={openCreateProject}
         />
       )}
 
       {/* Client groups */}
-      {!showOnboarding && filteredGroups.map((group, idx) => {
-        const profile = group.client
-          ? clientProfiles.get(group.client.id)
-          : undefined;
-
-        return (
-        <div key={group.client?.id || `ungrouped-${idx}`} className="mb-7">
-          {/* Client header */}
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              {group.client?.name || "Unassigned"}
-            </span>
-            <span className="text-[11px] text-[var(--field-placeholder)]">
-              {group.projects.length} project
-              {group.projects.length !== 1 ? "s" : ""}
-            </span>
+      {!showOnboarding && filteredGroups.map((group, idx) => (
+        <section key={group.client?.id || `ungrouped-${idx}`} className="mb-12">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-[17px] font-medium text-black">
+                {group.client?.name || "Unassigned"}
+              </h3>
+              <span className="rounded-full bg-[#91A6FF]/20 px-2 py-0.5 text-[13px] font-medium text-[#4A5A99]">
+                {group.projects.length}
+              </span>
+            </div>
+            {group.client && (
+              <button
+                className="text-[15px] text-stone-900 transition-colors hover:text-black"
+                onClick={() => navigate(`/clients/${group.client!.id}/context`)}
+              >
+                View All
+              </button>
+            )}
           </div>
 
-          {/* Client profile banner */}
-          {group.client && profile && (profile.summary || profile.health) && (
-            <ClientProfileBanner client={group.client} profile={profile} />
-          )}
-
-          {/* Project cards grid */}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {group.projects.map((project) => (
               <ProjectCard
                 key={project.id}
@@ -308,19 +193,18 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
               />
             ))}
           </div>
-        </div>
-        );
-      })}
+        </section>
+      ))}
 
-      {/* Modals */}
       {showCreateClient && (
         <CreateClientModal onClose={() => setShowCreateClient(false)} />
       )}
       {showCreateProject && (
         <CreateProjectModal
-          onClose={() => setShowCreateProject(false)}
+          onClose={closeCreateProject}
           onBrowse={onBrowse}
           defaultClientId={clients.length === 1 ? clients[0].id : undefined}
+          initialRootPath={initialProjectPath}
         />
       )}
     </div>

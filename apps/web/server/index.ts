@@ -1,10 +1,15 @@
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
+import multer from "multer";
+import { randomUUID } from "node:crypto";
 import { WorkspaceFacade, ClientRepository, buildProviderViews } from "@prism/workspace";
+import type { EntityScope } from "@prism/workspace";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
-import type { AbsolutePath } from "@prism/core";
+import type { AbsolutePath, IntakeBrief } from "@prism/core";
+import { createIntakeBriefRepository } from "@prism/memory";
 import { existsSync } from "node:fs";
+import { selectDirectory } from "./native-dialog.js";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { toNodeHandler } from "better-auth/node";
@@ -53,6 +58,23 @@ const UpdateProjectSchema = z.object({
 
 const RunActionSchema = z.object({
   action: z.string().min(1).max(100),
+});
+
+const EntityScopeSchema = z.object({
+  entityType: z.enum(["project", "client"]),
+  entityId: z.string().min(1),
+});
+
+const AddContextItemSchema = z.object({
+  itemType: z.string().min(1),
+  title: z.string().min(1).max(500),
+  content: z.string().max(200_000).optional(),
+  mimeType: z.string().max(200).optional(),
+  fileSizeBytes: z.coerce.number().int().nonnegative().optional(),
+});
+
+const ApplyToBriefSchema = z.object({
+  projectId: z.string().min(1),
 });
 
 function paramId(req: express.Request): string {
@@ -351,6 +373,199 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
     }),
   );
 
+  // Native directory picker
+  // Security: req.body is intentionally ignored — dialog is server-initiated only
+  app.post(
+    "/api/dialog/select-directory",
+    requireAuth,
+    safeHandle(async (_req, res) => {
+      const selected = await selectDirectory();
+      res.json({ data: selected });
+    }),
+  );
+
+  // --- Context Dump routes ---
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+  function parseScope(req: express.Request): EntityScope | null {
+    const parsed = EntityScopeSchema.safeParse(req.params);
+    return parsed.success ? parsed.data : null;
+  }
+
+  app.get(
+    "/api/context/:entityType/:entityId/items",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const scope = parseScope(req);
+      if (!scope) { res.status(400).json({ error: "Invalid entityType or entityId" }); return; }
+      const items = facade.contextRepo.getItems(scope);
+      res.json({ data: items });
+    }),
+  );
+
+  app.post(
+    "/api/context/:entityType/:entityId/items",
+    requireAuth,
+    requireWorkspace,
+    upload.single("file"),
+    safeHandle((req, res) => {
+      const scope = parseScope(req);
+      if (!scope) { res.status(400).json({ error: "Invalid entityType or entityId" }); return; }
+
+      const parsed = AddContextItemSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: parsed.error.issues[0].message });
+        return;
+      }
+      const { itemType, title } = parsed.data;
+      let { content, mimeType, fileSizeBytes } = parsed.data;
+
+      // File uploaded via multipart — extract text content from buffer
+      if (req.file) {
+        const allowedMime = /^(text\/|application\/json|application\/x-yaml)/;
+        if (!allowedMime.test(req.file.mimetype)) {
+          res.status(415).json({ error: `Unsupported file type: ${req.file.mimetype}. Only text files are accepted.` });
+          return;
+        }
+        content = req.file.buffer.toString("utf-8");
+        mimeType = mimeType || req.file.mimetype;
+        fileSizeBytes = req.file.size;
+      }
+
+      const item = facade.contextRepo.addItem(scope, {
+        itemType,
+        title,
+        content,
+        mimeType,
+        fileSizeBytes,
+      });
+
+      // Enqueue for extraction if content is available
+      if (content) {
+        facade.extractionPipeline.enqueue(item.id);
+      }
+
+      res.json({ data: item });
+    }),
+  );
+
+  app.delete(
+    "/api/context/items/:id",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const deleted = facade.contextRepo.deleteItem(paramId(req));
+      if (!deleted) { res.status(404).json({ error: "Context item not found" }); return; }
+      res.json({ data: { success: true } });
+    }),
+  );
+
+  app.post(
+    "/api/context/items/:id/re-extract",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const item = facade.contextRepo.getItem(paramId(req));
+      if (!item) { res.status(404).json({ error: "Context item not found" }); return; }
+      facade.contextRepo.updateExtractionStatus(item.id, "queued");
+      facade.extractionPipeline.enqueue(item.id);
+      res.json({ data: { success: true } });
+    }),
+  );
+
+  app.get(
+    "/api/context/:entityType/:entityId/knowledge",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const scope = parseScope(req);
+      if (!scope) { res.status(400).json({ error: "Invalid entityType or entityId" }); return; }
+      const knowledge = facade.contextRepo.getKnowledge(scope);
+      res.json({ data: knowledge });
+    }),
+  );
+
+  app.get(
+    "/api/context/:entityType/:entityId/summary",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const scope = parseScope(req);
+      if (!scope) { res.status(400).json({ error: "Invalid entityType or entityId" }); return; }
+      const summary = facade.contextRepo.getSummary(scope);
+      res.json({ data: summary });
+    }),
+  );
+
+  app.post(
+    "/api/context/knowledge/:id/flag",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const flagged = facade.contextRepo.flagKnowledge(paramId(req));
+      if (!flagged) { res.status(404).json({ error: "Knowledge entry not found" }); return; }
+      res.json({ data: { success: true } });
+    }),
+  );
+
+  app.post(
+    "/api/context/knowledge/:id/apply",
+    requireAuth,
+    requireWorkspace,
+    safeHandle(async (req, res) => {
+      const parsed = ApplyToBriefSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "projectId is required" });
+        return;
+      }
+      const { projectId } = parsed.data;
+
+      const knowledge = facade.contextRepo.getKnowledgeById(paramId(req));
+      if (!knowledge) { res.status(404).json({ error: "Knowledge entry not found" }); return; }
+
+      const project = facade.registry.get(projectId);
+      if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+      // Cross-package bridge: map knowledge into IntakeBrief via @prism/memory
+      const briefRepo = createIntakeBriefRepository(project.rootPath as AbsolutePath);
+      const existingIds = await briefRepo.list();
+      const briefId = existingIds.length > 0 ? existingIds[0] : randomUUID();
+
+      const existingBrief = existingIds.length > 0 ? await briefRepo.readMetadata(briefId) : null;
+      let brief: IntakeBrief = existingBrief ?? {
+            id: briefId,
+            projectId,
+            clientContext: "",
+            workflowDescription: "",
+            painPoints: [],
+            assumptions: [],
+            unresolvedQuestions: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+      // Map knowledge category → brief field
+      const fact = knowledge.value;
+      if (knowledge.key.includes("pain") || knowledge.key === "pain_points") {
+        if (!brief.painPoints.includes(fact)) brief.painPoints.push(fact);
+      } else if (knowledge.category === "technical") {
+        brief.workflowDescription = brief.workflowDescription
+          ? `${brief.workflowDescription}\n- ${fact}`
+          : `- ${fact}`;
+      } else {
+        brief.clientContext = brief.clientContext
+          ? `${brief.clientContext}\n- ${fact}`
+          : `- ${fact}`;
+      }
+      brief.updatedAt = new Date().toISOString();
+
+      await briefRepo.writeMetadata(briefId, brief);
+
+      res.json({ data: { success: true, briefId } });
+    }),
+  );
+
   // --- 404 for unknown API routes (before the SPA catch-all) ---
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "API route not found" });
@@ -364,6 +579,15 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
       res.sendFile(join(clientDist, "index.html"));
     });
   }
+
+  // Multer error handler (file size limit, etc.)
+  app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({ error: "File exceeds 10 MB limit" });
+      return;
+    }
+    next(err);
+  });
 
   return { app, auth };
 }

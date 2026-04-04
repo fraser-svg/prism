@@ -77,6 +77,7 @@ export interface PrismStore {
   reExtractItem: (id: string, entityType: "project" | "client", entityId: string) => Promise<void>;
   flagKnowledge: (knowledgeId: string) => Promise<void>;
   applyToBrief: (projectId: string, knowledgeId: string) => Promise<void>;
+  resetStore: () => void;
 }
 
 // Safe transport wrapper — catches transport-level errors
@@ -306,6 +307,7 @@ export function createPrismStore(transport: PrismTransport) {
             title: file.name,
             fileSizeBytes: file.size,
             mimeType: file.type || undefined,
+            file,
           }),
         );
       }
@@ -341,6 +343,31 @@ export function createPrismStore(transport: PrismTransport) {
 
     applyToBrief: async (projectId, knowledgeId) => {
       await safeInvoke(() => transport.applyToBrief(projectId, knowledgeId));
+    },
+
+    resetStore: () => {
+      set({
+        clients: [],
+        projects: [],
+        portfolioGroups: [],
+        portfolioLoading: false,
+        portfolioError: null,
+        pipelineCache: new Map(),
+        activeProjectId: null,
+        activePipeline: null,
+        pipelineLoading: false,
+        activeTimeline: [],
+        drawerOpen: false,
+        drawerProjectId: null,
+        providers: [],
+        providersLoading: false,
+        searchQuery: "",
+        contextItems: [],
+        contextKnowledge: [],
+        contextSummary: null,
+        contextHealth: null,
+        extractionQueue: { extracting: 0, total: 0 },
+      });
     },
   }));
 }

@@ -458,3 +458,27 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Map IntakeBrief fields to ExtractedKnowledge categories: `painPoints` → category 'business', `assumptions` → category 'business', `clientContext` → category 'business'. Set confidence to 0.7 (lower than AI extraction since these are user-reported, not verified). Run as a one-time migration or on-demand per project.
 
 **Depends on:** Context Dump Phase 2 (fraser-svg/context-dump) + IntakeBrief having real data from sessions.
+
+## Client Data Retention & Encryption Policy (P2)
+
+**What:** Define and implement retention limits, redaction capability, and at-rest encryption for client transcripts and documents stored in the context system.
+
+**Why:** Context Dump persists client transcripts, documents, and extracted knowledge indefinitely with no retention policy or encryption. Fine for internal use (single developer on localhost). Required before any external user touches the system. Flagged by Codex adversarial review during eng review (2026-04-04).
+
+**When:** Before first external user. Not blocking for v1 internal use.
+
+**How:** Three components: (1) configurable retention limits per client (auto-delete context items older than N days), (2) "delete all client data" API endpoint for GDPR-style requests (delete context_items + CASCADE + unlink files + purge summaries), (3) at-rest encryption for stored files using workspace-level key. Start with (2) since it's the most legally important.
+
+**Depends on:** Context Dump backend shipped (fraser-svg/littlebird-research).
+
+## Context API Route Integration Tests (P2)
+
+**What:** Integration tests for the 8 Express context routes covering auth middleware, multer file upload, Zod validation, and error responses.
+
+**Why:** The 41-case unit test plan covers repository and extraction logic, but the Express routes handle auth, file upload parsing, and input validation at the system boundary. These are where integration bugs live. Flagged by Codex adversarial review.
+
+**When:** After Context Dump web routes are implemented and working manually.
+
+**How:** Add `test/context-routes.test.ts` using supertest against the Express app. Test: auth required (401 without session), file upload via multipart (201 + item created), oversized file (413), missing required fields (400), re-extract triggers pipeline, flag/apply endpoints work. ~8-10 test cases.
+
+**Depends on:** Context Dump backend shipped (fraser-svg/littlebird-research).
