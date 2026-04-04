@@ -1,28 +1,4 @@
-import { useState } from "react";
-import {
-  Modal,
-  ModalBackdrop,
-  ModalContainer,
-  ModalDialog,
-  ModalHeader,
-  ModalHeading,
-  ModalBody,
-  ModalFooter,
-  useOverlayState,
-  TextField,
-  Label,
-  Input,
-  Button,
-  Tabs,
-  TabList,
-  Tab,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectPopover,
-  ListBox,
-  ListBoxItem,
-} from "@heroui/react";
+import { useState, useEffect, useRef } from "react";
 import { usePrismStore } from "../context";
 
 interface CreateProjectModalProps {
@@ -31,11 +7,7 @@ interface CreateProjectModalProps {
   onBrowse?: () => Promise<string | null>;
 }
 
-export function CreateProjectModal({
-  onClose,
-  defaultClientId,
-  onBrowse,
-}: CreateProjectModalProps) {
+export function CreateProjectModal({ onClose, defaultClientId, onBrowse }: CreateProjectModalProps) {
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState(defaultClientId || "");
   const [mode, setMode] = useState<"link" | "create">("link");
@@ -43,13 +15,17 @@ export function CreateProjectModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { clients, createProject, linkProject } = usePrismStore();
+  const backdropRef = useRef<HTMLDivElement>(null);
 
-  const state = useOverlayState({
-    isOpen: true,
-    onOpenChange: (open) => {
-      if (!open) onClose();
-    },
-  });
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === backdropRef.current) onClose();
+  };
 
   const handleBrowse = async () => {
     if (!onBrowse) return;
@@ -65,18 +41,13 @@ export function CreateProjectModal({
 
   const handleSubmit = async () => {
     if (!rootPath) return;
-
     setSaving(true);
     setError(null);
     try {
       if (mode === "link") {
         await linkProject(rootPath, clientId || undefined);
       } else {
-        await createProject(
-          name.trim() || rootPath.split("/").pop() || "project",
-          rootPath,
-          clientId || undefined,
-        );
+        await createProject(name.trim() || rootPath.split("/").pop() || "project", rootPath, clientId || undefined);
       }
       onClose();
     } catch (err) {
@@ -87,97 +58,85 @@ export function CreateProjectModal({
   };
 
   return (
-    <Modal state={state}>
-      <ModalBackdrop>
-        <ModalContainer>
-          <ModalDialog>
-            <ModalHeader>
-              <ModalHeading>Add Project</ModalHeading>
-            </ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
-              <Tabs
-                selectedKey={mode}
-                onSelectionChange={(key) => setMode(key as "link" | "create")}
-              >
-                <TabList>
-                  <Tab id="link">Link Existing</Tab>
-                  <Tab id="create">Create New</Tab>
-                </TabList>
-              </Tabs>
+    <div ref={backdropRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={handleBackdropClick}>
+      <div className="w-full max-w-lg rounded-xl border border-stone-200 bg-[var(--bg-surface)] p-6 shadow-lg">
+        <h2 className="mb-5 text-[17px] font-semibold text-black">Add Project</h2>
 
-              <div className="flex gap-2">
-                <TextField className="flex-1">
-                  <Label>Project path</Label>
-                  <Input
-                    value={rootPath}
-                    readOnly={!!onBrowse}
-                    onChange={onBrowse ? undefined : (e) => setRootPath(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                </TextField>
-                {onBrowse && (
-                  <Button
-                    variant="outline"
-                    onPress={handleBrowse}
-                    className="mt-auto"
-                  >
-                    Browse
-                  </Button>
-                )}
-              </div>
+        {/* Mode tabs */}
+        <div className="mb-5 flex gap-0.5 rounded-lg bg-stone-100 p-0.5">
+          <button
+            className={`flex-1 rounded-md px-3 py-1.5 text-[15px] font-medium transition-colors ${
+              mode === "link" ? "bg-[var(--bg-surface)] text-black shadow-sm" : "text-stone-900 hover:text-black"
+            }`}
+            onClick={() => setMode("link")}
+          >
+            Link Existing
+          </button>
+          <button
+            className={`flex-1 rounded-md px-3 py-1.5 text-[15px] font-medium transition-colors ${
+              mode === "create" ? "bg-[var(--bg-surface)] text-black shadow-sm" : "text-stone-900 hover:text-black"
+            }`}
+            onClick={() => setMode("create")}
+          >
+            Create New
+          </button>
+        </div>
 
-              {mode === "create" && (
-                <TextField>
-                  <Label>Project name</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </TextField>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium uppercase tracking-widest text-stone-700">Project path</label>
+            <div className="flex gap-2">
+              <input
+                value={rootPath}
+                readOnly={!!onBrowse}
+                onChange={onBrowse ? undefined : (e) => setRootPath(e.target.value)}
+                className="flex-1 rounded-lg border border-stone-200 bg-[var(--bg-surface)] px-3 py-2 font-mono text-[15px] text-black placeholder:text-stone-700 focus:border-stone-800 focus:outline-none"
+                placeholder="/path/to/project"
+              />
+              {onBrowse && (
+                <button className="rounded-lg border border-stone-200 px-3 py-2 text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-800" onClick={handleBrowse}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>folder_open</span>
+                </button>
               )}
+            </div>
+          </div>
 
-              {clients.length > 0 && (
-                <Select
-                  selectedKey={clientId || null}
-                  onSelectionChange={(key) => setClientId(key ? String(key) : "")}
-                >
-                  <Label>Client</Label>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      {clients.map((c) => (
-                        <ListBoxItem key={c.id} id={c.id}>
-                          {c.name}
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </SelectPopover>
-                </Select>
-              )}
+          {mode === "create" && (
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium uppercase tracking-widest text-stone-700">Project name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-lg border border-stone-200 bg-[var(--bg-surface)] px-3 py-2 text-[15px] text-black placeholder:text-stone-700 focus:border-stone-800 focus:outline-none"
+                placeholder="My Project"
+              />
+            </div>
+          )}
 
-              {error && <p className="text-sm text-danger">{error}</p>}
-            </ModalBody>
-            <ModalFooter className="flex justify-end gap-2">
-              <Button variant="outline" onPress={onClose}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                isDisabled={!rootPath || saving}
-                onPress={handleSubmit}
+          {clients.length > 0 && (
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium uppercase tracking-widest text-stone-700">Client</label>
+              <select
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full rounded-lg border border-stone-200 bg-[var(--bg-surface)] px-3 py-2 text-[15px] text-black focus:border-stone-800 focus:outline-none"
               >
-                {saving
-                  ? "Adding..."
-                  : mode === "link"
-                    ? "Link Project"
-                    : "Create Project"}
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </Modal>
+                <option value="">No client</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {error && <p className="text-[15px] text-red-500">{error}</p>}
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="rounded-lg border border-stone-200 px-4 py-2 text-[15px] text-stone-800 transition-colors hover:bg-stone-50" onClick={onClose}>Cancel</button>
+          <button className="rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-40" disabled={!rootPath || saving} onClick={handleSubmit}>
+            {saving ? "Adding..." : mode === "link" ? "Link Project" : "Create Project"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

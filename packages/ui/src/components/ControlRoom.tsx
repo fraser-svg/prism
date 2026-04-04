@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Button, Card, CardContent, Chip, Separator, Spinner, Tabs } from "@heroui/react";
+import { useParams, useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { PipelineStrip } from "./PipelineStrip";
 import { ContextTab } from "./ContextTab";
 import type { StageView } from "../types";
 
+const STATUS_CHIP: Record<string, { bg: string; text: string; label: string }> = {
+  completed: { bg: "bg-emerald-50", text: "text-emerald-600", label: "Completed" },
+  current: { bg: "bg-[#91A6FF]/20", text: "text-[#4A5A99]", label: "In Progress" },
+  blocked: { bg: "bg-red-50", text: "text-red-500", label: "Blocked" },
+  upcoming: { bg: "bg-[#91A6FF]/10", text: "text-[#5B6BAA]", label: "Upcoming" },
+};
+
+const EVENT_CHIP: Record<string, { bg: string; text: string }> = {
+  gate: { bg: "bg-emerald-50", text: "text-emerald-600" },
+  action: { bg: "bg-[#91A6FF]/20", text: "text-[#4A5A99]" },
+  decision: { bg: "bg-amber-50", text: "text-amber-600" },
+};
+
 export function ControlRoom() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const {
     projects,
     portfolioLoading,
@@ -32,7 +45,7 @@ export function ControlRoom() {
   } = usePrismStore();
 
   const [selectedStage, setSelectedStage] = useState<StageView | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("pipeline");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "context">("pipeline");
 
   const project = projects.find((p) => p.id === id);
 
@@ -57,7 +70,7 @@ export function ControlRoom() {
 
   if (!project) {
     return (
-      <div className="flex h-full items-center justify-center text-[var(--muted)]">
+      <div className="flex h-full items-center justify-center text-stone-900">
         Project not found
       </div>
     );
@@ -66,7 +79,7 @@ export function ControlRoom() {
   if (pipelineLoading && !activePipeline) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Spinner size="lg" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-stone-800 border-t-transparent" />
       </div>
     );
   }
@@ -92,175 +105,310 @@ export function ControlRoom() {
   const handleFlagWrong = (knowledgeId: string) => {
     flagKnowledge(knowledgeId);
   };
-  const handleLinkPreviousAttempt = () => {
-    // Will be wired to directory picker + analysis flow
-  };
+  const handleLinkPreviousAttempt = () => {};
+
+  const stageChip = selectedStage
+    ? STATUS_CHIP[selectedStage.status] || STATUS_CHIP.upcoming
+    : null;
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Main content */}
-      <div className="flex-1 overflow-auto px-6 py-5">
-        {/* Project header */}
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h1 className="mb-1 text-lg font-semibold text-[var(--foreground)]">
-              {project.name}
-            </h1>
-            <span className="font-mono text-xs text-[var(--field-placeholder)]">
-              {project.rootPath}
-            </span>
-          </div>
-          <Button variant="primary" onPress={() => toggleDrawer(id)}>
-            Open Session
-          </Button>
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Top bar */}
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-stone-200 bg-[var(--bg-surface)] px-6">
+        <div className="flex items-center gap-1.5 text-[15px]">
+          <button
+            className="text-stone-900 transition-colors hover:text-black"
+            onClick={() => navigate("/")}
+          >
+            Portfolio
+          </button>
+          <span className="text-stone-500">/</span>
+          <span className="font-medium text-black">{project.name}</span>
         </div>
+      </header>
 
-        {/* Tab switcher */}
-        <Tabs
-          selectedKey={activeTab}
-          onSelectionChange={(key) => setActiveTab(key as string)}
-          className="mb-5"
-        >
-          <Tabs.List>
-            <Tabs.Tab id="pipeline">Pipeline</Tabs.Tab>
-            <Tabs.Tab id="context">Context</Tabs.Tab>
-            <Tabs.Indicator />
-          </Tabs.List>
-        </Tabs>
+      {/* Main scrollable content */}
+      <div className="flex-1 overflow-y-auto p-8">
+        {/* Hero header */}
+        <section className="mb-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-black">
+                {project.name}
+              </h2>
+              {project.rootPath && (
+                <code className="mt-1 block font-mono text-[15px] text-stone-700">
+                  {project.rootPath}
+                </code>
+              )}
+            </div>
+            <button
+              className="flex items-center gap-2 rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700"
+              onClick={() => toggleDrawer(id)}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bolt</span>
+              Open Session
+            </button>
+          </div>
 
-        {/* Pipeline tab content */}
+          {/* Tabs */}
+          <div className="mt-8 flex gap-6 border-b border-stone-200">
+            <button
+              className={`pb-3 text-[15px] font-medium transition-colors ${
+                activeTab === "pipeline"
+                  ? "border-b-2 border-stone-800 text-black"
+                  : "text-stone-700 hover:text-stone-800"
+              }`}
+              onClick={() => setActiveTab("pipeline")}
+            >
+              Pipeline
+            </button>
+            <button
+              className={`pb-3 text-[15px] font-medium transition-colors ${
+                activeTab === "context"
+                  ? "border-b-2 border-stone-800 text-black"
+                  : "text-stone-700 hover:text-stone-800"
+              }`}
+              onClick={() => setActiveTab("context")}
+            >
+              Context
+            </button>
+          </div>
+        </section>
+
+        {/* Pipeline tab */}
         {activeTab === "pipeline" && (
-          <>
-            {/* Pipeline strip */}
-            {activePipeline && activePipeline.stages.length > 0 && (
-              <Card className="mb-5">
-                <CardContent className="p-4">
-                  <PipelineStrip
-                    stages={activePipeline.stages}
-                    onStageClick={setSelectedStage}
-                  />
-                </CardContent>
-              </Card>
-            )}
+          <div className="grid grid-cols-10 gap-6">
+            {/* Main flow (70%) */}
+            <div className="col-span-7 space-y-6">
+              {activePipeline && activePipeline.stages.length > 0 && (
+                <PipelineStrip
+                  stages={activePipeline.stages}
+                  onStageClick={setSelectedStage}
+                />
+              )}
 
-            {/* Error state */}
-            {activePipeline?.error && (
-              <Card className="mb-5 border-l-3 border-l-[var(--danger)]">
-                <CardContent className="flex flex-row items-center gap-3 p-4">
-                  <span className="text-sm text-danger">
+              {activePipeline?.error && (
+                <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                  <span className="material-symbols-outlined text-red-500" style={{ fontSize: 18 }}>error</span>
+                  <span className="text-sm text-red-600">
                     Pipeline extraction failed: {activePipeline.error}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="tertiary"
-                    onPress={() => id && loadPipeline(id)}
+                  <button
+                    className="ml-auto rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-stone-800 transition-colors hover:bg-stone-50"
+                    onClick={() => id && loadPipeline(id)}
                   >
                     Retry
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+                  </button>
+                </div>
+              )}
 
-            {/* Stage detail */}
-            {selectedStage && (
-              <Card className="mb-5">
-                <CardContent className="flex flex-col gap-4 p-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-[15px] font-semibold text-[var(--foreground)]">
-                      {selectedStage.label}
-                    </h2>
-                    <Chip
-                      size="sm"
-                      variant="soft"
-                      color={
-                        selectedStage.status === "completed"
-                          ? "success"
-                          : selectedStage.status === "blocked"
-                            ? "danger"
-                            : "accent"
-                      }
-                    >
-                      {selectedStage.status}
-                    </Chip>
+              {/* Stage detail card */}
+              {selectedStage && stageChip && (
+                <div className="rounded-lg border border-stone-200 bg-[var(--bg-surface)] p-6">
+                  <div className="mb-6 flex items-start justify-between">
+                    <div>
+                      <h3 className="mb-1.5 text-[17px] font-semibold text-black">
+                        {selectedStage.label}
+                      </h3>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[13px] font-medium ${stageChip.bg} ${stageChip.text}`}>
+                        {stageChip.label}
+                      </span>
+                    </div>
                   </div>
 
-                  <p className="text-sm text-[var(--muted)]">{selectedStage.description}</p>
-
-                  {/* Gate requirements */}
-                  {selectedStage.gateRequirements.length > 0 && (
+                  <div className="grid grid-cols-2 gap-8">
                     <div>
-                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                        Gate Requirements
-                      </h3>
-                      {selectedStage.gateRequirements.map((req, i) => (
-                        <div key={i} className="mb-1 flex items-center gap-2">
-                          <span className={`text-xs ${req.met ? "text-success" : "text-danger"}`}>
-                            {req.met ? "\u2713" : "\u2717"}
-                          </span>
-                          <span className="text-xs text-[var(--muted)]">
-                            {req.description}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                      {selectedStage.gateRequirements.length > 0 && (
+                        <>
+                          <h4 className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+                            Gate Requirements
+                          </h4>
+                          <ul className="space-y-3">
+                            {selectedStage.gateRequirements.map((req, i) => (
+                              <li key={i} className="flex items-center gap-2.5 text-[15px]">
+                                <span
+                                  className="material-symbols-outlined"
+                                  style={{
+                                    fontSize: 18,
+                                    color: req.met ? "#10B981" : "#d4d4d4",
+                                    fontVariationSettings: req.met ? "'FILL' 1" : undefined,
+                                  }}
+                                >
+                                  {req.met ? "check_circle" : "radio_button_unchecked"}
+                                </span>
+                                <span className={req.met ? "text-black" : "text-stone-700"}>
+                                  {req.description}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
 
-                  {/* Artifacts */}
-                  {selectedStage.artifacts.length > 0 && (
-                    <div>
-                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                        Artifacts
-                      </h3>
-                      {selectedStage.artifacts.map((art, i) => (
-                        <div key={i} className="mb-1 flex items-center gap-2">
-                          <span className={`text-xs ${art.present ? "text-success" : "text-[var(--field-placeholder)]"}`}>
-                            {art.present ? "\u25CF" : "\u25CB"}
-                          </span>
-                          <span className="text-xs text-[var(--muted)]">{art.name}</span>
-                        </div>
-                      ))}
+                      {selectedStage.description && (
+                        <p className="mt-4 text-[15px] text-stone-900">
+                          {selectedStage.description}
+                        </p>
+                      )}
                     </div>
-                  )}
 
-                  {/* Blockers */}
-                  {selectedStage.blockers.length > 0 && (
-                    <div>
-                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-danger">
-                        Blockers
-                      </h3>
-                      {selectedStage.blockers.map((blocker, i) => (
-                        <div key={i} className="mb-1 text-xs text-danger">
-                          {blocker}
+                    <div className="space-y-6">
+                      {selectedStage.artifacts.length > 0 && (
+                        <div>
+                          <h4 className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+                            Artifacts
+                          </h4>
+                          <div className="flex gap-2">
+                            {selectedStage.artifacts.map((art, i) => (
+                              <div
+                                key={i}
+                                className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                                  art.present
+                                    ? "bg-stone-100 text-stone-800"
+                                    : "border border-stone-200 text-stone-500"
+                                }`}
+                                title={art.name}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: art.present ? "'FILL' 1" : undefined }}>
+                                  {art.present ? "description" : "add"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                      )}
 
-            {/* Recommendations */}
-            {activePipeline && activePipeline.recommendations.length > 0 && (
-              <Card className="mb-5">
-                <CardContent className="flex flex-col gap-3 p-5">
-                  <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      {selectedStage.blockers.length > 0 && (
+                        <div>
+                          <h4 className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+                            Blockers
+                          </h4>
+                          {selectedStage.blockers.map((blocker, i) => (
+                            <div key={i} className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3">
+                              <span className="material-symbols-outlined text-red-400" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>warning</span>
+                              <p className="text-[15px] text-red-600">{blocker}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activePipeline && activePipeline.recommendations.length > 0 && (
+                <div className="rounded-lg border border-stone-200 bg-[var(--bg-surface)] p-5">
+                  <h3 className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">
                     Next Actions
-                  </h2>
-                  {activePipeline.recommendations.map((rec, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <Chip size="sm" variant="soft">
-                        <span className="text-[10px]">{rec.source}</span>
-                      </Chip>
-                      <span className="text-sm text-[var(--foreground)]">{rec.text}</span>
+                  </h3>
+                  <div className="space-y-2.5">
+                    {activePipeline.recommendations.map((rec, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <span className="rounded bg-[#91A6FF]/20 px-1.5 py-0.5 text-[12px] font-semibold uppercase text-[#4A5A99]">
+                          {rec.source}
+                        </span>
+                        <span className="text-[15px] text-black">{rec.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right rail (30%) */}
+            <div className="col-span-3 space-y-6">
+              {/* Timeline */}
+              <section className="flex h-[380px] flex-col rounded-lg border border-stone-200 bg-[var(--bg-surface)] p-5">
+                <h3 className="mb-4 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+                  Timeline
+                </h3>
+                <div className="flex-1 space-y-5 overflow-y-auto pr-2">
+                  {activeTimeline.length === 0 ? (
+                    <span className="text-[15px] text-stone-700">No events yet</span>
+                  ) : (
+                    activeTimeline.map((event) => {
+                      const chip = EVENT_CHIP[event.eventType] || EVENT_CHIP.action;
+                      return (
+                        <div key={event.id} className="relative border-l border-stone-200 pl-4">
+                          <div className={`absolute -left-[4px] top-0.5 h-2 w-2 rounded-full ${
+                            event.eventType === "gate" ? "bg-emerald-500"
+                            : event.eventType === "decision" ? "bg-amber-500"
+                            : "bg-black"
+                          }`} />
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className={`rounded px-1.5 py-0.5 text-[12px] font-semibold uppercase ${chip.bg} ${chip.text}`}>
+                              {event.eventType}
+                            </span>
+                            <span className="text-[12px] text-stone-700">
+                              {new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="text-[15px] text-black">{event.summary}</p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              {/* Health gauge */}
+              {activePipeline && activePipeline.healthScore !== null && (
+                <div className="rounded-lg border border-stone-200 bg-[var(--bg-surface)] p-5">
+                  <h3 className="mb-4 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+                    Health
+                  </h3>
+                  <div className="flex items-center gap-5">
+                    <div className="relative h-20 w-20">
+                      <svg className="h-full w-full -rotate-90" viewBox="0 0 88 88">
+                        <circle cx="44" cy="44" r="36" fill="none" stroke="#e5e5e5" strokeWidth="6" />
+                        <circle
+                          cx="44" cy="44" r="36"
+                          fill="none"
+                          stroke={activePipeline.healthScore >= 7 ? "#10B981" : activePipeline.healthScore >= 4 ? "#F59E0B" : "#EF4444"}
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 36}
+                          strokeDashoffset={2 * Math.PI * 36 - (2 * Math.PI * 36 * activePipeline.healthScore * 10) / 100}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-semibold text-black">
+                          {activePipeline.healthScore}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </>
+                    <div>
+                      <p className="text-[15px] font-medium text-black">
+                        {activePipeline.healthScore >= 7 ? "Operational" : activePipeline.healthScore >= 4 ? "At Risk" : "Critical"}
+                      </p>
+                      <p className="mt-0.5 text-[13px] text-stone-700">{activePipeline.healthTrend}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Deploy */}
+              {project?.deployUrl && (
+                <div className="rounded-lg border border-stone-200 bg-[var(--bg-surface)] p-5">
+                  <h3 className="mb-3 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+                    Deploy
+                  </h3>
+                  <div className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 p-3">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <span className="material-symbols-outlined text-stone-800" style={{ fontSize: 16 }}>link</span>
+                      <span className="truncate font-mono text-[14px] text-stone-900">{project.deployUrl}</span>
+                    </div>
+                    <a href={project.deployUrl} target="_blank" rel="noopener noreferrer">
+                      <span className="material-symbols-outlined text-stone-700 transition-colors hover:text-black" style={{ fontSize: 16 }}>open_in_new</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
-        {/* Context tab content */}
         {activeTab === "context" && (
           <ContextTab
             contextItems={contextItems}
@@ -279,75 +427,6 @@ export function ControlRoom() {
           />
         )}
       </div>
-
-      {/* Right rail: Timeline */}
-      {activeTab === "pipeline" && (
-        <div className="w-[300px] shrink-0 overflow-auto border-l border-[var(--separator)] px-4 py-5">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Timeline
-          </h2>
-
-          {activeTimeline.length === 0 ? (
-            <span className="text-xs text-[var(--field-placeholder)]">
-              No events yet
-            </span>
-          ) : (
-            activeTimeline.map((event) => (
-              <div key={event.id} className="mb-3 pb-3">
-                <div className="mb-1 flex justify-between">
-                  <span className="font-mono text-[10px] text-[var(--field-placeholder)]">
-                    {event.eventType}
-                  </span>
-                  <span className="text-[10px] text-[var(--field-placeholder)]">
-                    {new Date(event.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--muted)]">{event.summary}</span>
-                <Separator className="mt-3" />
-              </div>
-            ))
-          )}
-
-          {/* Health score */}
-          {activePipeline && activePipeline.healthScore !== null && (
-            <Card className="mt-5">
-              <CardContent className="p-3">
-                <span className="mb-1 block text-[11px] text-[var(--field-placeholder)]">
-                  Health Score
-                </span>
-                <span
-                  className={`text-2xl font-semibold ${
-                    activePipeline.healthScore >= 7
-                      ? "text-success"
-                      : activePipeline.healthScore >= 4
-                        ? "text-warning"
-                        : "text-danger"
-                  }`}
-                >
-                  {activePipeline.healthScore}
-                </span>
-                <span className="text-xs text-[var(--field-placeholder)]">
-                  /10 {activePipeline.healthTrend}
-                </span>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Deploy URL */}
-          {project?.deployUrl && (
-            <Card className="mt-3">
-              <CardContent className="p-3">
-                <span className="mb-1 block text-[11px] text-[var(--field-placeholder)]">
-                  Live URL
-                </span>
-                <span className="break-all font-mono text-xs text-success">
-                  {project.deployUrl}
-                </span>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
     </div>
   );
 }
