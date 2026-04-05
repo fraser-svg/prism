@@ -61,7 +61,7 @@ export interface PrismStore {
   setActiveProject: (id: string | null) => void;
   toggleDrawer: (projectId?: string) => void;
   setSearchQuery: (query: string) => void;
-  createClient: (name: string, notes?: string) => Promise<void>;
+  createClient: (name: string, notes?: string) => Promise<ClientView>;
   createProject: (
     name: string,
     rootPath?: string,
@@ -229,7 +229,9 @@ export function createPrismStore(transport: PrismTransport) {
     createClient: async (name, notes) => {
       const result = await safeInvoke(() => transport.createClient(name, notes));
       if (result.error) throw new Error(result.error);
-      await get().loadPortfolio();
+      const client = result.data as ClientView;
+      get().loadPortfolio(); // fire-and-forget -- don't block wizard Step 2
+      return client;
     },
 
     createProject: async (name, rootPath, clientAccountId) => {
@@ -350,8 +352,9 @@ export function createPrismStore(transport: PrismTransport) {
     },
 
     addContextFiles: async (entityType, entityId, files) => {
+      const failed: string[] = [];
       for (const file of files) {
-        await safeInvoke(() =>
+        const result = await safeInvoke(() =>
           transport.addContextItem({
             entityType,
             entityId,
@@ -362,8 +365,10 @@ export function createPrismStore(transport: PrismTransport) {
             file,
           }),
         );
+        if (result.error) failed.push(file.name);
       }
       await get().loadContext(entityType, entityId);
+      if (failed.length > 0) throw new Error(`Failed to upload: ${failed.join(", ")}`);
     },
 
     addContextNote: async (entityType, entityId, text) => {

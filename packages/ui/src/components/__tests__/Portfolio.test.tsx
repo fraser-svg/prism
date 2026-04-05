@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Mock the context module to control store values
@@ -102,5 +102,18 @@ describe("Portfolio", () => {
     });
     renderPortfolio();
     expect(screen.queryByText("Set up your workspace in three steps")).toBeNull();
+  });
+
+  it("+ New dropdown renders New Client and New Project options", async () => {
+    setStore({ projects: [], clients: [] });
+    renderPortfolio();
+
+    const newBtn = screen.getByText("+ New");
+    expect(newBtn).toBeTruthy();
+    expect(screen.queryByText("New Client")).toBeNull();
+
+    fireEvent.click(newBtn);
+    expect(screen.getByText("New Client")).toBeTruthy();
+    expect(screen.getByText("New Project")).toBeTruthy();
   });
 });
