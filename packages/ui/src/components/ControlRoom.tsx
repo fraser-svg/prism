@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { PipelineStrip } from "./PipelineStrip";
@@ -35,12 +35,15 @@ export function ControlRoom() {
     contextSummary,
     contextHealth,
     extractionQueue,
+    contextSearchResults,
+    clientSummary,
     loadContext,
     addContextFiles,
     addContextNote,
     deleteContextItem,
     reExtractItem,
     flagKnowledge,
+    searchKnowledge,
     applyToBrief,
   } = usePrismStore();
 
@@ -103,9 +106,18 @@ export function ControlRoom() {
     if (id) applyToBrief(id, knowledgeId);
   };
   const handleFlagWrong = (knowledgeId: string) => {
-    flagKnowledge(knowledgeId);
+    if (id) flagKnowledge(knowledgeId, "project", id);
+  };
+  const handleCopyAllKnowledge = () => {
+    if (contextSummary) void navigator.clipboard.writeText(contextSummary.content).catch(() => {});
+  };
+  const handleSearch = (query: string) => {
+    if (id) searchKnowledge("project", id, query);
   };
   const handleLinkPreviousAttempt = () => {};
+  const handlePoll = useCallback(() => {
+    if (id) loadContext("project", id);
+  }, [id, loadContext]);
 
   const stageChip = selectedStage
     ? STATUS_CHIP[selectedStage.status] || STATUS_CHIP.upcoming
@@ -414,16 +426,21 @@ export function ControlRoom() {
             contextItems={contextItems}
             knowledge={contextKnowledge}
             summary={contextSummary}
+            clientSummary={clientSummary}
             contextHealth={contextHealth}
             extractionQueue={extractionQueue}
+            searchResults={contextSearchResults}
             onDrop={handleContextDrop}
             onAddNote={handleAddNote}
             onDeleteItem={handleDeleteItem}
             onReExtract={handleReExtract}
             onCopyKnowledge={handleCopyKnowledge}
+            onCopyAllKnowledge={handleCopyAllKnowledge}
             onApplyToBrief={handleApplyToBrief}
             onFlagWrong={handleFlagWrong}
+            onSearch={handleSearch}
             onLinkPreviousAttempt={handleLinkPreviousAttempt}
+            onPoll={handlePoll}
           />
         )}
       </div>

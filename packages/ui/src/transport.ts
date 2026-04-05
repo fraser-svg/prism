@@ -26,6 +26,7 @@ export interface PrismTransport {
   getSummary(entityType: "project" | "client", entityId: string): Promise<IpcResult>;
   flagKnowledge(knowledgeId: string): Promise<IpcResult>;
   applyToBrief(projectId: string, knowledgeId: string): Promise<IpcResult>;
+  searchKnowledge(entityType: "project" | "client", entityId: string, query: string): Promise<IpcResult>;
   // Usage & billing
   getUsage(): Promise<IpcResult>;
   createCheckout(): Promise<IpcResult>;
@@ -58,6 +59,7 @@ export class IpcTransport implements PrismTransport {
   getSummary(entityType: "project" | "client", entityId: string) { return window.prism.getSummary(entityType, entityId); }
   flagKnowledge(knowledgeId: string) { return window.prism.flagKnowledge(knowledgeId); }
   applyToBrief(projectId: string, knowledgeId: string) { return window.prism.applyToBrief(projectId, knowledgeId); }
+  searchKnowledge(entityType: "project" | "client", entityId: string, query: string) { return window.prism.searchKnowledge(entityType, entityId, query); }
   getUsage() { return Promise.resolve({ error: "Not available in desktop mode" }); }
   createCheckout() { return Promise.resolve({ error: "Not available in desktop mode" }); }
   getBillingPortal() { return Promise.resolve({ error: "Not available in desktop mode" }); }
@@ -159,6 +161,9 @@ export class FetchTransport implements PrismTransport {
   }
   applyToBrief(projectId: string, knowledgeId: string) {
     return this.request(`/context/knowledge/${knowledgeId}/apply`, { method: "POST", body: JSON.stringify({ projectId }) });
+  }
+  searchKnowledge(entityType: "project" | "client", entityId: string, query: string) {
+    return this.request(`/context/${entityType}/${entityId}/search?q=${encodeURIComponent(query)}`);
   }
   getUsage() { return this.request("/usage"); }
   createCheckout() { return this.request("/billing/checkout", { method: "POST" }); }

@@ -506,3 +506,51 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Create a `subscription_tiers` table with columns: tier_id, name, monthly_price_cents, action_limit, daily_cap, features (JSON). Update UsageGate to read limits from this table instead of constants. Add an admin API for tier CRUD. Frontend: tiers dropdown in Vault upgrade flow.
 
 **Depends on:** Vault + usage-gated paywall shipped (fraser-svg/onboarding-api-keys).
+
+## Extraction Quality Eval Suite (P2)
+
+**What:** A repeatable eval that runs the extraction pipeline against 3-5 representative documents and checks: correct category assignment, reasonable confidence calibration, no hallucinated facts, source_quote accuracy.
+
+**Why:** The extraction prompt is the core quality driver for Context Dump. Without an eval, prompt changes are blind — you can't tell if a tweak improved or degraded extraction quality. Identified during eng review (2026-04-05) as the primary gap in the extraction pipeline's quality feedback loop.
+
+**When:** After Context Dump evolution (fraser-svg/improve-context-dump) ships and 3+ real client documents have been extracted.
+
+**How:** Add `evals/extraction-quality/` with sample documents and expected outputs. Run extraction pipeline against each doc, compare output categories/keys/confidence to expected values. Score: precision (no hallucinated facts), recall (found expected facts), confidence calibration (high-confidence entries should be explicit statements). Manual spot-check for v1; automated scoring for v2.
+
+**Depends on:** Context Dump evolution shipped + real sample documents collected.
+
+## Web Execution Pipeline (P1)
+
+**What:** Wire the existing Stage 4 (Build) orchestration logic into the web app so users can trigger builds from the browser, not just the CLI.
+
+**Why:** The web app is the product surface, but build execution is CLI-only. Agency operators need to trigger builds from the same interface where they manage projects and review context. This is the bridge between "knowledge capture" and "production output."
+
+**When:** After Context Dump evolution and auth hardening ship.
+
+**How:** Add a "Build" action to the ControlRoom that calls the orchestrator's build pipeline. Requires: WebSocket or SSE for real-time build progress, file write permissions via server-side execution, and a build output viewer in the UI.
+
+**Depends on:** Context Dump evolution (fraser-svg/improve-context-dump) + auth hardening.
+
+## Socratic Discovery Skip (P1)
+
+**What:** Allow users who have already uploaded rich context (3+ documents, extracted knowledge) to skip or abbreviate the Socratic discovery interview.
+
+**Why:** The Socratic flow asks questions to understand the client and project. When the context system already has this information, re-asking is friction. The system should recognize "I already know enough" and offer to proceed directly.
+
+**When:** After Context Dump evolution ships and is used with real clients.
+
+**How:** At Socratic start, check context health score. If >= 75 (profile exists, 3+ docs, recent, multi-category), offer: "I see you've already uploaded context for this client. Want to skip discovery and proceed with what I know?" If user accepts, compile the knowledge summary into the brief directly.
+
+**Depends on:** Context Dump evolution (fraser-svg/improve-context-dump).
+
+## Knowledge Diff on Re-Extraction (P3)
+
+**What:** When re-extracting a document, show the user what changed: new facts added, old facts removed, confidence changes.
+
+**Why:** Re-extraction currently silently replaces all knowledge from the source item. The user has no visibility into what changed, making it hard to trust or verify the re-extraction.
+
+**When:** After Context Dump evolution ships and re-extraction is used regularly.
+
+**How:** Before `clearKnowledgeForItem`, snapshot the existing knowledge. After re-extraction, diff the old and new sets by key+category. Surface the diff in the UI: green for new, red for removed, amber for changed confidence. Store the diff as an event log entry.
+
+**Depends on:** Context Dump evolution (fraser-svg/improve-context-dump).

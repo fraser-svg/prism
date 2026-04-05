@@ -29,6 +29,7 @@ export interface PrismAPI {
   getSummary: (entityType: "project" | "client", entityId: string) => Promise<IpcResult>;
   flagKnowledge: (knowledgeId: string) => Promise<IpcResult>;
   applyToBrief: (projectId: string, knowledgeId: string) => Promise<IpcResult>;
+  searchKnowledge: (entityType: "project" | "client", entityId: string, query: string) => Promise<IpcResult>;
 }
 
 export interface IpcResult {
@@ -139,7 +140,7 @@ export interface ContextItem {
   clientAccountId: string | null;
   itemType: "file" | "directory" | "text_note" | "url";
   title: string;
-  sourcePath: string | null;
+  filePath: string | null;
   content: string | null;
   mimeType: string | null;
   fileSizeBytes: number | null;
@@ -154,14 +155,18 @@ export interface ExtractedKnowledge {
   key: string;
   value: string;
   confidence: number;
-  extractedAt: string;
+  flagged: boolean;
+  sourceQuote: string | null;
+  createdAt: string;
 }
 
 export interface KnowledgeSummary {
   id: string;
-  entityType: "project" | "client";
-  entityId: string;
-  summaryText: string;
+  clientAccountId: string | null;
+  projectId: string | null;
+  summaryType: string;
+  content: string;
   brandColors: string[] | null;
+  sourceItemCount: number | null;
   generatedAt: string;
 }

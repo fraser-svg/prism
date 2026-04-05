@@ -21,7 +21,7 @@ describe("WorkspaceDatabase", () => {
       const row = db.inner
         .prepare("SELECT MAX(version) as v FROM _migrations")
         .get() as { v: number };
-      expect(row.v).toBe(5);
+      expect(row.v).toBe(6);
     } finally {
       db.close();
     }
@@ -99,7 +99,7 @@ describe("WorkspaceDatabase", () => {
       const rows = db2.inner
         .prepare("SELECT COUNT(*) as c FROM _migrations")
         .get() as { c: number };
-      expect(rows.c).toBe(5);
+      expect(rows.c).toBe(6);
     } finally {
       db2.close();
     }
@@ -114,7 +114,7 @@ describe("WorkspaceDatabase", () => {
       const rows = db.inner
         .prepare("SELECT version, applied_at FROM _migrations")
         .all() as Array<{ version: number; applied_at: string }>;
-      expect(rows).toHaveLength(5);
+      expect(rows).toHaveLength(6);
       expect(rows[0].version).toBe(1);
       expect(rows[0].applied_at).toBeTruthy();
       expect(rows[1].version).toBe(2);
@@ -125,6 +125,8 @@ describe("WorkspaceDatabase", () => {
       expect(rows[3].applied_at).toBeTruthy();
       expect(rows[4].version).toBe(5);
       expect(rows[4].applied_at).toBeTruthy();
+      expect(rows[5].version).toBe(6);
+      expect(rows[5].applied_at).toBeTruthy();
     } finally {
       db.close();
     }

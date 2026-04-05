@@ -120,13 +120,15 @@ describe("ContextRepository", () => {
   // ─── deleteItem ───
 
   describe("deleteItem", () => {
-    it("removes item and returns true", () => {
+    it("removes item and returns the deleted item", () => {
       const item = repo.addItem(
         { entityType: "client", entityId: "client-1" },
         { itemType: "text_note", title: "Temp", content: "delete me" },
       );
 
-      expect(repo.deleteItem(item.id)).toBe(true);
+      const deleted = repo.deleteItem(item.id);
+      expect(deleted).not.toBeNull();
+      expect(deleted!.id).toBe(item.id);
       expect(repo.getItem(item.id)).toBeNull();
     });
 
@@ -149,8 +151,8 @@ describe("ContextRepository", () => {
       expect(knowledgeAfter).toHaveLength(0);
     });
 
-    it("returns false for nonexistent item", () => {
-      expect(repo.deleteItem("nonexistent-id")).toBe(false);
+    it("returns null for nonexistent item", () => {
+      expect(repo.deleteItem("nonexistent-id")).toBeNull();
     });
   });
 
