@@ -84,8 +84,11 @@ export interface PrismStore {
   addContextNote: (entityType: "project" | "client", entityId: string, text: string) => Promise<void>;
   deleteContextItem: (id: string, entityType: "project" | "client", entityId: string) => Promise<void>;
   reExtractItem: (id: string, entityType: "project" | "client", entityId: string) => Promise<void>;
-  flagKnowledge: (knowledgeId: string) => Promise<void>;
+  flagKnowledge: (knowledgeId: string, entityType: "project" | "client", entityId: string) => Promise<void>;
   applyToBrief: (projectId: string, knowledgeId: string) => Promise<void>;
+  searchKnowledge: (entityType: "project" | "client", entityId: string, query: string) => Promise<void>;
+  contextSearchResults: ExtractedKnowledge[];
+  clientSummary: KnowledgeSummary | null;
   resetStore: () => void;
 }
 
@@ -137,6 +140,8 @@ export function createPrismStore(transport: PrismTransport) {
     contextSummary: null,
     contextHealth: null,
     extractionQueue: { extracting: 0, total: 0 },
+    contextSearchResults: [],
+    clientSummary: null,
 
     loadPortfolio: async () => {
       set({ portfolioLoading: true, portfolioError: null });
@@ -320,15 +325,27 @@ export function createPrismStore(transport: PrismTransport) {
           hasCategories: categories.size >= 2,
         };
 
+        // 3C: If loading project context, also fetch parent client summary
+        let parentClientSummary: KnowledgeSummary | null = null;
+        if (entityType === "project") {
+          const { projects } = get();
+          const project = projects.find((p) => p.id === entityId);
+          if (project?.clientAccountId) {
+            const clientResult = await safeInvoke(() => transport.getSummary("client", project.clientAccountId!));
+            parentClientSummary = (clientResult.data as KnowledgeSummary | undefined) || null;
+          }
+        }
+
         set({
           contextItems: items,
           contextKnowledge: knowledge,
           contextSummary: summary,
           contextHealth: health,
           extractionQueue: { extracting, total: extracting + queued },
+          clientSummary: parentClientSummary,
         });
       } catch {
-        set({ contextItems: [], contextKnowledge: [], contextSummary: null, contextHealth: null });
+        set({ contextItems: [], contextKnowledge: [], contextSummary: null, contextHealth: null, clientSummary: null });
       }
     },
 
@@ -372,12 +389,22 @@ export function createPrismStore(transport: PrismTransport) {
       await get().loadContext(entityType, entityId);
     },
 
-    flagKnowledge: async (knowledgeId) => {
+    flagKnowledge: async (knowledgeId, entityType, entityId) => {
       await safeInvoke(() => transport.flagKnowledge(knowledgeId));
+      await get().loadContext(entityType, entityId);
     },
 
     applyToBrief: async (projectId, knowledgeId) => {
       await safeInvoke(() => transport.applyToBrief(projectId, knowledgeId));
+    },
+
+    searchKnowledge: async (entityType, entityId, query) => {
+      if (!query.trim()) {
+        set({ contextSearchResults: [] });
+        return;
+      }
+      const result = await safeInvoke(() => transport.searchKnowledge(entityType, entityId, query));
+      set({ contextSearchResults: (result.data as ExtractedKnowledge[] | undefined) || [] });
     },
 
     resetStore: () => {
@@ -404,6 +431,8 @@ export function createPrismStore(transport: PrismTransport) {
         contextSummary: null,
         contextHealth: null,
         extractionQueue: { extracting: 0, total: 0 },
+        contextSearchResults: [],
+        clientSummary: null,
       });
     },
   }));

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { WorkspaceDatabase } from "./workspace-database";
 import { ContextRepository } from "./context-repository";
-import { ExtractionPipeline, isTranscript } from "./extraction-pipeline";
+import { ExtractionPipeline, isTranscript, chunkContent } from "./extraction-pipeline";
 
 function seedDb(db: ReturnType<typeof WorkspaceDatabase.open>) {
   db.inner
@@ -125,6 +125,10 @@ describe("ExtractionPipeline", () => {
     const knowledge = repo.getKnowledge({ entityType: "project", entityId: "proj-1" });
     expect(knowledge).toHaveLength(2);
     expect(knowledge.some((k) => k.key === "pain_points")).toBe(true);
+
+    // Verify recompileSummary also ran (summary should be upserted)
+    const summary = repo.getSummary({ entityType: "project", entityId: "proj-1" });
+    expect(summary).not.toBeNull();
   });
 
   it("leaves status as stored when no API key", async () => {
@@ -222,7 +226,8 @@ describe("ExtractionPipeline", () => {
       expect(updated!.extractionStatus).toBe("extracted");
     }, { timeout: 10000 });
 
-    expect(callCount).toBe(2);
+    // 1: extraction (429), 2: extraction retry (success), 3: recompileSummary→compileSummary
+    expect(callCount).toBe(3);
   });
 
   it("handles 5xx server error with retry", async () => {
@@ -256,7 +261,8 @@ describe("ExtractionPipeline", () => {
       expect(updated!.extractionStatus).toBe("extracted");
     }, { timeout: 10000 });
 
-    expect(callCount).toBe(2);
+    // 1: extraction (500), 2: extraction retry (success), 3: recompileSummary→compileSummary
+    expect(callCount).toBe(3);
   });
 
   it("marks as failed on malformed JSON response", async () => {
@@ -347,13 +353,9 @@ describe("ExtractionPipeline", () => {
   });
 
   it("does not double-queue the same item in pending queue", async () => {
-    // Use a slow mock — fills all 3 active slots, leaving subsequent items in queue
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
-      await new Promise((r) => setTimeout(r, 200));
-      return makeHaikuResponse([]) as unknown as Response;
-    });
-
-    const pipeline = new ExtractionPipeline(wsDb.inner, () => "sk-test-key");
+    // No API key → processItem resolves immediately (sets "stored"), no fetch calls
+    // This isolates the queue deduplication logic from extraction timing
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => null);
 
     // Create 4 items — 3 will go active, 1 stays in queue
     const items = Array.from({ length: 4 }, (_, i) =>
@@ -367,7 +369,7 @@ describe("ExtractionPipeline", () => {
       pipeline.enqueue(item.id);
     }
 
-    // 3 active + 1 in queue
+    // Synchronously: 3 active slots filled, 1 in queue (microtasks haven't run yet)
     expect(pipeline.activeExtractions).toBe(3);
     expect(pipeline.queueSize).toBe(1);
 
@@ -375,9 +377,415 @@ describe("ExtractionPipeline", () => {
     pipeline.enqueue(items[3].id);
     expect(pipeline.queueSize).toBe(1); // Still 1, not 2
 
-    // Wait for all to complete
+    // Wait for all to complete (microtasks resolve processItem calls)
     await vi.waitFor(() => {
       expect(pipeline.queueSize + pipeline.activeExtractions).toBe(0);
     }, { timeout: 5000 });
+  });
+
+  // ─── T1-T3: compileSummary / recompileSummary ───
+
+  it("T1: recompileSummary generates narrative summary via Haiku", async () => {
+    let capturedPrompt = "";
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, opts) => {
+      const body = JSON.parse(opts?.body as string);
+      capturedPrompt = body.messages[0].content;
+      // Return narrative text (not JSON array)
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({
+          content: [{ text: "# Client Profile\n\nAcme Corp is a SaaS company..." }],
+        }),
+      } as unknown as Response;
+    });
+
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => "sk-test-key");
+
+    // Seed some knowledge
+    const item = repo.addItem(
+      { entityType: "client", entityId: "client-1" },
+      { itemType: "text_note", title: "Notes", content: "Acme is a SaaS company" },
+    );
+    repo.insertKnowledge(item.id, [
+      { category: "business", key: "industry", value: "SaaS platform", confidence: 0.9 },
+      { category: "technical", key: "stack", value: "React + Node.js", confidence: 0.85 },
+    ]);
+
+    await pipeline.recompileSummary({ entityType: "client", entityId: "client-1" });
+
+    // Should have called Haiku with a synthesis prompt
+    expect(capturedPrompt).toContain("client profile");
+    expect(capturedPrompt).toContain("SaaS platform");
+    expect(capturedPrompt).toContain("React + Node.js");
+
+    // Summary should be upserted
+    const summary = repo.getSummary({ entityType: "client", entityId: "client-1" });
+    expect(summary).not.toBeNull();
+    expect(summary!.content).toContain("Acme Corp");
+  });
+
+  it("T2: recompileSummary falls back to buildSummary when no API key", async () => {
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => null);
+
+    // Seed knowledge
+    const item = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Notes", content: "some content" },
+    );
+    repo.insertKnowledge(item.id, [
+      { category: "business", key: "model", value: "Subscription billing", confidence: 0.9 },
+    ]);
+
+    await pipeline.recompileSummary({ entityType: "project", entityId: "proj-1" });
+
+    const summary = repo.getSummary({ entityType: "project", entityId: "proj-1" });
+    expect(summary).not.toBeNull();
+    expect(summary!.content).toContain("Subscription billing");
+    expect(summary!.content).toContain("# Project Brief");
+  });
+
+  it("T3: recompileSummary excludes flagged knowledge from summary", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        content: [{ text: "# Profile\n\nSummary based on good facts only" }],
+      }),
+    } as unknown as Response);
+
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => "sk-test-key");
+
+    const item = repo.addItem(
+      { entityType: "client", entityId: "client-1" },
+      { itemType: "text_note", title: "Notes", content: "content" },
+    );
+    const knowledge = repo.insertKnowledge(item.id, [
+      { category: "business", key: "good", value: "Keep this", confidence: 0.9 },
+      { category: "business", key: "bad", value: "Flag this", confidence: 0.8 },
+    ]);
+
+    // Flag one entry
+    repo.flagKnowledge(knowledge[1].id);
+
+    let capturedPrompt = "";
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, opts) => {
+      const body = JSON.parse(opts?.body as string);
+      capturedPrompt = body.messages[0].content;
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({ content: [{ text: "# Profile\nOnly good facts" }] }),
+      } as unknown as Response;
+    });
+
+    await pipeline.recompileSummary({ entityType: "client", entityId: "client-1" });
+
+    expect(capturedPrompt).toContain("Keep this");
+    expect(capturedPrompt).not.toContain("Flag this");
+  });
+
+  // ─── T19: clearKnowledgeForItem (idempotent re-extract) ───
+
+  it("T19: re-extraction clears old knowledge before inserting new", async () => {
+    let extractionCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      extractionCount++;
+      const entries = extractionCount === 1
+        ? [{ category: "business", key: "v1", value: "First extraction", confidence: 0.9 }]
+        : [{ category: "technical", key: "v2", value: "Second extraction", confidence: 0.85 }];
+      return makeHaikuResponse(entries) as unknown as Response;
+    });
+
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => "sk-test-key");
+
+    const item = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Re-extract test", content: "Content for re-extraction" },
+    );
+
+    // First extraction
+    pipeline.enqueue(item.id);
+    await vi.waitFor(() => {
+      expect(repo.getItem(item.id)!.extractionStatus).toBe("extracted");
+    }, { timeout: 5000 });
+
+    const firstKnowledge = repo.getKnowledge({ entityType: "project", entityId: "proj-1" });
+    expect(firstKnowledge.some((k) => k.key === "v1")).toBe(true);
+
+    // Re-extract — should clear old knowledge
+    repo.updateExtractionStatus(item.id, "queued");
+    pipeline.enqueue(item.id);
+    await vi.waitFor(() => {
+      const k = repo.getKnowledge({ entityType: "project", entityId: "proj-1" });
+      return expect(k.some((e) => e.key === "v2")).toBe(true);
+    }, { timeout: 5000 });
+
+    const finalKnowledge = repo.getKnowledge({ entityType: "project", entityId: "proj-1" });
+    // Old v1 knowledge should be gone
+    expect(finalKnowledge.some((k) => k.key === "v1")).toBe(false);
+    expect(finalKnowledge.some((k) => k.key === "v2")).toBe(true);
+  });
+
+  // ─── T27-T30: Fixes ───
+
+  it("T27: failure split — knowledge persists even if compileSummary fails", async () => {
+    let callCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        // Extraction succeeds
+        return makeHaikuResponse([
+          { category: "business", key: "fact", value: "Important fact", confidence: 0.9 },
+        ]) as unknown as Response;
+      }
+      // compileSummary fails
+      return { ok: false, status: 500, headers: new Headers(), json: async () => ({}) } as unknown as Response;
+    });
+
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => "sk-test-key");
+
+    const item = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Failure split", content: "Content for failure test" },
+    );
+
+    pipeline.enqueue(item.id);
+
+    await vi.waitFor(() => {
+      expect(repo.getItem(item.id)!.extractionStatus).toBe("extracted");
+    }, { timeout: 5000 });
+
+    // Knowledge should persist despite summary failure
+    const knowledge = repo.getKnowledge({ entityType: "project", entityId: "proj-1" });
+    expect(knowledge.length).toBeGreaterThan(0);
+    expect(knowledge[0].value).toBe("Important fact");
+  });
+
+  it("T28: recompileSummary falls back to buildSummary on Haiku API error", async () => {
+    // First call succeeds (for any lingering extraction), subsequent fail
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 503,
+      headers: new Headers(),
+      json: async () => ({ error: "service_unavailable" }),
+    } as unknown as Response);
+
+    const pipeline = new ExtractionPipeline(wsDb.inner, () => "sk-test-key");
+
+    const item = repo.addItem(
+      { entityType: "client", entityId: "client-1" },
+      { itemType: "text_note", title: "Notes", content: "content" },
+    );
+    repo.insertKnowledge(item.id, [
+      { category: "business", key: "model", value: "B2B SaaS", confidence: 0.9 },
+    ]);
+
+    await pipeline.recompileSummary({ entityType: "client", entityId: "client-1" });
+
+    // Should have fallen back to buildSummary
+    const summary = repo.getSummary({ entityType: "client", entityId: "client-1" });
+    expect(summary).not.toBeNull();
+    expect(summary!.content).toContain("B2B SaaS");
+    expect(summary!.content).toContain("# Client Profile");
+  });
+});
+
+// ─── T11-T18: chunkContent ───
+
+describe("chunkContent", () => {
+  it("T11: returns single chunk for content under 50KB", () => {
+    const content = "x".repeat(1000);
+    const chunks = chunkContent(content);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toBe(content);
+  });
+
+  it("T12: returns empty array for empty/whitespace content", () => {
+    expect(chunkContent("")).toHaveLength(0);
+    expect(chunkContent("   ")).toHaveLength(0);
+    expect(chunkContent("\n\n")).toHaveLength(0);
+  });
+
+  it("T13: splits on paragraph boundaries first", () => {
+    const para1 = "a".repeat(30 * 1024);
+    const para2 = "b".repeat(30 * 1024);
+    const content = para1 + "\n\n" + para2;
+    const chunks = chunkContent(content);
+    expect(chunks.length).toBe(2);
+    expect(chunks[0]).toBe(para1);
+    expect(chunks[1]).toBe(para2);
+  });
+
+  it("T14: falls back to line boundaries for oversized paragraphs", () => {
+    // One big paragraph with line breaks but no paragraph breaks
+    const lines = Array.from({ length: 20 }, (_, i) => "line-" + i + "-" + "x".repeat(5 * 1024));
+    const content = lines.join("\n");
+    const chunks = chunkContent(content);
+    // Each chunk should be ≤ 50KB
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(50 * 1024);
+    }
+    expect(chunks.length).toBeGreaterThan(1);
+  });
+
+  it("T15: hard-cuts content with no boundaries", () => {
+    const content = "x".repeat(200 * 1024); // 200KB, no newlines
+    const chunks = chunkContent(content);
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(50 * 1024);
+    }
+    expect(chunks.length).toBe(4); // 200KB / 50KB = 4
+  });
+
+  it("T16: caps at MAX_CHUNKS (10) chunks", () => {
+    const content = "x".repeat(600 * 1024); // 600KB > 500KB cap
+    const chunks = chunkContent(content);
+    expect(chunks.length).toBeLessThanOrEqual(10);
+  });
+
+  it("T17: preserves all content for content exactly at chunk boundary", () => {
+    const content = "x".repeat(50 * 1024); // Exactly 50KB
+    const chunks = chunkContent(content);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toBe(content);
+  });
+
+  it("T18: handles mixed paragraph sizes correctly", () => {
+    const small = "small paragraph";
+    const big = "y".repeat(60 * 1024); // > 50KB, needs line split
+    const medium = "z".repeat(20 * 1024);
+    const content = [small, big, medium].join("\n\n");
+    const chunks = chunkContent(content);
+    // All chunks should be ≤ 50KB
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(50 * 1024);
+    }
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ─── T5-T6: searchKnowledge (ContextRepository) ───
+
+describe("ContextRepository.searchKnowledge", () => {
+  let tmpDir: string;
+  let wsDb: ReturnType<typeof WorkspaceDatabase.open>;
+  let repo: ContextRepository;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "prism-search-test-"));
+    wsDb = WorkspaceDatabase.open(join(tmpDir, "workspace.db"));
+    seedDb(wsDb);
+    repo = new ContextRepository(wsDb.inner);
+  });
+
+  afterEach(async () => {
+    wsDb.close();
+    await rm(tmpDir, { recursive: true });
+  });
+
+  it("T5: searchKnowledge scopes results to entity", () => {
+    // Add knowledge to two different clients
+    const item1 = repo.addItem(
+      { entityType: "client", entityId: "client-1" },
+      { itemType: "text_note", title: "Client 1 notes", content: "content" },
+    );
+    repo.insertKnowledge(item1.id, [
+      { category: "business", key: "model", value: "Enterprise subscription platform", confidence: 0.9 },
+    ]);
+
+    const item2 = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Project notes", content: "content" },
+    );
+    repo.insertKnowledge(item2.id, [
+      { category: "business", key: "model", value: "Enterprise mobile application", confidence: 0.85 },
+    ]);
+
+    // Search scoped to client-1 should only return client-1 knowledge
+    const clientResults = repo.searchKnowledge("Enterprise", { entityType: "client", entityId: "client-1" });
+    expect(clientResults.length).toBe(1);
+    expect(clientResults[0].value).toContain("subscription");
+
+    // Search without scope should return both
+    const allResults = repo.searchKnowledge("Enterprise");
+    expect(allResults.length).toBe(2);
+  });
+
+  it("T6: searchKnowledge returns empty on FTS5 syntax error", () => {
+    const item = repo.addItem(
+      { entityType: "client", entityId: "client-1" },
+      { itemType: "text_note", title: "Notes", content: "content" },
+    );
+    repo.insertKnowledge(item.id, [
+      { category: "business", key: "test", value: "Some value", confidence: 0.9 },
+    ]);
+
+    // Malformed FTS5 query — should not throw, returns empty
+    const results = repo.searchKnowledge("AND OR NOT {}[]");
+    expect(results).toEqual([]);
+  });
+
+  it("T6b: searchKnowledge returns empty for blank query", () => {
+    expect(repo.searchKnowledge("")).toEqual([]);
+    expect(repo.searchKnowledge("   ")).toEqual([]);
+  });
+});
+
+// ─── T29: clearKnowledgeForItem (ContextRepository) ───
+
+describe("ContextRepository.clearKnowledgeForItem", () => {
+  let tmpDir: string;
+  let wsDb: ReturnType<typeof WorkspaceDatabase.open>;
+  let repo: ContextRepository;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "prism-clear-test-"));
+    wsDb = WorkspaceDatabase.open(join(tmpDir, "workspace.db"));
+    seedDb(wsDb);
+    repo = new ContextRepository(wsDb.inner);
+  });
+
+  afterEach(async () => {
+    wsDb.close();
+    await rm(tmpDir, { recursive: true });
+  });
+
+  it("T29: clearKnowledgeForItem deletes knowledge for specific item only", () => {
+    const item1 = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Item 1", content: "content 1" },
+    );
+    const item2 = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Item 2", content: "content 2" },
+    );
+
+    repo.insertKnowledge(item1.id, [
+      { category: "business", key: "k1", value: "From item 1", confidence: 0.9 },
+    ]);
+    repo.insertKnowledge(item2.id, [
+      { category: "technical", key: "k2", value: "From item 2", confidence: 0.85 },
+    ]);
+
+    // Clear only item1's knowledge
+    const deleted = repo.clearKnowledgeForItem(item1.id);
+    expect(deleted).toBe(1);
+
+    // item2's knowledge should remain
+    const remaining = repo.getKnowledge({ entityType: "project", entityId: "proj-1" });
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].key).toBe("k2");
+  });
+
+  it("T29b: clearKnowledgeForItem returns 0 for item with no knowledge", () => {
+    const item = repo.addItem(
+      { entityType: "project", entityId: "proj-1" },
+      { itemType: "text_note", title: "Empty", content: "no knowledge" },
+    );
+    expect(repo.clearKnowledgeForItem(item.id)).toBe(0);
   });
 });

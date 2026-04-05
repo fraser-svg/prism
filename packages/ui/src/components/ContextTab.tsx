@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import type { ContextItem, ExtractedKnowledge, KnowledgeSummary } from "../types";
 
@@ -6,16 +6,21 @@ interface ContextTabProps {
   contextItems: ContextItem[];
   knowledge: ExtractedKnowledge[];
   summary: KnowledgeSummary | null;
+  clientSummary?: KnowledgeSummary | null;
   contextHealth: { score: number; hasProfile: boolean; hasDocs: boolean; recent: boolean; hasCategories: boolean } | null;
   extractionQueue: { extracting: number; total: number };
+  searchResults?: ExtractedKnowledge[];
   onDrop: (files: File[]) => void;
   onAddNote: (text: string) => void;
   onDeleteItem: (id: string) => void;
   onReExtract: (id: string) => void;
   onCopyKnowledge: (text: string) => void;
+  onCopyAllKnowledge: () => void;
   onApplyToBrief: (knowledgeId: string) => void;
   onFlagWrong: (knowledgeId: string) => void;
+  onSearch: (query: string) => void;
   onLinkPreviousAttempt: () => void;
+  onPoll?: () => void;
 }
 
 const FILE_ICONS: Record<string, string> = {
@@ -43,7 +48,7 @@ const CATEGORY_CONFIG: Record<string, { border: string; text: string; label: str
 function groupKnowledgeByCategory(knowledge: ExtractedKnowledge[]) {
   const groups: Record<string, ExtractedKnowledge[]> = {};
   for (const k of knowledge) {
-    if (k.confidence < 0.3) continue;
+    if (k.confidence < 0.5) continue;
     if (!groups[k.category]) groups[k.category] = [];
     groups[k.category].push(k);
   }
@@ -73,9 +78,14 @@ function KnowledgeEntry({
       tabIndex={0}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[15px] leading-relaxed text-black">
+        <p className="text-[15px] leading-relaxed text-black" title={entry.sourceQuote || undefined}>
           <span className="text-[13px] text-stone-700">{entry.key}:</span>{" "}
           {entry.value}
+          {entry.sourceQuote && (
+            <span className="ml-1 inline-block cursor-help text-[11px] text-stone-400" title={`Source: "${entry.sourceQuote}"`}>
+              [src]
+            </span>
+          )}
         </p>
         <span className="shrink-0 text-[13px] font-medium text-stone-700">
           {Math.round(entry.confidence * 100)}%
@@ -96,21 +106,34 @@ export function ContextTab({
   contextItems,
   knowledge,
   summary,
+  clientSummary,
   contextHealth,
   extractionQueue,
+  searchResults,
   onDrop,
   onAddNote,
   onDeleteItem,
   onReExtract,
   onCopyKnowledge,
+  onCopyAllKnowledge,
   onApplyToBrief,
   onFlagWrong,
+  onSearch,
   onLinkPreviousAttempt,
+  onPoll,
 }: ContextTabProps) {
   const [noteText, setNoteText] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEmpty = contextItems.length === 0;
+
+  // E2: Smart polling — refresh context every 2s while extractions are in progress
+  useEffect(() => {
+    if (!onPoll || extractionQueue.total === 0) return;
+    const interval = setInterval(onPoll, 2000);
+    return () => clearInterval(interval);
+  }, [onPoll, extractionQueue.total]);
 
   const onDropAccepted = useCallback(
     (acceptedFiles: File[]) => { onDrop(acceptedFiles); },
@@ -245,9 +268,65 @@ export function ContextTab({
 
       {/* Right sidebar */}
       <div role="complementary" className="w-[280px] shrink-0 overflow-auto border-l border-stone-200 bg-[var(--bg-surface)] p-5">
-        <h2 className="mb-4 text-[13px] font-medium uppercase tracking-widest text-stone-700">
-          What Prism Knows
-        </h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[13px] font-medium uppercase tracking-widest text-stone-700">
+            What Prism Knows
+          </h2>
+          {knowledge.length > 0 && (
+            <button
+              className="rounded px-2 py-0.5 text-[13px] text-stone-700 transition-colors hover:bg-stone-100 hover:text-black"
+              onClick={onCopyAllKnowledge}
+              title="Copy all knowledge to clipboard"
+            >
+              Copy All
+            </button>
+          )}
+        </div>
+
+        {/* Search */}
+        {knowledge.length > 0 && (
+          <div className="mb-4">
+            <input
+              type="search"
+              placeholder="Search knowledge..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); onSearch(e.target.value); }}
+              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[15px] text-black placeholder:text-stone-700 transition-colors focus:border-stone-800 focus:outline-none"
+            />
+          </div>
+        )}
+
+        {/* Search results */}
+        {searchQuery && searchResults && searchResults.length > 0 && (
+          <div className="mb-5">
+            <h3 className="mb-2 text-[13px] font-medium uppercase tracking-widest text-stone-700">
+              Search Results ({searchResults.length})
+            </h3>
+            <div className="border-l-2 border-l-stone-300 pl-3">
+              {searchResults.map((entry) => (
+                <KnowledgeEntry key={entry.id} entry={entry} onCopy={onCopyKnowledge} onApply={onApplyToBrief} onFlag={onFlagWrong} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Brand color swatches */}
+        {summary?.brandColors && summary.brandColors.length > 0 && (
+          <div className="mb-5">
+            <h3 className="mb-2 text-[13px] font-medium uppercase tracking-widest text-stone-700">Brand Colors</h3>
+            <div className="flex flex-wrap gap-2">
+              {summary.brandColors.map((color) => (
+                <span
+                  key={color}
+                  className="inline-block h-7 w-7 rounded-md border border-stone-200"
+                  style={{ backgroundColor: color }}
+                  title={color}
+                  aria-label={`Brand color ${color}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {knowledge.length === 0 ? (
           <p className="text-[15px] leading-6 text-stone-900">
@@ -255,7 +334,7 @@ export function ContextTab({
               ? "Prism learns about your clients from the files and notes you share. The more context you provide, the smarter your builds get."
               : "Drop files or add notes to teach Prism about this client."}
           </p>
-        ) : (
+        ) : !searchQuery && (
           categories.map((category) => {
             const entries = knowledgeGroups[category];
             const cfg = CATEGORY_CONFIG[category];
@@ -272,6 +351,16 @@ export function ContextTab({
               </div>
             );
           })
+        )}
+
+        {/* Client inheritance section (3C) */}
+        {clientSummary && (
+          <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <div className="mb-2 text-[13px] font-medium uppercase tracking-widest text-stone-700">From Client</div>
+            <p className="text-[13px] leading-relaxed text-stone-900 line-clamp-4">
+              {clientSummary.content}
+            </p>
+          </div>
         )}
 
         {contextHealth && contextItems.length > 0 && (

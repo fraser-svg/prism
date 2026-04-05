@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { ContextTab } from "./ContextTab";
@@ -13,16 +13,22 @@ export function ClientContextPage() {
     contextSummary,
     contextHealth,
     extractionQueue,
+    contextSearchResults,
     loadContext,
     addContextFiles,
     addContextNote,
     deleteContextItem,
     reExtractItem,
     flagKnowledge,
+    searchKnowledge,
     applyToBrief,
   } = usePrismStore();
 
   const client = clients.find((c) => c.id === clientId);
+
+  const handlePoll = useCallback(() => {
+    if (clientId) loadContext("client", clientId);
+  }, [clientId, loadContext]);
 
   useEffect(() => {
     if (clientId) {
@@ -75,14 +81,18 @@ export function ClientContextPage() {
           summary={contextSummary}
           contextHealth={contextHealth}
           extractionQueue={extractionQueue}
+          searchResults={contextSearchResults}
           onDrop={(files) => clientId && addContextFiles("client", clientId, files)}
           onAddNote={(text) => clientId && addContextNote("client", clientId, text)}
           onDeleteItem={(id) => clientId && deleteContextItem(id, "client", clientId)}
           onReExtract={(id) => clientId && reExtractItem(id, "client", clientId)}
           onCopyKnowledge={(text) => void navigator.clipboard.writeText(text).catch(() => {})}
+          onCopyAllKnowledge={() => contextSummary && void navigator.clipboard.writeText(contextSummary.content).catch(() => {})}
           onApplyToBrief={() => {}}
-          onFlagWrong={(knowledgeId) => flagKnowledge(knowledgeId)}
+          onFlagWrong={(knowledgeId) => clientId && flagKnowledge(knowledgeId, "client", clientId)}
+          onSearch={(query) => clientId && searchKnowledge("client", clientId, query)}
           onLinkPreviousAttempt={() => {}}
+          onPoll={handlePoll}
         />
       </div>
     </div>

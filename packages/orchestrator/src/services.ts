@@ -48,6 +48,7 @@ export interface LoadedProjectContext {
   memory: Awaited<ReturnType<typeof readProductMemory>>["data"];
   paths: ReturnType<typeof projectPaths>;
   checkpointFiles: ReturnType<typeof checkpointPaths>;
+  clientKnowledgeSummary?: string;
 }
 
 export interface ResumeProjectResult {

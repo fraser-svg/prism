@@ -42,6 +42,7 @@ export interface KnowledgeRow {
   value: string;
   confidence: number;
   flagged: boolean;
+  sourceQuote: string | null;
   createdAt: string;
 }
 
@@ -83,6 +84,7 @@ interface RawKnowledge {
   value: string;
   confidence: number;
   flagged: number;
+  source_quote: string | null;
   created_at: string;
 }
 
@@ -164,9 +166,9 @@ export class ContextRepository {
     return row ? this.toContextItem(row) : null;
   }
 
-  deleteItem(id: string): boolean {
+  deleteItem(id: string): ContextItemRow | null {
     const item = this.getItem(id);
-    if (!item) return false;
+    if (!item) return null;
 
     // CASCADE will delete associated extracted_knowledge rows (and FTS triggers fire)
     this.db.prepare("DELETE FROM context_items WHERE id = ?").run(id);
@@ -177,7 +179,7 @@ export class ContextRepository {
       metadata: { itemId: id },
     });
 
-    return true;
+    return item;
   }
 
   updateExtractionStatus(id: string, status: string): void {
@@ -195,6 +197,7 @@ export class ContextRepository {
       key: string;
       value: string;
       confidence: number;
+      source_quote?: string;
     }>,
   ): KnowledgeRow[] {
     const item = this.getItem(itemId);
@@ -202,8 +205,8 @@ export class ContextRepository {
 
     const inserted: KnowledgeRow[] = [];
     const insert = this.db.prepare(
-      `INSERT INTO extracted_knowledge (id, client_account_id, project_id, source_item_id, category, key, value, confidence)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO extracted_knowledge (id, client_account_id, project_id, source_item_id, category, key, value, confidence, source_quote)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
 
     this.db.transaction(() => {
@@ -218,6 +221,7 @@ export class ContextRepository {
           entry.key,
           entry.value,
           entry.confidence,
+          entry.source_quote ?? null,
         );
         const raw = this.db
           .prepare("SELECT * FROM extracted_knowledge WHERE id = ?")
@@ -265,17 +269,37 @@ export class ContextRepository {
     return true;
   }
 
-  searchKnowledge(query: string): KnowledgeRow[] {
+  clearKnowledgeForItem(itemId: string): number {
+    const result = this.db
+      .prepare("DELETE FROM extracted_knowledge WHERE source_item_id = ?")
+      .run(itemId);
+    return result.changes;
+  }
+
+  searchKnowledge(query: string, scope?: EntityScope): KnowledgeRow[] {
     if (!query.trim()) return [];
-    const rows = this.db
-      .prepare(
-        `SELECT ek.* FROM extracted_knowledge ek
+    try {
+      // Wrap in double-quotes to force phrase search, neutralizing FTS5 operators
+      const safeQuery = `"${query.replace(/"/g, '""')}"`;
+      let sql = `SELECT ek.* FROM extracted_knowledge ek
          JOIN knowledge_fts fts ON ek.rowid = fts.rowid
-         WHERE knowledge_fts MATCH ?
-         ORDER BY rank`,
-      )
-      .all(query) as RawKnowledge[];
-    return rows.map((r) => this.toKnowledge(r));
+         WHERE knowledge_fts MATCH ?`;
+      const params: unknown[] = [safeQuery];
+
+      if (scope) {
+        const col = scopeCol(scope);
+        sql += ` AND ek.${col} = ?`;
+        params.push(scope.entityId);
+      }
+
+      sql += " ORDER BY rank";
+
+      const rows = this.db.prepare(sql).all(...params) as RawKnowledge[];
+      return rows.map((r) => this.toKnowledge(r));
+    } catch {
+      // FTS5 syntax errors (malformed MATCH queries) return empty results
+      return [];
+    }
   }
 
   // ─── Knowledge Summaries ───
@@ -402,6 +426,7 @@ export class ContextRepository {
       value: raw.value,
       confidence: raw.confidence,
       flagged: raw.flagged === 1,
+      sourceQuote: raw.source_quote,
       createdAt: raw.created_at,
     };
   }

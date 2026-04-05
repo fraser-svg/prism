@@ -506,9 +506,17 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
     "/api/context/items/:id",
     requireAuth,
     requireWorkspace,
-    safeHandle((req, res) => {
-      const deleted = facade.contextRepo.deleteItem(paramId(req));
-      if (!deleted) { res.status(404).json({ error: "Context item not found" }); return; }
+    safeHandle(async (req, res) => {
+      const item = facade.contextRepo.deleteItem(paramId(req));
+      if (!item) { res.status(404).json({ error: "Context item not found" }); return; }
+
+      const scope: EntityScope = item.clientAccountId
+        ? { entityType: "client", entityId: item.clientAccountId }
+        : { entityType: "project", entityId: item.projectId! };
+
+      // Recompile summary after deleting item and its knowledge
+      facade.extractionPipeline.recompileSummary(scope).catch(() => {});
+
       res.json({ data: { success: true } });
     }),
   );
@@ -550,13 +558,36 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
     }),
   );
 
+  app.get(
+    "/api/context/:entityType/:entityId/search",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const scope = parseScope(req);
+      if (!scope) { res.status(400).json({ error: "Invalid entityType or entityId" }); return; }
+      const q = typeof req.query.q === "string" ? req.query.q : "";
+      if (!q.trim()) { res.json({ data: [] }); return; }
+      const results = facade.contextRepo.searchKnowledge(q, scope);
+      res.json({ data: results });
+    }),
+  );
+
   app.post(
     "/api/context/knowledge/:id/flag",
     requireAuth,
     requireWorkspace,
-    safeHandle((req, res) => {
+    safeHandle(async (req, res) => {
+      const knowledge = facade.contextRepo.getKnowledgeById(paramId(req));
+      if (!knowledge) { res.status(404).json({ error: "Knowledge entry not found" }); return; }
       const flagged = facade.contextRepo.flagKnowledge(paramId(req));
       if (!flagged) { res.status(404).json({ error: "Knowledge entry not found" }); return; }
+
+      // Recompile summary to exclude flagged fact
+      const scope: EntityScope = knowledge.clientAccountId
+        ? { entityType: "client", entityId: knowledge.clientAccountId }
+        : { entityType: "project", entityId: knowledge.projectId! };
+      facade.extractionPipeline.recompileSummary(scope).catch(() => {});
+
       res.json({ data: { success: true } });
     }),
   );
