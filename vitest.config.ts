@@ -13,6 +13,7 @@ export default defineConfig({
       "@prism/orchestrator/pipeline-snapshot": workspacePath("./packages/orchestrator/src/pipeline-snapshot.ts"),
       "@prism/orchestrator": workspacePath("./packages/orchestrator/src/index.ts"),
       "@prism/guardian": workspacePath("./packages/guardian/src/index.ts"),
+      "@prism/execution/pricing": workspacePath("./packages/execution/src/pricing.ts"),
       "@prism/execution": workspacePath("./packages/execution/src/index.ts"),
       "@prism/ui": workspacePath("./packages/ui/src/index.ts"),
       "@prism/workspace": workspacePath("./packages/workspace/src/index.ts"),
@@ -20,7 +21,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["packages/*/src/**/*.test.ts", "packages/*/src/**/*.test.tsx", "test/**/*.test.ts"],
+    include: ["packages/*/src/**/*.test.ts", "packages/*/src/**/*.test.tsx", "apps/*/server/**/*.test.ts", "test/**/*.test.ts"],
     passWithNoTests: true,
     testTimeout: 30_000,
   },

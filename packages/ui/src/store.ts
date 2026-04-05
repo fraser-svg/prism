@@ -11,6 +11,10 @@ import type {
   KnowledgeSummary,
   ContextHealth,
   UsageStatus,
+  ConversationMessage,
+  PipelineSessionCost,
+  PreFilledField,
+  PipelineHistoryEntry,
 } from "./types";
 import type { PrismTransport } from "./transport";
 
@@ -89,6 +93,31 @@ export interface PrismStore {
   searchKnowledge: (entityType: "project" | "client", entityId: string, query: string) => Promise<void>;
   contextSearchResults: ExtractedKnowledge[];
   clientSummary: KnowledgeSummary | null;
+
+  // Pipeline conversation state
+  pipelineSessionActive: boolean;
+  pipelinePhase: string | null;
+  conversationHistory: ConversationMessage[];
+  streamingMessage: string | null;
+  statusMessage: string | null;
+  autopilotEnabled: boolean;
+  executionProgress: { tasksTotal: number; tasksCompleted: number; currentTask: string | null };
+  sessionCost: PipelineSessionCost;
+  preFilledFields: PreFilledField[];
+  pipelineHistory: PipelineHistoryEntry[];
+  pipelineError: string | null;
+
+  // Pipeline actions
+  startPipelineSession: (projectId: string) => Promise<void>;
+  sendPipelineMessage: (projectId: string, message: string) => Promise<void>;
+  approvePipelineSpec: (projectId: string, specId: string) => Promise<void>;
+  advancePipeline: (projectId: string) => Promise<void>;
+  toggleAutopilot: (projectId: string, enabled: boolean) => Promise<void>;
+  loadPipelineHistory: (projectId: string) => Promise<void>;
+  loadPreFilledFields: (projectId: string) => Promise<void>;
+  connectPipelineStream: (projectId: string) => () => void;
+  disconnectPipelineStream: () => void;
+
   resetStore: () => void;
 }
 
@@ -142,6 +171,19 @@ export function createPrismStore(transport: PrismTransport) {
     extractionQueue: { extracting: 0, total: 0 },
     contextSearchResults: [],
     clientSummary: null,
+
+    // Pipeline conversation initial state
+    pipelineSessionActive: false,
+    pipelinePhase: null,
+    conversationHistory: [],
+    streamingMessage: null,
+    statusMessage: null,
+    autopilotEnabled: false,
+    executionProgress: { tasksTotal: 0, tasksCompleted: 0, currentTask: null },
+    sessionCost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+    preFilledFields: [],
+    pipelineHistory: [],
+    pipelineError: null,
 
     loadPortfolio: async () => {
       set({ portfolioLoading: true, portfolioError: null });
@@ -407,6 +449,147 @@ export function createPrismStore(transport: PrismTransport) {
       set({ contextSearchResults: (result.data as ExtractedKnowledge[] | undefined) || [] });
     },
 
+    // --- Pipeline actions ---
+    startPipelineSession: async (projectId) => {
+      set({ pipelineError: null, statusMessage: "Resuming pipeline..." });
+      const result = await safeInvoke(() => transport.resumePipeline(projectId));
+      if (result.error) {
+        set({ pipelineError: result.error, statusMessage: null });
+        return;
+      }
+      const data = result.data as { session: { id: string; phase: string; cost: PipelineSessionCost; autopilot: boolean; activeSpecId: string | null } };
+      const s = data.session;
+      set({
+        pipelineSessionActive: true,
+        pipelinePhase: s.phase,
+        conversationHistory: [],
+        sessionCost: s.cost || { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+        autopilotEnabled: s.autopilot || false,
+        statusMessage: null,
+      });
+    },
+
+    sendPipelineMessage: async (projectId, message) => {
+      // Optimistically add user message
+      const userMsg: ConversationMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
+      set((s) => ({ conversationHistory: [...s.conversationHistory, userMsg], pipelineError: null }));
+      const result = await safeInvoke(() => transport.sendPipelineMessage(projectId, message));
+      if (result.error) {
+        // Roll back the optimistic user message on failure
+        set((s) => ({
+          pipelineError: result.error!,
+          conversationHistory: s.conversationHistory.filter((m) => m !== userMsg),
+        }));
+        return;
+      }
+      const data = result.data as { message: ConversationMessage; phase: string; cost: PipelineSessionCost };
+      set((s) => ({
+        conversationHistory: [...s.conversationHistory, data.message],
+        pipelinePhase: data.phase,
+        sessionCost: data.cost,
+      }));
+    },
+
+    approvePipelineSpec: async (projectId, specId) => {
+      const result = await safeInvoke(() => transport.approvePipelineSpec(projectId, specId));
+      if (result.error) {
+        set({ pipelineError: result.error });
+        return;
+      }
+    },
+
+    advancePipeline: async (projectId) => {
+      const result = await safeInvoke(() => transport.advancePipeline(projectId));
+      if (result.error) {
+        set({ pipelineError: result.error });
+        return;
+      }
+      const data = result.data as { phase: string; advanced: boolean };
+      if (data.advanced) {
+        set({ pipelinePhase: data.phase, conversationHistory: [] });
+      }
+    },
+
+    toggleAutopilot: async (projectId, enabled) => {
+      const result = await safeInvoke(() => transport.togglePipelineAutopilot(projectId, enabled));
+      if (result.error) {
+        set({ pipelineError: result.error });
+        return;
+      }
+      set({ autopilotEnabled: enabled });
+    },
+
+    loadPipelineHistory: async (projectId) => {
+      const result = await safeInvoke(() => transport.getPipelineHistory(projectId));
+      if (result.error) return;
+      set({ pipelineHistory: (result.data as PipelineHistoryEntry[]) || [] });
+    },
+
+    loadPreFilledFields: async (projectId) => {
+      const result = await safeInvoke(() => transport.getPipelinePreFilled(projectId));
+      if (result.error) return;
+      set({ preFilledFields: (result.data as PreFilledField[]) || [] });
+    },
+
+    connectPipelineStream: (projectId) => {
+      const es = transport.getPipelineStream(projectId);
+      if (!es) return () => {};
+
+      es.addEventListener("message", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === "message" && data.data?.role === "assistant") {
+            // Only add SSE-delivered messages if they aren't duplicates
+            // (sendPipelineMessage already appends the response from POST /message)
+            set((s) => {
+              const last = s.conversationHistory[s.conversationHistory.length - 1];
+              if (last?.role === "assistant" && last?.content === data.data.content) {
+                return {}; // Skip duplicate
+              }
+              return { conversationHistory: [...s.conversationHistory, { role: data.data.role, content: data.data.content, timestamp: new Date().toISOString() }] };
+            });
+          } else if (data.type === "phase_changed") {
+            set({ pipelinePhase: data.data?.phase, conversationHistory: [] });
+          } else if (data.type === "cost_update") {
+            set({ sessionCost: data.data });
+          } else if (data.type === "status_update") {
+            set({ statusMessage: data.data?.message });
+          } else if (data.type === "execution_progress") {
+            set({ executionProgress: data.data?.progress });
+          } else if (data.type === "error") {
+            set({ pipelineError: data.data?.message });
+          } else if (data.type === "snapshot") {
+            // Full state snapshot on reconnect
+            const snap = data.data;
+            if (snap) {
+              set({
+                pipelinePhase: snap.phase,
+                conversationHistory: snap.conversationHistory || [],
+                sessionCost: snap.cost || { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+                autopilotEnabled: snap.autopilot || false,
+                pipelineSessionActive: true,
+              });
+            }
+          }
+        } catch {
+          // Ignore malformed SSE data
+        }
+      });
+
+      es.onerror = () => {
+        set({ statusMessage: "Connection lost. Reconnecting..." });
+      };
+
+      // Store cleanup reference
+      const cleanup = () => { es.close(); };
+      return cleanup;
+    },
+
+    disconnectPipelineStream: () => {
+      // Caller manages cleanup via the return value of connectPipelineStream
+      set({ pipelineSessionActive: false, streamingMessage: null, statusMessage: null });
+    },
+
     resetStore: () => {
       set({
         clients: [],
@@ -433,6 +616,18 @@ export function createPrismStore(transport: PrismTransport) {
         extractionQueue: { extracting: 0, total: 0 },
         contextSearchResults: [],
         clientSummary: null,
+        // Pipeline reset
+        pipelineSessionActive: false,
+        pipelinePhase: null,
+        conversationHistory: [],
+        streamingMessage: null,
+        statusMessage: null,
+        autopilotEnabled: false,
+        executionProgress: { tasksTotal: 0, tasksCompleted: 0, currentTask: null },
+        sessionCost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+        preFilledFields: [],
+        pipelineHistory: [],
+        pipelineError: null,
       });
     },
   }));

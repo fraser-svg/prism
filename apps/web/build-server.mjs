@@ -22,6 +22,7 @@ await build({
     "@prism/orchestrator/pipeline-snapshot": resolve(pkgs, "orchestrator/src/pipeline-snapshot.ts"),
     "@prism/guardian": resolve(pkgs, "guardian/src/index.ts"),
     "@prism/execution": resolve(pkgs, "execution/src/index.ts"),
+    "@prism/execution/pricing": resolve(pkgs, "execution/src/pricing.ts"),
     "@prism/workspace": resolve(pkgs, "workspace/src/index.ts"),
     "@prism/ui": resolve(pkgs, "ui/src/index.ts"),
   },

@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { PipelineStrip } from "./PipelineStrip";
 import { ContextTab } from "./ContextTab";
+import { PipelineChat } from "./PipelineChat";
 import type { StageView } from "../types";
 
 const STATUS_CHIP: Record<string, { bg: string; text: string; label: string }> = {
@@ -45,10 +46,24 @@ export function ControlRoom() {
     flagKnowledge,
     searchKnowledge,
     applyToBrief,
+    // Pipeline conversation
+    pipelineSessionActive,
+    pipelinePhase,
+    conversationHistory,
+    statusMessage,
+    autopilotEnabled,
+    sessionCost,
+    pipelineError,
+    startPipelineSession,
+    sendPipelineMessage,
+    toggleAutopilot,
+    connectPipelineStream,
+    disconnectPipelineStream,
   } = usePrismStore();
 
   const [selectedStage, setSelectedStage] = useState<StageView | null>(null);
   const [activeTab, setActiveTab] = useState<"pipeline" | "context">("pipeline");
+  const streamCleanupRef = useRef<(() => void) | null>(null);
 
   const project = projects.find((p) => p.id === id);
 
@@ -114,6 +129,29 @@ export function ControlRoom() {
   const handleSearch = (query: string) => {
     if (id) searchKnowledge("project", id, query);
   };
+  const handleStartPipeline = useCallback(async () => {
+    if (!id) return;
+    await startPipelineSession(id);
+    const cleanup = connectPipelineStream(id);
+    streamCleanupRef.current = cleanup;
+  }, [id, startPipelineSession, connectPipelineStream]);
+
+  const handleSendMessage = useCallback((message: string) => {
+    if (id) sendPipelineMessage(id, message);
+  }, [id, sendPipelineMessage]);
+
+  const handleToggleAutopilot = useCallback((enabled: boolean) => {
+    if (id) toggleAutopilot(id, enabled);
+  }, [id, toggleAutopilot]);
+
+  // Cleanup SSE on unmount
+  useEffect(() => {
+    return () => {
+      streamCleanupRef.current?.();
+      disconnectPipelineStream();
+    };
+  }, [disconnectPipelineStream]);
+
   const handleLinkPreviousAttempt = () => {};
   const handlePoll = useCallback(() => {
     if (id) loadContext("project", id);
@@ -156,10 +194,12 @@ export function ControlRoom() {
             </div>
             <button
               className="flex items-center gap-2 rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700"
-              onClick={() => toggleDrawer(id)}
+              onClick={pipelineSessionActive ? () => toggleDrawer(id) : handleStartPipeline}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bolt</span>
-              Open Session
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                {pipelineSessionActive ? "play_arrow" : "bolt"}
+              </span>
+              {pipelineSessionActive ? "Continue Pipeline" : "Start Pipeline"}
             </button>
           </div>
 
@@ -189,7 +229,21 @@ export function ControlRoom() {
         </section>
 
         {/* Pipeline tab */}
-        {activeTab === "pipeline" && (
+        {activeTab === "pipeline" && pipelineSessionActive && pipelinePhase && (
+          <PipelineChat
+            projectId={id!}
+            phase={pipelinePhase}
+            messages={conversationHistory}
+            cost={sessionCost}
+            autopilot={autopilotEnabled}
+            statusMessage={statusMessage}
+            error={pipelineError}
+            onSendMessage={handleSendMessage}
+            onToggleAutopilot={handleToggleAutopilot}
+          />
+        )}
+
+        {activeTab === "pipeline" && !pipelineSessionActive && (
           <div className="grid grid-cols-10 gap-6">
             {/* Main flow (70%) */}
             <div className="col-span-7 space-y-6">

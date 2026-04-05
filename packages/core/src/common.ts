@@ -16,6 +16,17 @@ export const WORKFLOW_PHASES = [
 
 export type WorkflowPhase = (typeof WORKFLOW_PHASES)[number];
 
+export const PHASE_LABELS: Record<WorkflowPhase, string> = {
+  understand: "Understanding",
+  identify_problem: "Identifying Problem",
+  spec: "Specifying",
+  plan: "Planning",
+  execute: "Executing",
+  verify: "Verifying",
+  release: "Releasing",
+  resume: "Resuming",
+};
+
 export type ProjectStatus = "active" | "paused" | "blocked" | "archived";
 export type SpecType = "product" | "change" | "task";
 export type SpecStatus =

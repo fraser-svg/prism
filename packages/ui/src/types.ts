@@ -170,3 +170,43 @@ export interface KnowledgeSummary {
   sourceItemCount: number | null;
   generatedAt: string;
 }
+
+// Pipeline conversation types
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  toolUse?: { name: string; input: Record<string, unknown> } | null;
+}
+
+export interface PipelineSessionCost {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+export interface PipelineSessionState {
+  phase: string;
+  conversationHistory: ConversationMessage[];
+  autopilot: boolean;
+  cost: PipelineSessionCost;
+  activeSpecId: string | null;
+  status: string;
+}
+
+export interface PreFilledField {
+  key: string;
+  value: string;
+  confidence: number;
+  category: string;
+}
+
+export interface PipelineHistoryEntry {
+  id: string;
+  projectId: string;
+  phase: string;
+  status: string;
+  totalCostUsd: number;
+  createdAt: string;
+  updatedAt: string;
+}
