@@ -5,6 +5,12 @@ import multer from "multer";
 import { randomUUID } from "node:crypto";
 import { WorkspaceFacade, ClientRepository, buildProviderViews } from "@prism/workspace";
 import type { EntityScope } from "@prism/workspace";
+import {
+  requireStripe,
+  createCheckoutSession,
+  createPortalSession,
+  handleWebhook,
+} from "./billing.js";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath, IntakeBrief } from "@prism/core";
 import { createIntakeBriefRepository } from "@prism/memory";
@@ -118,6 +124,15 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
   // --- Auth ---
   const auth = createAuth(facade.context.db.inner);
 
+  // Stripe webhook MUST be before express.json() — needs raw body for signature verification
+  app.post(
+    "/api/billing/webhook",
+    express.raw({ type: "application/json" }),
+    safeHandle(async (req, res) => {
+      await handleWebhook(req, res, facade.usageGate);
+    }),
+  );
+
   // Mount Better Auth BEFORE express.json() — OAuth callbacks need raw body parsing
   const authHandler = toNodeHandler(auth);
   app.all("/api/auth/*splat", (req, res) => {
@@ -161,6 +176,13 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
       return;
     }
     next();
+  }
+
+  // --- Helper: extract user ID from session ---
+  async function getUserId(req: express.Request): Promise<string | null> {
+    if (process.env.SKIP_AUTH === "true") return "dev-user";
+    const session = await auth.api.getSession({ headers: new Headers(req.headers as Record<string, string>) });
+    return session?.user?.id ?? null;
   }
 
   // --- Routes ---
@@ -596,6 +618,102 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
     }),
   );
 
+  // --- Usage ---
+  app.get(
+    "/api/usage",
+    requireAuth,
+    requireWorkspace,
+    safeHandle(async (req, res) => {
+      const userId = await getUserId(req);
+      if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+      const usage = facade.usageGate.getUsage(userId);
+      res.json({ data: usage });
+    }),
+  );
+
+  // --- Billing ---
+  app.post(
+    "/api/billing/checkout",
+    requireAuth,
+    requireWorkspace,
+    requireStripe,
+    safeHandle(async (req, res) => {
+      await createCheckoutSession(req, res, facade.usageGate, getUserId);
+    }),
+  );
+
+  app.post(
+    "/api/billing/portal",
+    requireAuth,
+    requireWorkspace,
+    requireStripe,
+    safeHandle(async (req, res) => {
+      await createPortalSession(req, res, facade.usageGate, getUserId);
+    }),
+  );
+
+  // --- Vault: BYO API keys ---
+  const ALLOWED_BYO_PROVIDERS = new Set(["anthropic", "openai"]);
+
+  app.put(
+    "/api/vault/providers/:provider",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const provider = req.params.provider;
+      if (!ALLOWED_BYO_PROVIDERS.has(provider)) {
+        res.status(400).json({ error: `Unknown provider: ${provider}` });
+        return;
+      }
+      const { apiKey } = req.body as { apiKey?: string };
+      if (!apiKey || typeof apiKey !== "string") {
+        res.status(400).json({ error: "apiKey is required" });
+        return;
+      }
+      // Trim whitespace and strip common env var prefixes
+      const cleaned = apiKey.trim().replace(/^[A-Z_]+=/, "");
+      if (!cleaned) {
+        res.status(400).json({ error: "Invalid API key" });
+        return;
+      }
+      // Remove existing, then register with new key
+      facade.integrations.remove(provider, "byo");
+      facade.integrations.register(provider, "byo", { apiKey: cleaned });
+      res.json({ data: { success: true } });
+    }),
+  );
+
+  app.delete(
+    "/api/vault/providers/:provider",
+    requireAuth,
+    requireWorkspace,
+    safeHandle((req, res) => {
+      const provider = req.params.provider;
+      if (!ALLOWED_BYO_PROVIDERS.has(provider)) {
+        res.status(400).json({ error: `Unknown provider: ${provider}` });
+        return;
+      }
+      facade.integrations.remove(provider, "byo");
+      res.json({ data: { success: true } });
+    }),
+  );
+
+  // --- Vault: GitHub connection status ---
+  app.get(
+    "/api/vault/github",
+    requireAuth,
+    requireWorkspace,
+    safeHandle(async (req, res) => {
+      const userId = await getUserId(req);
+      if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+      // Check if user has a GitHub account linked via Better Auth
+      const account = facade.context.db.inner
+        .prepare("SELECT id FROM account WHERE userId = ? AND providerId = 'github'")
+        .get(userId) as { id: string } | undefined;
+      res.json({ data: { connected: !!account } });
+    }),
+  );
+
   // --- 404 for unknown API routes (before the SPA catch-all) ---
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "API route not found" });
@@ -632,6 +750,17 @@ if (isMainModule || process.env.PRISM_START_SERVER === "true") {
     facade = new WorkspaceFacade();
     facade.context.db.inner.pragma("busy_timeout = 5000");
     clients = new ClientRepository(facade.context.db.inner);
+    // Register Prism's own API keys as platform-level integrations
+    if (process.env.ANTHROPIC_API_KEY) {
+      facade.integrations.ensureRegistered("anthropic", "platform", {
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+    }
+    if (process.env.OPENAI_API_KEY) {
+      facade.integrations.ensureRegistered("openai", "platform", {
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
     console.log("Workspace initialized");
   } catch (err) {
     console.error("Failed to initialize workspace:", err);

@@ -1,8 +1,10 @@
 import { Button, Card, CardContent, ProgressBar } from "@heroui/react";
 
 interface OnboardingGuideProps {
+  hasGitHub: boolean;
   hasClients: boolean;
   hasProjects: boolean;
+  onConnectGitHub: () => void;
   onCreateClient: () => void;
   onCreateProject: () => void;
 }
@@ -16,7 +18,7 @@ function StepCircle({
 }) {
   return (
     <div
-      aria-label={`Step ${step} of 2`}
+      aria-label={`Step ${step} of 3`}
       style={{
         width: 32,
         height: 32,
@@ -37,12 +39,14 @@ function StepCircle({
 }
 
 export function OnboardingGuide({
+  hasGitHub,
   hasClients,
   hasProjects,
+  onConnectGitHub,
   onCreateClient,
   onCreateProject,
 }: OnboardingGuideProps) {
-  const completedSteps = (hasClients ? 1 : 0) + (hasProjects ? 1 : 0);
+  const completedSteps = (hasGitHub ? 1 : 0) + (hasClients ? 1 : 0) + (hasProjects ? 1 : 0);
 
   return (
     <div className="fade-in flex h-[60%] flex-col items-center justify-center gap-6">
@@ -51,22 +55,53 @@ export function OnboardingGuide({
           Welcome to Prismatic
         </h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Set up your workspace in two steps
+          Set up your workspace in three steps
         </p>
       </div>
 
       <div className="w-full max-w-[480px]">
         <ProgressBar
           aria-label="Setup progress"
-          value={(completedSteps / 2) * 100}
+          value={(completedSteps / 3) * 100}
           color="primary"
           size="sm"
           className="mb-6"
         />
       </div>
 
-      <div className="flex w-full max-w-[560px] flex-col gap-4 sm:flex-row">
-        {/* Step 1: Add a Client */}
+      <div className="flex w-full max-w-[720px] flex-col gap-4 sm:flex-row">
+        {/* Step 1: Connect GitHub */}
+        <Card
+          className="flex-1"
+          style={{
+            opacity: hasGitHub ? 0.5 : 1,
+            border: !hasGitHub ? "1px solid var(--accent-blue)" : "1px solid var(--border-default)",
+          }}
+        >
+          <CardContent className="flex flex-col gap-3 p-5">
+            <div className="flex items-center gap-3">
+              <StepCircle step={1} done={hasGitHub} />
+              <span className="text-sm font-semibold text-[var(--foreground)]">
+                Connect GitHub
+              </span>
+            </div>
+            <p className="text-xs text-[var(--muted)]">
+              Link your GitHub account so Prismatic can access your repositories.
+            </p>
+            {!hasGitHub && (
+              <Button
+                size="sm"
+                variant="primary"
+                onPress={onConnectGitHub}
+                className="mt-1 self-start"
+              >
+                Connect GitHub
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Step 2: Add a Client */}
         <Card
           className="flex-1"
           style={{
@@ -76,7 +111,7 @@ export function OnboardingGuide({
         >
           <CardContent className="flex flex-col gap-3 p-5">
             <div className="flex items-center gap-3">
-              <StepCircle step={1} done={hasClients} />
+              <StepCircle step={2} done={hasClients} />
               <span className="text-sm font-semibold text-[var(--foreground)]">
                 Add a Client
               </span>
@@ -98,7 +133,7 @@ export function OnboardingGuide({
           </CardContent>
         </Card>
 
-        {/* Step 2: Create a Project */}
+        {/* Step 3: Create a Project */}
         <Card
           className="flex-1"
           style={{
@@ -108,7 +143,7 @@ export function OnboardingGuide({
         >
           <CardContent className="flex flex-col gap-3 p-5">
             <div className="flex items-center gap-3">
-              <StepCircle step={2} done={hasProjects} />
+              <StepCircle step={3} done={hasProjects} />
               <span className="text-sm font-semibold text-[var(--foreground)]">
                 Create a Project
               </span>

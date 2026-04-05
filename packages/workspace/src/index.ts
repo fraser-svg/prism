@@ -19,6 +19,8 @@ export type { IntegrationRow, HealthResult, HealthAdapter } from "./integration-
 export { buildProviderViews, PROVIDER_DISPLAY_NAMES } from "./provider-views";
 export type { ProviderViewData } from "./provider-views";
 export { ProjectTemplates } from "./templates";
+export { UsageGate } from "./usage-gate";
+export type { UsageStatus } from "./usage-gate";
 export { WorkspaceFacade } from "./workspace-facade";
 export type {
   WorkspaceSettings,

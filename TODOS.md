@@ -482,3 +482,27 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 **How:** Add `test/context-routes.test.ts` using supertest against the Express app. Test: auth required (401 without session), file upload via multipart (201 + item created), oversized file (413), missing required fields (400), re-extract triggers pipeline, flag/apply endpoints work. ~8-10 test cases.
 
 **Depends on:** Context Dump backend shipped (fraser-svg/littlebird-research).
+
+## Free-Trial Abuse Prevention (P3)
+
+**What:** Rate limiting and abuse detection for the free 50-action tier. Options include IP-based rate limiting, email verification before free tier activation, CAPTCHA on sign-up, and fingerprinting repeat sign-ups.
+
+**Why:** The current free tier relies on user_id from auth. A motivated abuser could create multiple accounts to get unlimited free actions. Low priority because early beta volume is tiny, but should be addressed before broad marketing.
+
+**When:** Before any paid marketing campaign or public launch that could attract abuse.
+
+**How:** Simplest: require email verification (Better Auth supports this). Medium: add IP-based daily caps. Full: device fingerprinting + anomaly detection. Start with email verification.
+
+**Depends on:** Vault + usage-gated paywall shipped (fraser-svg/onboarding-api-keys).
+
+## Subscription Tier Configuration (P1)
+
+**What:** Allow YC advisory board to configure subscription tiers with custom usage limits, pricing, and feature gates. Move hardcoded FREE_LIMIT (50) and PAID_DAILY_CAP (500) to a configurable tiers table.
+
+**Why:** Fraser wants his YC advisory board to define subscription tiers with usage limits, not hardcoded values. This enables experimentation with pricing and tier structure without code changes.
+
+**When:** Before YC application submission (May 3, 2026) so advisors can adjust tiers.
+
+**How:** Create a `subscription_tiers` table with columns: tier_id, name, monthly_price_cents, action_limit, daily_cap, features (JSON). Update UsageGate to read limits from this table instead of constants. Add an admin API for tier CRUD. Frontend: tiers dropdown in Vault upgrade flow.
+
+**Depends on:** Vault + usage-gated paywall shipped (fraser-svg/onboarding-api-keys).

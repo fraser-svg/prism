@@ -4,6 +4,23 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.28.0] - 2026-04-05
+
+### Added
+- **Vault page** (`/vault`) — central hub for subscription status, GitHub connection, and BYO API keys (Anthropic, OpenAI).
+- **Usage-gated beta paywall** — 50 free AI actions/day for free users, 500/day for Pro ($49/mo). Atomic SQL prevents race conditions.
+- **Stripe Checkout + Customer Portal** — full subscription lifecycle via webhooks (checkout.session.completed, subscription.updated/deleted) with idempotency.
+- **UsageGate service** — pure DB usage tracking with check-on-access daily reset, separated from Stripe API layer.
+- **UpgradeModal** — shown when free users hit their action limit, with Pro benefits and one-click checkout.
+- **3-step onboarding** — Connect GitHub (step 1), Add Client (step 2), Create Project (step 3). Usage bar in app shell for free users.
+- **18 UsageGate tests** — atomic limits, daily reset, subscription lifecycle, idempotency, concurrent access prevention.
+- **BYO API key management** — save/remove provider keys via Vault with allowlist validation.
+
+### Changed
+- OnboardingGuide expanded from 2 steps to 3 (GitHub connection added as step 1).
+- ExtractionPipeline API key getter now uses `IntegrationCabinet.getByProvider()` instead of raw column queries.
+- GitHub OAuth scope now includes `read:user`.
+
 ## [4.0.27.0] - 2026-04-05
 
 ### Added

@@ -102,6 +102,15 @@ export class IntegrationCabinet {
     }
   }
 
+  getByProvider(provider: string): IntegrationRow | null {
+    const row = this.db
+      .prepare(
+        "SELECT * FROM integrations WHERE provider = ? ORDER BY registered_at DESC LIMIT 1",
+      )
+      .get(provider) as RawIntegrationRow | undefined;
+    return row ? this.toIntegrationRow(row) : null;
+  }
+
   async checkHealth(
     provider: string,
     instanceLabel: string,

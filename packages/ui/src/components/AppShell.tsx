@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { SessionDrawer } from "./SessionDrawer";
@@ -15,12 +15,17 @@ const NAV_ITEMS = [
 
 const BOTTOM_NAV = [
   { icon: "tune", label: "Providers", path: "/providers" },
+  { icon: "lock", label: "Vault", path: "/vault" },
 ] as const;
 
 export function AppShell({ header, hideSidebar }: AppShellProps) {
-  const { drawerOpen } = usePrismStore();
+  const { drawerOpen, usage, loadUsage } = usePrismStore();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadUsage();
+  }, [loadUsage]);
 
   if (hideSidebar) {
     return (
@@ -75,8 +80,24 @@ export function AppShell({ header, hideSidebar }: AppShellProps) {
           })}
         </nav>
 
+        {/* Usage bar (free users only) */}
+        {usage && !usage.isPaid && (
+          <div className="mx-4 mb-3 mt-auto">
+            <div className="flex items-center justify-between text-[12px] text-stone-500">
+              <span>{usage.remaining} actions left</span>
+              <span>{usage.used}/{usage.limit}</span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+              <div
+                className="h-full rounded-full bg-[#91A6FF] transition-all"
+                style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Bottom nav */}
-        <div className="mt-auto space-y-0.5 border-t border-stone-100 px-3 pt-4">
+        <div className={`${usage?.isPaid !== false ? "mt-auto" : ""} space-y-0.5 border-t border-stone-100 px-3 pt-4`}>
           {BOTTOM_NAV.map((item) => {
             const active = isActive(item.path);
             return (

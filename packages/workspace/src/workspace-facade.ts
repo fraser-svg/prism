@@ -11,6 +11,7 @@ import { IntegrationCabinet } from "./integration-cabinet";
 import { ProjectTemplates } from "./templates";
 import { ContextRepository } from "./context-repository";
 import { ExtractionPipeline } from "./extraction-pipeline";
+import { UsageGate } from "./usage-gate";
 import type { WorkspaceStatus, ProjectBadge } from "./types";
 
 export class WorkspaceFacade {
@@ -24,6 +25,7 @@ export class WorkspaceFacade {
   readonly templates: ProjectTemplates;
   readonly contextRepo: ContextRepository;
   readonly extractionPipeline: ExtractionPipeline;
+  readonly usageGate: UsageGate;
 
   constructor(homePath?: AbsolutePath) {
     this.context = WorkspaceManager.initialize(homePath);
@@ -46,13 +48,13 @@ export class WorkspaceFacade {
       `${this.context.homePath}/templates`,
     );
     this.contextRepo = new ContextRepository(db);
+    this.usageGate = new UsageGate(db);
     this.extractionPipeline = new ExtractionPipeline(db, () => {
       // Lazy API key getter: check IntegrationCabinet for Anthropic provider
       try {
-        const row = db
-          .prepare("SELECT api_key FROM integrations WHERE provider_id = 'anthropic' AND status = 'connected'")
-          .get() as { api_key: string } | undefined;
-        return row?.api_key ?? null;
+        const integration = this.integrations.getByProvider("anthropic");
+        if (!integration || integration.status !== "connected") return null;
+        return (integration.config?.apiKey as string) ?? null;
       } catch {
         return null;
       }

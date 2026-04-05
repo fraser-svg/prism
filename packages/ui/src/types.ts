@@ -1,3 +1,10 @@
+export interface UsageStatus {
+  used: number;
+  limit: number;
+  remaining: number;
+  isPaid: boolean;
+}
+
 export interface PrismAPI {
   listPortfolio: () => Promise<IpcResult>;
   createClient: (name: string, notes?: string) => Promise<IpcResult>;

@@ -27,6 +27,7 @@ export function createAuth(db: Database.Database) {
         clientId: process.env.GITHUB_CLIENT_ID || "",
         clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
         enabled: !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET),
+        scope: ["read:user"],
       },
     },
     secret: process.env.BETTER_AUTH_SECRET,
