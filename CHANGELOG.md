@@ -4,6 +4,20 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.29.0] - 2026-04-05
+
+### Added
+- **2-step client creation wizard** — Step 1 names the client, Step 2 prompts users to upload files/notes so Prism learns about their client before building. "The more Prism knows, the smarter every build gets."
+- **Shared context components** (`ContextDropZone`, `ContextNoteInput`, `ContextItemList`, `KnowledgePanel`) extracted to `ContextShared.tsx` — reused by both the wizard and the existing Context tab.
+- **Upload error surfacing** — `addContextFiles` now collects failed filenames and throws so callers can display inline errors.
+- **4 new wizard tests** and 1 new Portfolio dropdown test.
+
+### Changed
+- `createClient` now returns `ClientView` (was `void`) — enables wizard to advance to Step 2 with the new client's ID without waiting for portfolio refresh.
+- Portfolio "+ Client" and "+ Project" buttons merged into a single "+ New" dropdown.
+- "View All" link on client groups renamed to "Knowledge" with `psychology` icon.
+- Context tab empty state now shows value headline: "Context is how Prism learns about your client."
+
 ## [4.0.28.0] - 2026-04-05
 
 ### Added
