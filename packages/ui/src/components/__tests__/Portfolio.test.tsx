@@ -48,7 +48,7 @@ describe("Portfolio", () => {
     setStore({ projects: [], clients: [] });
     renderPortfolio();
     expect(screen.getByText("Welcome to Prismatic")).toBeTruthy();
-    expect(screen.getByText("Set up your workspace in two steps")).toBeTruthy();
+    expect(screen.getByText("Set up your workspace in three steps")).toBeTruthy();
   });
 
   it("does NOT show OnboardingGuide when projects exist", () => {
@@ -59,13 +59,13 @@ describe("Portfolio", () => {
       ],
     });
     renderPortfolio();
-    expect(screen.queryByText("Set up your workspace in two steps")).toBeNull();
+    expect(screen.queryByText("Set up your workspace in three steps")).toBeNull();
   });
 
   it("hides onboarding when searchQuery is active even with 0 projects", () => {
     setStore({ projects: [], clients: [], searchQuery: "foo" });
     renderPortfolio();
-    expect(screen.queryByText("Set up your workspace in two steps")).toBeNull();
+    expect(screen.queryByText("Set up your workspace in three steps")).toBeNull();
   });
 
   it("shows step 1 as complete when clients exist but no projects", () => {
@@ -74,8 +74,8 @@ describe("Portfolio", () => {
       clients: [{ id: "c1", name: "Acme Corp" }],
     });
     renderPortfolio();
-    const step1 = screen.getByLabelText("Step 1 of 2");
-    expect(step1.textContent).toBe("\u2713");
+    const step2 = screen.getByLabelText("Step 2 of 3");
+    expect(step2.textContent).toBe("\u2713");
   });
 
   it("hides client group grid when onboarding is showing", () => {
@@ -90,7 +90,7 @@ describe("Portfolio", () => {
     // OnboardingGuide does not contain "Acme Corp", so it should be absent
     expect(screen.queryByText("Unassigned")).toBeNull();
     // Verify onboarding IS showing
-    expect(screen.getByText("Set up your workspace in two steps")).toBeTruthy();
+    expect(screen.getByText("Set up your workspace in three steps")).toBeTruthy();
   });
 
   it("shows no-results state when search filters everything out", () => {
@@ -101,6 +101,6 @@ describe("Portfolio", () => {
       portfolioGroups: [],
     });
     renderPortfolio();
-    expect(screen.queryByText("Set up your workspace in two steps")).toBeNull();
+    expect(screen.queryByText("Set up your workspace in three steps")).toBeNull();
   });
 });
