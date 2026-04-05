@@ -8,7 +8,7 @@ export interface PrismTransport {
   listPortfolio(): Promise<IpcResult>;
   createClient(name: string, notes?: string): Promise<IpcResult>;
   updateClient(id: string, fields: Record<string, unknown>): Promise<IpcResult>;
-  createProject(name: string, rootPath: string, clientAccountId?: string): Promise<IpcResult>;
+  createProject(name: string, rootPath?: string, clientAccountId?: string): Promise<IpcResult>;
   linkProject(rootPath: string, clientAccountId?: string): Promise<IpcResult>;
   updateProject(id: string, fields: Record<string, unknown>): Promise<IpcResult>;
   getProjectPipeline(projectId: string): Promise<IpcResult>;
@@ -33,7 +33,7 @@ export class IpcTransport implements PrismTransport {
   listPortfolio() { return window.prism.listPortfolio(); }
   createClient(name: string, notes?: string) { return window.prism.createClient(name, notes); }
   updateClient(id: string, fields: Record<string, unknown>) { return window.prism.updateClient(id, fields); }
-  createProject(name: string, rootPath: string, clientAccountId?: string) { return window.prism.createProject(name, rootPath, clientAccountId); }
+  createProject(name: string, rootPath?: string, clientAccountId?: string) { return window.prism.createProject(name, rootPath ?? "", clientAccountId); }
   linkProject(rootPath: string, clientAccountId?: string) { return window.prism.linkProject(rootPath, clientAccountId); }
   updateProject(id: string, fields: Record<string, unknown>) { return window.prism.updateProject(id, fields); }
   getProjectPipeline(projectId: string) { return window.prism.getProjectPipeline(projectId); }
@@ -93,8 +93,11 @@ export class FetchTransport implements PrismTransport {
   updateClient(id: string, fields: Record<string, unknown>) {
     return this.request(`/clients/${id}`, { method: "PATCH", body: JSON.stringify(fields) });
   }
-  createProject(name: string, rootPath: string, clientAccountId?: string) {
-    return this.request("/projects", { method: "POST", body: JSON.stringify({ name, rootPath, clientAccountId }) });
+  createProject(name: string, rootPath?: string, clientAccountId?: string) {
+    const body: Record<string, string> = { name };
+    if (rootPath) body.rootPath = rootPath;
+    if (clientAccountId) body.clientAccountId = clientAccountId;
+    return this.request("/projects", { method: "POST", body: JSON.stringify(body) });
   }
   linkProject(rootPath: string, clientAccountId?: string) {
     return this.request("/projects/link", { method: "POST", body: JSON.stringify({ rootPath, clientAccountId }) });

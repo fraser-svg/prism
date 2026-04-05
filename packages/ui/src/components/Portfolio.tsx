@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePrismStore } from "../context";
 import { ProjectCard } from "./ProjectCard";
@@ -26,9 +26,6 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
   const navigate = useNavigate();
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
-  const [initialProjectPath, setInitialProjectPath] = useState("");
-  const [browsing, setBrowsing] = useState(false);
-  const browsingRef = useRef(false);
 
   useEffect(() => {
     loadPortfolio().then(() => scanAllPipelines());
@@ -98,29 +95,8 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
 
   const showOnboarding = projects.length === 0 && !searchQuery;
 
-  const openCreateProject = async () => {
-    if (!onBrowse) {
-      setInitialProjectPath("");
-      setShowCreateProject(true);
-      return;
-    }
-
-    if (browsingRef.current) return;
-    browsingRef.current = true;
-    setBrowsing(true);
-    try {
-      const selected = await onBrowse();
-      setInitialProjectPath(selected || "");
-      setShowCreateProject(true);
-    } finally {
-      browsingRef.current = false;
-      setBrowsing(false);
-    }
-  };
-
-  const closeCreateProject = () => {
-    setShowCreateProject(false);
-    setInitialProjectPath("");
+  const openCreateProject = () => {
+    setShowCreateProject(true);
   };
 
   return (
@@ -143,11 +119,10 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
             + Client
           </button>
           <button
-            className="rounded-lg bg-stone-800 px-3 py-1.5 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-50"
-            disabled={browsing}
+            className="rounded-lg bg-stone-800 px-3 py-1.5 text-[15px] font-medium text-white transition-colors hover:bg-stone-700"
             onClick={openCreateProject}
           >
-            {browsing ? "Opening..." : "+ Project"}
+            + Project
           </button>
         </div>
       </header>
@@ -201,10 +176,9 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       )}
       {showCreateProject && (
         <CreateProjectModal
-          onClose={closeCreateProject}
+          onClose={() => setShowCreateProject(false)}
           onBrowse={onBrowse}
           defaultClientId={clients.length === 1 ? clients[0].id : undefined}
-          initialRootPath={initialProjectPath}
         />
       )}
     </div>

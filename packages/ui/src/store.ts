@@ -59,7 +59,7 @@ export interface PrismStore {
   createClient: (name: string, notes?: string) => Promise<void>;
   createProject: (
     name: string,
-    rootPath: string,
+    rootPath?: string,
     clientAccountId?: string,
   ) => Promise<void>;
   linkProject: (rootPath: string, clientAccountId?: string) => Promise<void>;

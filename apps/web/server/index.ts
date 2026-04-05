@@ -8,8 +8,8 @@ import type { EntityScope } from "@prism/workspace";
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath, IntakeBrief } from "@prism/core";
 import { createIntakeBriefRepository } from "@prism/memory";
-import { existsSync } from "node:fs";
-import { selectDirectory } from "./native-dialog.js";
+import { existsSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { toNodeHandler } from "better-auth/node";
@@ -39,9 +39,22 @@ function sanitizePath(raw: string): string {
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1).max(200),
-  rootPath: z.string().min(1).transform(sanitizePath),
+  rootPath: z.string().min(1).transform(sanitizePath).optional(),
   clientAccountId: z.string().optional(),
 });
+
+/** Base directory for auto-created projects */
+function prismaticBase(): string {
+  return resolve(join(homedir(), "Prismatic"));
+}
+
+/** Slugify a project name for use as a directory name */
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "project";
+}
 
 const LinkProjectSchema = z.object({
   rootPath: z.string().min(1).transform(sanitizePath),
@@ -207,11 +220,39 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
         res.status(400).json({ error: parsed.error.issues[0].message });
         return;
       }
-      const { name, rootPath, clientAccountId } = parsed.data;
-      if (!existsSync(rootPath)) {
-        res.status(400).json({ error: "Path not found: directory does not exist" });
-        return;
+      const { name, clientAccountId } = parsed.data;
+      const base = prismaticBase();
+
+      // Determine rootPath: use provided path or auto-generate under ~/Prismatic/
+      let rootPath = parsed.data.rootPath;
+      if (!rootPath) {
+        let slug = nameToSlug(name);
+        let candidate = resolve(join(base, slug));
+        let suffix = 2;
+        while (existsSync(candidate)) {
+          candidate = resolve(join(base, `${slug}-${suffix}`));
+          suffix++;
+        }
+        rootPath = candidate;
       }
+
+      // Auto-create directories under ~/Prismatic/; require others to exist already
+      if (!existsSync(rootPath)) {
+        if (resolve(rootPath).startsWith(base + "/")) {
+          try {
+            mkdirSync(rootPath, { recursive: true });
+          } catch (err) {
+            res.status(400).json({
+              error: `Failed to create directory: ${err instanceof Error ? err.message : String(err)}`,
+            });
+            return;
+          }
+        } else {
+          res.status(400).json({ error: "Path not found: directory does not exist" });
+          return;
+        }
+      }
+
       const project = facade.registry.register(rootPath, name);
       if (clientAccountId) {
         facade.registry.updateProject(project.id, { clientAccountId });
@@ -370,17 +411,6 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
     requireWorkspace,
     safeHandle(async (_req, res) => {
       res.json({ data: await buildProviderViews(facade.integrations) });
-    }),
-  );
-
-  // Native directory picker
-  // Security: req.body is intentionally ignored — dialog is server-initiated only
-  app.post(
-    "/api/dialog/select-directory",
-    requireAuth,
-    safeHandle(async (_req, res) => {
-      const selected = await selectDirectory();
-      res.json({ data: selected });
     }),
   );
 
