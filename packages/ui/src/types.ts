@@ -2,7 +2,7 @@ export interface PrismAPI {
   listPortfolio: () => Promise<IpcResult>;
   createClient: (name: string, notes?: string) => Promise<IpcResult>;
   updateClient: (id: string, fields: Record<string, unknown>) => Promise<IpcResult>;
-  createProject: (name: string, rootPath: string, clientAccountId?: string) => Promise<IpcResult>;
+  createProject: (name: string, rootPath?: string, clientAccountId?: string) => Promise<IpcResult>;
   linkProject: (rootPath: string, clientAccountId?: string) => Promise<IpcResult>;
   updateProject: (id: string, fields: Record<string, unknown>) => Promise<IpcResult>;
   getProjectPipeline: (projectId: string) => Promise<IpcResult>;

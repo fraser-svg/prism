@@ -1,16 +1,16 @@
 # Prism TODOs
 
-## Path-Free Project Creation for Web (P2)
+## ~~Path-Free Project Creation for Web~~ — UX FRICTION RESOLVED in fraser-svg/fix-project-folder-picker
 
-**What:** Allow project creation in the web app without requiring a server-local filesystem path. Options: scaffold a project directory server-side, support URL-only projects (GitHub repo URL), or create a "demo project" with sample data.
+Server now auto-creates project directories under `~/Prismatic/{slug}` when `rootPath` is omitted. Users just type a project name and submit. Broken native Finder dialog removed.
 
-**Why:** Web project creation currently validates that `rootPath` exists on the server filesystem (`apps/web/server/index.ts:189`). Remote users evaluating Prism (or YC reviewers) can't provide a local path, which blocks activation regardless of onboarding quality. Identified by Codex outside voice during onboarding CEO review.
+### Remaining: Decouple project identity from filesystem paths (P2)
 
-**When:** Before any remote user testing or YC demo where the reviewer isn't on the same machine as the server.
+**What:** Projects are still identified by filesystem paths on the server. For full path-free support, decouple project identity from `rootPath` entirely (e.g., support URL-only projects, GitHub repo URLs, or virtual projects with no filesystem backing).
 
-**How:** Simplest: accept a GitHub repo URL and clone it server-side to a temp directory. Medium: scaffold an empty `.prism/` project directory at a server-managed location. Full: decouple project identity from filesystem paths entirely.
+**Why:** Remote users on Railway still depend on the server's ephemeral filesystem. Auto-create under ~/Prismatic/ solves the UX problem but not the architectural coupling.
 
-**Depends on:** Onboarding flow (fraser-svg/user-onboarding-flow) shipped.
+**When:** Before multi-tenant or hosted deployment where server filesystem is not user-owned.
 
 ## ~~Portfolio MVP — Shared UI + Web App~~ — DONE in fraser-svg/portfolio-mvp
 

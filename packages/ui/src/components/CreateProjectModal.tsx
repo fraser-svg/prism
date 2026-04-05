@@ -5,20 +5,17 @@ interface CreateProjectModalProps {
   onClose: () => void;
   defaultClientId?: string;
   onBrowse?: () => Promise<string | null>;
-  initialRootPath?: string;
 }
 
 export function CreateProjectModal({
   onClose,
   defaultClientId,
   onBrowse,
-  initialRootPath = "",
 }: CreateProjectModalProps) {
-  const initialName = initialRootPath.split(/[/\\]/).filter(Boolean).pop() || "";
-  const [name, setName] = useState(initialName);
+  const [name, setName] = useState("");
   const [clientId, setClientId] = useState(defaultClientId || "");
-  const [mode, setMode] = useState<"link" | "create">("link");
-  const [rootPath, setRootPath] = useState(initialRootPath);
+  const [mode, setMode] = useState<"link" | "create">("create");
+  const [rootPath, setRootPath] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { clients, createProject, linkProject } = usePrismStore();
@@ -47,14 +44,18 @@ export function CreateProjectModal({
   };
 
   const handleSubmit = async () => {
-    if (!rootPath) return;
+    const trimmedName = name.trim();
+    if (mode === "link" && !rootPath) return;
+    if (mode === "create" && !trimmedName) return;
+
     setSaving(true);
     setError(null);
     try {
       if (mode === "link") {
         await linkProject(rootPath, clientId || undefined);
       } else {
-        await createProject(name.trim() || rootPath.split("/").pop() || "project", rootPath, clientId || undefined);
+        // Server auto-generates rootPath under ~/Prismatic/ when omitted
+        await createProject(trimmedName, undefined, clientId || undefined);
       }
       onClose();
     } catch (err) {
@@ -63,6 +64,8 @@ export function CreateProjectModal({
       setSaving(false);
     }
   };
+
+  const canSubmit = mode === "create" ? !!name.trim() : !!rootPath;
 
   return (
     <div ref={backdropRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={handleBackdropClick}>
@@ -73,51 +76,57 @@ export function CreateProjectModal({
         <div className="mb-5 flex gap-0.5 rounded-lg bg-stone-100 p-0.5">
           <button
             className={`flex-1 rounded-md px-3 py-1.5 text-[15px] font-medium transition-colors ${
-              mode === "link" ? "bg-[var(--bg-surface)] text-black shadow-sm" : "text-stone-900 hover:text-black"
-            }`}
-            onClick={() => setMode("link")}
-          >
-            Link Existing
-          </button>
-          <button
-            className={`flex-1 rounded-md px-3 py-1.5 text-[15px] font-medium transition-colors ${
               mode === "create" ? "bg-[var(--bg-surface)] text-black shadow-sm" : "text-stone-900 hover:text-black"
             }`}
             onClick={() => setMode("create")}
           >
             Create New
           </button>
+          <button
+            className={`flex-1 rounded-md px-3 py-1.5 text-[15px] font-medium transition-colors ${
+              mode === "link" ? "bg-[var(--bg-surface)] text-black shadow-sm" : "text-stone-900 hover:text-black"
+            }`}
+            onClick={() => setMode("link")}
+          >
+            Link Existing
+          </button>
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium uppercase tracking-widest text-stone-700">Project path</label>
-            <div className="flex gap-2">
-              <input
-                value={rootPath}
-                readOnly={!!onBrowse}
-                onChange={onBrowse ? undefined : (e) => setRootPath(e.target.value)}
-                className="flex-1 rounded-lg border border-stone-200 bg-[var(--bg-surface)] px-3 py-2 font-mono text-[15px] text-black placeholder:text-stone-700 focus:border-stone-800 focus:outline-none"
-                placeholder="/path/to/project"
-              />
-              {onBrowse && (
-                <button className="rounded-lg border border-stone-200 px-3 py-2 text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-800" onClick={handleBrowse}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>folder_open</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {mode === "create" && (
+          {mode === "create" ? (
+            /* Create mode: just name + client */
             <div>
               <label className="mb-1.5 block text-[13px] font-medium uppercase tracking-widest text-stone-700">Project name</label>
               <input
+                autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && canSubmit) handleSubmit(); }}
                 className="w-full rounded-lg border border-stone-200 bg-[var(--bg-surface)] px-3 py-2 text-[15px] text-black placeholder:text-stone-700 focus:border-stone-800 focus:outline-none"
                 placeholder="My Project"
               />
             </div>
+          ) : (
+            /* Link mode: path + browse + name */
+            <>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium uppercase tracking-widest text-stone-700">Project path</label>
+                <div className="flex gap-2">
+                  <input
+                    value={rootPath}
+                    readOnly={!!onBrowse}
+                    onChange={onBrowse ? undefined : (e) => setRootPath(e.target.value)}
+                    className="flex-1 rounded-lg border border-stone-200 bg-[var(--bg-surface)] px-3 py-2 font-mono text-[15px] text-black placeholder:text-stone-700 focus:border-stone-800 focus:outline-none"
+                    placeholder="/path/to/project"
+                  />
+                  {onBrowse && (
+                    <button className="rounded-lg border border-stone-200 px-3 py-2 text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-800" onClick={handleBrowse}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>folder_open</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
 
           {clients.length > 0 && (
@@ -139,7 +148,7 @@ export function CreateProjectModal({
 
         <div className="mt-5 flex justify-end gap-2">
           <button className="rounded-lg border border-stone-200 px-4 py-2 text-[15px] text-stone-800 transition-colors hover:bg-stone-50" onClick={onClose}>Cancel</button>
-          <button className="rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-40" disabled={!rootPath || saving} onClick={handleSubmit}>
+          <button className="rounded-lg bg-stone-800 px-4 py-2 text-[15px] font-medium text-white transition-colors hover:bg-stone-700 disabled:opacity-40" disabled={!canSubmit || saving} onClick={handleSubmit}>
             {saving ? "Adding..." : mode === "link" ? "Link Project" : "Create Project"}
           </button>
         </div>
