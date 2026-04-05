@@ -4,6 +4,21 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.27.0] - 2026-04-05
+
+### Added
+- **One-click project creation** — type a project name and submit. Server auto-creates the directory under ~/Prismatic/{slug}. No more broken Finder popup.
+- **Slug collision avoidance** — duplicate project names get auto-suffixed (my-project-2, my-project-3) instead of silently sharing a directory.
+- **19 new tests** for slug generation, path resolution, collision avoidance, and directory auto-creation.
+
+### Changed
+- "Create New" is now the default mode in the Add Project modal (was "Link Existing").
+- `rootPath` is optional in the create project API. Server computes it when omitted.
+
+### Removed
+- Native OS folder picker dialog (osascript/zenity/PowerShell) — broken on headless servers, replaced by auto-create.
+- `/api/dialog/select-directory` endpoint and `native-dialog.ts` module.
+
 ## [4.0.25.1] - 2026-04-04
 
 ### Changed
