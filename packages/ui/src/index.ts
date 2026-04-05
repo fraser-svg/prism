@@ -11,6 +11,8 @@ export { SessionDrawer } from "./components/SessionDrawer";
 export { ClientContextPage } from "./components/ClientContextPage";
 export { ClientsPage } from "./components/ClientsPage";
 export { ContextTab } from "./components/ContextTab";
+export { Vault } from "./components/Vault";
+export { UpgradeModal } from "./components/UpgradeModal";
 export { PrismaticLogo } from "./branding/PrismaticLogo";
 
 // Store
@@ -39,4 +41,5 @@ export type {
   ExtractedKnowledge,
   KnowledgeSummary,
   ContextHealth,
+  UsageStatus,
 } from "./types";

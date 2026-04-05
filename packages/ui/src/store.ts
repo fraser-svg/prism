@@ -10,6 +10,7 @@ import type {
   ExtractedKnowledge,
   KnowledgeSummary,
   ContextHealth,
+  UsageStatus,
 } from "./types";
 import type { PrismTransport } from "./transport";
 
@@ -41,6 +42,10 @@ export interface PrismStore {
   // Search
   searchQuery: string;
 
+  // Usage & billing
+  usage: UsageStatus | null;
+  checkoutLoading: boolean;
+
   // Context dump
   contextItems: ContextItem[];
   contextKnowledge: ExtractedKnowledge[];
@@ -68,6 +73,10 @@ export interface PrismStore {
   // Provider actions
   loadProviders: () => Promise<void>;
   refreshProviders: () => Promise<void>;
+
+  // Usage & billing actions
+  loadUsage: () => Promise<void>;
+  createCheckout: () => Promise<void>;
 
   // Context actions
   loadContext: (entityType: "project" | "client", entityId: string) => Promise<void>;
@@ -121,6 +130,8 @@ export function createPrismStore(transport: PrismTransport) {
     providers: [],
     providersLoading: false,
     searchQuery: "",
+    usage: null,
+    checkoutLoading: false,
     contextItems: [],
     contextKnowledge: [],
     contextSummary: null,
@@ -261,6 +272,30 @@ export function createPrismStore(transport: PrismTransport) {
       }
     },
 
+    loadUsage: async () => {
+      try {
+        const result = await safeInvoke(() => transport.getUsage());
+        if (result.error) throw new Error(result.error);
+        set({ usage: result.data as UsageStatus });
+      } catch {
+        // Keep existing usage on failure
+      }
+    },
+
+    createCheckout: async () => {
+      set({ checkoutLoading: true });
+      try {
+        const result = await safeInvoke(() => transport.createCheckout());
+        if (result.error) throw new Error(result.error);
+        const { url } = result.data as { url: string };
+        if (url) window.location.href = url;
+      } catch {
+        // Checkout failed — button re-enables
+      } finally {
+        set({ checkoutLoading: false });
+      }
+    },
+
     loadContext: async (entityType, entityId) => {
       try {
         const [itemsResult, knowledgeResult, summaryResult] = await Promise.all([
@@ -362,6 +397,8 @@ export function createPrismStore(transport: PrismTransport) {
         providers: [],
         providersLoading: false,
         searchQuery: "",
+        usage: null,
+        checkoutLoading: false,
         contextItems: [],
         contextKnowledge: [],
         contextSummary: null,

@@ -1,4 +1,4 @@
-import type { IpcResult } from "./types";
+import type { IpcResult, UsageStatus } from "./types";
 
 /**
  * Transport abstraction — decouples the store from Electron IPC vs HTTP fetch.
@@ -26,6 +26,15 @@ export interface PrismTransport {
   getSummary(entityType: "project" | "client", entityId: string): Promise<IpcResult>;
   flagKnowledge(knowledgeId: string): Promise<IpcResult>;
   applyToBrief(projectId: string, knowledgeId: string): Promise<IpcResult>;
+  // Usage & billing
+  getUsage(): Promise<IpcResult>;
+  createCheckout(): Promise<IpcResult>;
+  getBillingPortal(): Promise<IpcResult>;
+  // Vault
+  saveProviderKey(provider: string, apiKey: string): Promise<IpcResult>;
+  removeProviderKey(provider: string): Promise<IpcResult>;
+  getGitHubStatus(): Promise<IpcResult>;
+  disconnectGitHub(): Promise<IpcResult>;
 }
 
 /** Electron IPC transport — delegates to window.prism.* preload API */
@@ -49,6 +58,13 @@ export class IpcTransport implements PrismTransport {
   getSummary(entityType: "project" | "client", entityId: string) { return window.prism.getSummary(entityType, entityId); }
   flagKnowledge(knowledgeId: string) { return window.prism.flagKnowledge(knowledgeId); }
   applyToBrief(projectId: string, knowledgeId: string) { return window.prism.applyToBrief(projectId, knowledgeId); }
+  getUsage() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  createCheckout() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  getBillingPortal() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  saveProviderKey() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  removeProviderKey() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  getGitHubStatus() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  disconnectGitHub() { return Promise.resolve({ error: "Not available in desktop mode" }); }
 }
 
 /** HTTP fetch transport — calls Express API endpoints */
@@ -144,4 +160,15 @@ export class FetchTransport implements PrismTransport {
   applyToBrief(projectId: string, knowledgeId: string) {
     return this.request(`/context/knowledge/${knowledgeId}/apply`, { method: "POST", body: JSON.stringify({ projectId }) });
   }
+  getUsage() { return this.request("/usage"); }
+  createCheckout() { return this.request("/billing/checkout", { method: "POST" }); }
+  getBillingPortal() { return this.request("/billing/portal", { method: "POST" }); }
+  saveProviderKey(provider: string, apiKey: string) {
+    return this.request(`/vault/providers/${provider}`, { method: "PUT", body: JSON.stringify({ apiKey }) });
+  }
+  removeProviderKey(provider: string) {
+    return this.request(`/vault/providers/${provider}`, { method: "DELETE" });
+  }
+  getGitHubStatus() { return this.request("/vault/github"); }
+  disconnectGitHub() { return this.request("/vault/github", { method: "DELETE" }); }
 }

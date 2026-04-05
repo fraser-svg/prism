@@ -8,9 +8,10 @@ import { OnboardingGuide } from "./OnboardingGuide";
 
 interface PortfolioProps {
   onBrowse?: () => Promise<string | null>;
+  hasGitHub?: boolean;
 }
 
-export function Portfolio({ onBrowse }: PortfolioProps) {
+export function Portfolio({ onBrowse, hasGitHub = false }: PortfolioProps) {
   const {
     clients,
     projects,
@@ -130,8 +131,12 @@ export function Portfolio({ onBrowse }: PortfolioProps) {
       {/* Onboarding guide for new users */}
       {showOnboarding && (
         <OnboardingGuide
+          hasGitHub={hasGitHub}
           hasClients={clients.length > 0}
           hasProjects={projects.length > 0}
+          onConnectGitHub={() => {
+            window.location.href = "/api/auth/sign-in/social?provider=github&callbackURL=/";
+          }}
           onCreateClient={() => setShowCreateClient(true)}
           onCreateProject={openCreateProject}
         />
