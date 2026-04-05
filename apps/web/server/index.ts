@@ -14,6 +14,8 @@ import {
 import { extractPipelineSnapshot } from "@prism/orchestrator/pipeline-snapshot";
 import type { AbsolutePath, IntakeBrief } from "@prism/core";
 import { createIntakeBriefRepository } from "@prism/memory";
+import { ConversationEngine } from "./conversation-engine";
+import { createPipelineRouter } from "./pipeline-routes";
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -743,6 +745,15 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
         .get(userId) as { id: string } | undefined;
       res.json({ data: { connected: !!account } });
     }),
+  );
+
+  // --- Pipeline conversation engine ---
+  const engine = new ConversationEngine(facade);
+  app.use(
+    "/api/projects/:id/pipeline",
+    requireAuth,
+    requireWorkspace,
+    createPipelineRouter(facade, engine, getUserId),
   );
 
   // --- 404 for unknown API routes (before the SPA catch-all) ---

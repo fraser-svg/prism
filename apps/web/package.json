@@ -10,6 +10,7 @@
     "start": "node dist/server/index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
     "@heroui/react": "^3.0.2",
     "@prism/core": "*",
     "@prism/memory": "*",

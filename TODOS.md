@@ -519,29 +519,37 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Context Dump evolution shipped + real sample documents collected.
 
-## Web Execution Pipeline (P1)
+## ~~Web Execution Pipeline (P1)~~ — IN PROGRESS in fraser-svg/web-prism-pipeline
 
-**What:** Wire the existing Stage 4 (Build) orchestration logic into the web app so users can trigger builds from the browser, not just the CLI.
+Full Socratic pipeline (understand → identify_problem → spec → plan → execute → verify → release) wired into the web app via direct Anthropic API conversation engine. SSE streaming, smart discovery with pre-fill from context dump, autopilot mode, cost tracking, parallel review generation. Ship phase deferred (see below).
 
-**Why:** The web app is the product surface, but build execution is CLI-only. Agency operators need to trigger builds from the same interface where they manage projects and review context. This is the bridge between "knowledge capture" and "production output."
+### Ship Phase for Web Pipeline (P1)
 
-**When:** After Context Dump evolution and auth hardening ship.
+**What:** Wire the ship phase (git operations, PR creation, deploy trigger) into the web pipeline. Currently deferred because `execShip()` calls git/gh CLI on the project directory, which must be accessible to the server process.
 
-**How:** Add a "Build" action to the ControlRoom that calls the orchestrator's build pipeline. Requires: WebSocket or SSE for real-time build progress, file write permissions via server-side execution, and a build output viewer in the UI.
+**Why:** The pipeline is complete through verify/release but can't actually ship code. Agency operators still need to use CLI for the final git push and PR creation.
 
-**Depends on:** Context Dump evolution (fraser-svg/improve-context-dump) + auth hardening.
+**When:** After web execution pipeline ships and the filesystem constraint is addressed.
 
-## Socratic Discovery Skip (P1)
+**How:** Options: (a) server-side git operations on Railway's ephemeral filesystem (limited), (b) GitHub API for PR creation without local git (preferred for remote), (c) hybrid where local dev mode uses git CLI and production uses GitHub API. Start with (b) since it works regardless of deployment platform.
 
-**What:** Allow users who have already uploaded rich context (3+ documents, extracted knowledge) to skip or abbreviate the Socratic discovery interview.
+**Depends on:** Web Execution Pipeline PR (fraser-svg/web-prism-pipeline) shipped.
 
-**Why:** The Socratic flow asks questions to understand the client and project. When the context system already has this information, re-asking is friction. The system should recognize "I already know enough" and offer to proceed directly.
+### Pipeline Memory — Cross-Session Learning (P2)
 
-**When:** After Context Dump evolution ships and is used with real clients.
+**What:** Learn from completed pipeline sessions to improve future runs. Track which discovery questions yielded useful answers, which spec patterns got approved vs rejected, which plan structures succeeded.
 
-**How:** At Socratic start, check context health score. If >= 75 (profile exists, 3+ docs, recent, multi-category), offer: "I see you've already uploaded context for this client. Want to skip discovery and proceed with what I know?" If user accepts, compile the knowledge summary into the brief directly.
+**Why:** Each pipeline run generates signal about what works. Without cross-session memory, Prism asks the same questions and makes the same mistakes every time. For agency operators running multiple client projects, patterns should transfer.
 
-**Depends on:** Context Dump evolution (fraser-svg/improve-context-dump).
+**When:** After the web pipeline ships and generates real session data from 5+ complete runs.
+
+**How:** Aggregate from `pipeline_sessions` table: conversation patterns that led to approvals, spec structures that passed all reviews, plan breakdowns that executed without failures. Feed back as context in system prompts for future sessions.
+
+**Depends on:** Web Execution Pipeline PR (fraser-svg/web-prism-pipeline) shipped + 5+ completed sessions.
+
+## ~~Socratic Discovery Skip (P1)~~ — ADDRESSED in fraser-svg/web-prism-pipeline
+
+Smart Discovery in the web pipeline pre-fills known fields from extracted knowledge (confidence >= 0.7), shows editable pre-fill cards, and only asks questions for unfilled fields. The `/prefilled` endpoint and `getPreFilledFields()` in the conversation engine implement this.
 
 ## Knowledge Diff on Re-Extraction (P3)
 

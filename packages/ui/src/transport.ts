@@ -36,6 +36,21 @@ export interface PrismTransport {
   removeProviderKey(provider: string): Promise<IpcResult>;
   getGitHubStatus(): Promise<IpcResult>;
   disconnectGitHub(): Promise<IpcResult>;
+  // Pipeline conversation
+  resumePipeline(projectId: string): Promise<IpcResult>;
+  sendPipelineMessage(projectId: string, message: string): Promise<IpcResult>;
+  createPipelineSpec(projectId: string): Promise<IpcResult>;
+  approvePipelineSpec(projectId: string, specId: string): Promise<IpcResult>;
+  createPipelinePlan(projectId: string): Promise<IpcResult>;
+  executePipeline(projectId: string): Promise<IpcResult>;
+  verifyPipeline(projectId: string): Promise<IpcResult>;
+  recordPipelineReview(projectId: string, reviewType: string, verdict: string, findings: Array<{ severity: string; title: string; details?: string }>): Promise<IpcResult>;
+  advancePipeline(projectId: string): Promise<IpcResult>;
+  togglePipelineAutopilot(projectId: string, enabled: boolean): Promise<IpcResult>;
+  getPipelineConversation(projectId: string, sessionId?: string): Promise<IpcResult>;
+  getPipelineHistory(projectId: string): Promise<IpcResult>;
+  getPipelinePreFilled(projectId: string): Promise<IpcResult>;
+  getPipelineStream(projectId: string): EventSource | null;
 }
 
 /** Electron IPC transport — delegates to window.prism.* preload API */
@@ -67,6 +82,20 @@ export class IpcTransport implements PrismTransport {
   removeProviderKey() { return Promise.resolve({ error: "Not available in desktop mode" }); }
   getGitHubStatus() { return Promise.resolve({ error: "Not available in desktop mode" }); }
   disconnectGitHub() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  resumePipeline() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  sendPipelineMessage() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  createPipelineSpec() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  approvePipelineSpec() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  createPipelinePlan() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  executePipeline() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  verifyPipeline() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  recordPipelineReview() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  advancePipeline() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  togglePipelineAutopilot() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  getPipelineConversation() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  getPipelineHistory() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  getPipelinePreFilled() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  getPipelineStream() { return null; }
 }
 
 /** HTTP fetch transport — calls Express API endpoints */
@@ -176,4 +205,49 @@ export class FetchTransport implements PrismTransport {
   }
   getGitHubStatus() { return this.request("/vault/github"); }
   disconnectGitHub() { return this.request("/vault/github", { method: "DELETE" }); }
+  // Pipeline conversation
+  resumePipeline(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/resume`, { method: "POST" });
+  }
+  sendPipelineMessage(projectId: string, message: string) {
+    return this.request(`/projects/${projectId}/pipeline/message`, { method: "POST", body: JSON.stringify({ message }) });
+  }
+  createPipelineSpec(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/create-spec`, { method: "POST" });
+  }
+  approvePipelineSpec(projectId: string, specId: string) {
+    return this.request(`/projects/${projectId}/pipeline/approve-spec`, { method: "POST", body: JSON.stringify({ specId }) });
+  }
+  createPipelinePlan(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/create-plan`, { method: "POST" });
+  }
+  executePipeline(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/execute`, { method: "POST" });
+  }
+  verifyPipeline(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/verify`, { method: "POST" });
+  }
+  recordPipelineReview(projectId: string, reviewType: string, verdict: string, findings: Array<{ severity: string; title: string; details?: string }>) {
+    return this.request(`/projects/${projectId}/pipeline/record-review`, { method: "POST", body: JSON.stringify({ reviewType, verdict, findings }) });
+  }
+  advancePipeline(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/advance`, { method: "POST" });
+  }
+  togglePipelineAutopilot(projectId: string, enabled: boolean) {
+    return this.request(`/projects/${projectId}/pipeline/autopilot`, { method: "POST", body: JSON.stringify({ enabled }) });
+  }
+  getPipelineConversation(projectId: string, sessionId?: string) {
+    const qs = sessionId ? `?sessionId=${sessionId}` : "";
+    return this.request(`/projects/${projectId}/pipeline/conversation${qs}`);
+  }
+  getPipelineHistory(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/history`);
+  }
+  getPipelinePreFilled(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/prefilled`);
+  }
+  getPipelineStream(projectId: string): EventSource | null {
+    if (typeof EventSource === "undefined") return null;
+    return new EventSource(`${this.baseUrl}/api/projects/${projectId}/pipeline/stream`);
+  }
 }
