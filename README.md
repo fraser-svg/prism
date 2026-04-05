@@ -36,8 +36,8 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, and an **autoresearch experiment system** (Level 1: prompt evolution — A/B testing of prompt variants scored across the 4 self-healing dimensions)
 - A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
-- An **Electron desktop app** (`apps/desktop/`) — Portfolio MVP with client management, project portfolio, 7-stage pipeline view, and session drawer. This is the YC demo.
-- A **web app** (`apps/web/`) — Vite SPA + Express API server sharing the same React component library via `@prism/ui`
+- An **Electron desktop app** (`apps/desktop/`) — Portfolio MVP with client management, project portfolio, 7-stage pipeline view, and session drawer. Currently paused; web app is the active demo surface.
+- A **web app** (`apps/web/`) — Vite SPA + Express API server. The web app is now the primary execution surface — you can run the full Socratic pipeline (understand → spec → plan → execute → verify → release) directly from the browser via a built-in Anthropic conversation engine, SSE streaming, and autopilot mode.
 - A **shared UI package** (`packages/ui/`) — React components, Zustand store, and transport adapters for IPC (desktop) and fetch (web)
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
@@ -185,7 +185,7 @@ Prism will move back to the right stage and continue from there.
 ```
 prism/
 ├── SKILL.md              # The brain — LLM judgment only
-├── VERSION               # 4.0.21.0
+├── VERSION               # 4.0.29.0
 ├── CHANGELOG.md
 ├── CLAUDE.md             # YC Build Brain gate
 ├── AGENTS.md             # Agent orchestration config

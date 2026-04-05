@@ -4,6 +4,21 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.29.0] - 2026-04-05
+
+### Added
+- **Web Execution Pipeline** — you can now run the full Socratic build pipeline directly from the browser. No CLI required.
+- **AI conversation engine** — direct Anthropic API integration with phase-boundary resets, smart discovery pre-fill from context dump knowledge, cost tracking, and context window management.
+- **7-phase pipeline** (understand → identify problem → spec → plan → execute → verify → release) exposed via 14 Express API endpoints and SSE streaming.
+- **Autopilot mode** — toggle to auto-advance through phases, pausing at gate boundaries for human approval. Max 3 retries before pausing.
+- **Smart Discovery pre-fill** — context dump knowledge with confidence ≥ 0.7 pre-fills discovery fields automatically. Editable pre-fill cards let you review before the conversation starts.
+- **Real-time streaming** — SSE stream delivers AI responses, phase transitions, cost updates, and execution progress as they happen.
+- **Cost Pill** — running token cost visible in the chat header. Hover for per-phase breakdown.
+- **6 pipeline UI components** — PipelineChat, ArtifactCard (spec/plan approve/reject), ExecutionProgress (task list), VerificationPanel (checks + review verdicts), GateStatus (blockers + advance), CostPill.
+- **Session persistence** — pipeline sessions stored in SQLite (`pipeline_sessions` table). Sessions survive server restart.
+- **Parallel review generation** — all required review types (engineering, QA, design, etc.) generated concurrently at the verify phase.
+- **105 new tests** covering conversation engine, pipeline routes, phase prompts, and UI components.
+
 ## [4.0.28.0] - 2026-04-05
 
 ### Added

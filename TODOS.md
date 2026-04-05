@@ -519,7 +519,7 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Context Dump evolution shipped + real sample documents collected.
 
-## ~~Web Execution Pipeline (P1)~~ — IN PROGRESS in fraser-svg/web-prism-pipeline
+## ~~Web Execution Pipeline (P1)~~ — DONE in fraser-svg/web-prism-pipeline
 
 Full Socratic pipeline (understand → identify_problem → spec → plan → execute → verify → release) wired into the web app via direct Anthropic API conversation engine. SSE streaming, smart discovery with pre-fill from context dump, autopilot mode, cost tracking, parallel review generation. Ship phase deferred (see below).
 
@@ -547,7 +547,7 @@ Full Socratic pipeline (understand → identify_problem → spec → plan → ex
 
 **Depends on:** Web Execution Pipeline PR (fraser-svg/web-prism-pipeline) shipped + 5+ completed sessions.
 
-## ~~Socratic Discovery Skip (P1)~~ — ADDRESSED in fraser-svg/web-prism-pipeline
+## ~~Socratic Discovery Skip (P1)~~ — DONE in fraser-svg/web-prism-pipeline
 
 Smart Discovery in the web pipeline pre-fills known fields from extracted knowledge (confidence >= 0.7), shows editable pre-fill cards, and only asks questions for unfilled fields. The `/prefilled` endpoint and `getPreFilledFields()` in the conversation engine implement this.
 
