@@ -36,9 +36,11 @@ Semi-technical creators are the expansion play. Agency operators are the beachhe
 - **Deploy detection and triggering** via Vercel CLI
 - A **trust-first self-healing engine** with session report cards, learning journal, advisory prescriptions, HEALTH.md dashboard, and an **autoresearch experiment system** (Level 1: prompt evolution — A/B testing of prompt variants scored across the 4 self-healing dimensions)
 - A **pipeline visualizer** generating interactive HTML dashboard of the 7-stage workflow (PipelineSnapshot JSON → Electron IPC contract)
-- An **Electron desktop app** (`apps/desktop/`) — Portfolio MVP with client management, project portfolio, 7-stage pipeline view, and session drawer. This is the YC demo.
-- A **web app** (`apps/web/`) — Vite SPA + Express API server sharing the same React component library via `@prism/ui`
+- A **web app** (`apps/web/`) — Vite SPA + Express API server at **prismatic.build**. Auth (Google, GitHub, email), client + project management, Context Dump, Vault/billing. This is the product.
+- An **Electron desktop app** (`apps/desktop/`) — paused indefinitely (web-only pivot as of v4.0.25.1)
 - A **shared UI package** (`packages/ui/`) — React components, Zustand store, and transport adapters for IPC (desktop) and fetch (web)
+- A **Context Dump system** — upload client documents/transcripts, extract structured knowledge via Haiku, FTS5 search, source provenance, knowledge summaries, smart polling UI
+- **Auth** (Google, GitHub, email) via Better Auth + **Vault** with BYO API keys and usage-gated paywall (50 free actions/day)
 - **Hook integrations** for Claude Code event-driven automation
 - **Evaluation harnesses** for quality measurement
 - A **spec compiler** pipeline
@@ -112,40 +114,72 @@ Like a real team would.
 
 ### Prerequisites
 
-- Node.js (v18+)
-- Claude Code
-- OpenSpec
-- gstack
-
-```bash
-npm install -g @fission-ai/openspec@latest
-````
-
----
+- Node.js (v22+)
+- npm (v10+)
 
 ### Setup
 
 ```bash
-cp -r prism/ ~/.claude/skills/prism/
+git clone https://github.com/fraser-svg/prism.git
+cd prism
+npm install
 ```
 
-or:
+Copy the environment file and fill in your credentials:
 
 ```bash
-git clone https://github.com/fraser-svg/prism.git ~/.claude/skills/prism/
+cp apps/web/.env.example apps/web/.env
 ```
+
+### Development
+
+```bash
+npm run dev:web       # Start web app (Vite SPA + Express API, hot reload)
+npm run build:web     # Production build
+npm test              # Run test suite (vitest)
+npm run verify        # Type check all packages + tests
+```
+
+---
+
+<!-- AUTO-GENERATED: scripts — do not edit below, generated from package.json -->
+## Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev:web` | Start web app dev server with hot reload (Vite + Express) |
+| `npm run build:web` | Production build (Vite SPA + esbuild server bundle) |
+| `npm run test` | Run full test suite via vitest |
+| `npm run verify` | Type-check all packages + run tests |
+| `npm run dev:desktop` | Start Electron desktop app (paused — web-only) |
+| `npm run build:desktop` | Build Electron desktop app (paused — web-only) |
+| `npm run typecheck:core` | Type-check core, memory, orchestrator, guardian, execution, workspace packages |
+
+<!-- AUTO-GENERATED: scripts end -->
+
+---
+
+<!-- AUTO-GENERATED: env — do not edit below, generated from apps/web/.env.example -->
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GOOGLE_CLIENT_ID` | For Google auth | Google OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_SECRET` | For Google auth | Google OAuth 2.0 client secret |
+| `GITHUB_CLIENT_ID` | For GitHub auth | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | For GitHub auth | GitHub OAuth App client secret |
+| `BETTER_AUTH_SECRET` | In production | Secret key for session signing (generate with `openssl rand -base64 32`) |
+| `SKIP_AUTH` | No | Set to `true` to bypass auth in development (default: not set) |
+| `PORT` | No | Express server port (default: `3001`) |
+| `NODE_ENV` | No | `development` or `production` |
+
+<!-- AUTO-GENERATED: env end -->
 
 ---
 
 ## Usage
 
-Start a Claude Code conversation:
-
-```
-/prism
-```
-
-Then just describe what you want.
+Open the web app at `http://localhost:3001` after running `npm run dev:web`.
 
 ---
 
