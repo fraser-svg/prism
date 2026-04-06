@@ -4,9 +4,11 @@ interface ExecutionProgressProps {
   tasksTotal: number;
   tasksCompleted: number;
   currentTask: string | null;
+  elapsedMs?: number;
   tasks?: Array<{
     name: string;
     status: "pending" | "running" | "completed" | "failed";
+    outputPreview?: string | null;
   }>;
 }
 
@@ -43,10 +45,18 @@ function StatusIndicator({
   }
 }
 
+function formatElapsed(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
 export function ExecutionProgress({
   tasksTotal,
   tasksCompleted,
   currentTask,
+  elapsedMs,
   tasks,
 }: ExecutionProgressProps) {
   const progressPercent =
@@ -62,13 +72,27 @@ export function ExecutionProgress({
         >
           Execution Progress
         </span>
-        <span className="text-stone-700" style={{ fontSize: 13 }}>
-          {tasksCompleted} / {tasksTotal} tasks
-        </span>
+        <div className="flex items-center gap-3">
+          {elapsedMs != null && (
+            <span className="font-mono text-stone-500" style={{ fontSize: 13 }}>
+              {formatElapsed(elapsedMs)}
+            </span>
+          )}
+          <span className="text-stone-700" style={{ fontSize: 13 }}>
+            {tasksCompleted} / {tasksTotal} tasks
+          </span>
+        </div>
       </div>
 
       {/* Progress bar */}
-      <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200">
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-stone-200"
+        role="progressbar"
+        aria-valuenow={progressPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Execution progress: ${tasksCompleted} of ${tasksTotal} tasks completed`}
+      >
         <div
           className="h-full rounded-full bg-stone-800 transition-all duration-300 ease-out"
           style={{ width: `${progressPercent}%` }}
@@ -103,14 +127,23 @@ export function ExecutionProgress({
             return (
               <li
                 key={task.name}
-                className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 ${
+                className={`flex items-start gap-2.5 rounded-md px-2 py-1.5 ${
                   isRunning ? "bg-stone-100" : ""
                 }`}
               >
-                <StatusIndicator status={task.status} />
-                <span className={textClass} style={{ fontSize: 13 }}>
-                  {task.name}
-                </span>
+                <div className="mt-0.5">
+                  <StatusIndicator status={task.status} />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className={textClass} style={{ fontSize: 13 }}>
+                    {task.name}
+                  </span>
+                  {task.outputPreview && (
+                    <span className="text-stone-500" style={{ fontSize: 13 }}>
+                      {task.outputPreview}
+                    </span>
+                  )}
+                </div>
               </li>
             );
           })}

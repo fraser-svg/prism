@@ -24,6 +24,7 @@ import { evaluateTransition } from "@prism/orchestrator";
 import { skillSpecToCore, skillPlanToCore, skillReviewToCore } from "@prism/orchestrator";
 import { getRequiredReviewMatrix, checkRequiredReviews } from "@prism/guardian";
 import { deriveReleaseState } from "@prism/guardian";
+import { createPlanRepository } from "@prism/memory";
 import type { ConversationEngine, EngineEvent } from "./conversation-engine";
 
 // ─── Schemas ───
@@ -59,6 +60,10 @@ const ReviewSchema = z.object({
 
 const AutopilotSchema = z.object({
   enabled: z.boolean(),
+});
+
+const RollbackSchema = z.object({
+  targetPhase: z.enum(["execute"]),
 });
 
 // ─── Route Factory ───
@@ -158,6 +163,9 @@ export function createPipelineRouter(
 
       if (session.streaming)
         return void res.status(409).json({ error: "Already streaming — wait for current response" });
+
+      if (session.executing)
+        return void res.status(409).json({ error: "Execution in progress — wait for completion" });
 
       const body = MessageSchema.parse(req.body);
       const response = await engine.sendMessage(
@@ -283,6 +291,7 @@ export function createPipelineRouter(
           project.rootPath,
           skillPlanToCore(planInput),
         );
+        engine.setActivePlanId(projectId, userId, plan.id);
         res.json({ plan, message: response });
       } else {
         res.json({ plan: null, message: response });
@@ -308,38 +317,114 @@ export function createPipelineRouter(
           error: "Must be in execute phase",
         });
 
+      if (session.executing)
+        return void res.status(409).json({ error: "Execution already in progress" });
+
+      // Set executing flag immediately to prevent TOCTOU race
+      session.executing = true;
+      session.executeStartedAt = Date.now();
+
       const project = resolveProject(projectId);
-      if (!project)
+      if (!project) {
+        session.executing = false;
         return void res.status(404).json({ error: "Project not found" });
+      }
+
+      // Read plan from orchestrator storage
+      let plan;
+      try {
+        const planRepo = createPlanRepository(project.rootPath);
+        if (session.activePlanId) {
+          plan = await planRepo.readMetadata(session.activePlanId);
+        } else {
+          // Fallback: find plan by specId
+          const planIds = await planRepo.list();
+          for (const pid of planIds) {
+            const candidate = await planRepo.readMetadata(pid);
+            if (candidate && candidate.specId === session.activeSpecId) {
+              plan = candidate;
+              break;
+            }
+          }
+        }
+      } catch {
+        session.executing = false;
+        return void res.status(500).json({ error: "Failed to read plan" });
+      }
+
+      if (!plan || !plan.phases.length) {
+        session.executing = false;
+        return void res.status(400).json({
+          error: "No plan found — create a plan first",
+        });
+      }
 
       // Return 202 immediately, run execution in background
       res.status(202).json({ status: "started" });
 
-      // Background execution
+      // Build task list from plan phases
+      const tasks = plan.phases.map((p) => ({
+        name: p.title,
+        description: p.description,
+        status: "pending" as "pending" | "running" | "completed" | "failed",
+        outputPreview: null as string | null,
+      }));
+
       const emitter = engine.getEmitter(projectId, userId);
+
+      // Helper: build execution_progress event payload (DRY across heartbeat + task loop)
+      const buildProgressEvent = (currentTask: string | null): EngineEvent => ({
+        type: "execution_progress",
+        data: {
+          tasksTotal: tasks.length,
+          tasksCompleted: tasks.filter((t) => t.status === "completed").length,
+          currentTask,
+          elapsedMs: Date.now() - (session.executeStartedAt ?? Date.now()),
+          tasks: tasks.map(({ name, status, outputPreview }) => ({ name, status, outputPreview })),
+        },
+      });
+
+      // Heartbeat: emit progress every 2s so elapsed timer stays live
+      const heartbeat = setInterval(() => {
+        emitter.emit("event", buildProgressEvent(
+          tasks.find((t) => t.status === "running")?.name ?? null,
+        ));
+      }, 2_000);
+
       try {
-        emitter.emit("event", {
-          type: "status_update",
-          data: { message: "Starting task execution..." },
-        } satisfies EngineEvent);
+        for (let i = 0; i < tasks.length; i++) {
+          const task = tasks[i];
+          task.status = "running";
+          emitter.emit("event", buildProgressEvent(task.name));
 
-        // TODO: Wire up ModelRouter task execution here
-        // For now, emit a placeholder completion
-        emitter.emit("event", {
-          type: "status_update",
-          data: { message: "Execution complete" },
-        } satisfies EngineEvent);
+          try {
+            const taskPrompt = `Execute this task: ${task.name}\n\nDescription: ${task.description}\n\nImplement this according to the approved specification.`;
+            const response = await engine.sendMessage(projectId, userId, taskPrompt);
+            task.status = "completed";
+            task.outputPreview = response.content ? response.content.slice(0, 200) : null;
+          } catch (taskErr) {
+            task.status = "failed";
+            task.outputPreview = taskErr instanceof Error ? taskErr.message.slice(0, 200) : "Task failed";
 
+            emitter.emit("event", buildProgressEvent(null));
+            emitter.emit("event", {
+              type: "error",
+              data: {
+                message: `Task "${task.name}" failed: ${taskErr instanceof Error ? taskErr.message : "Unknown error"}`,
+                recoverable: true,
+              },
+            } satisfies EngineEvent);
+            return; // Halt execution on first failure
+          }
+
+          emitter.emit("event", buildProgressEvent(null));
+        }
+
+        // All tasks completed — advance to verify
         engine.setPhase(projectId, userId, "verify");
-      } catch (err) {
-        emitter.emit("event", {
-          type: "error",
-          data: {
-            message:
-              err instanceof Error ? err.message : "Execution failed",
-            recoverable: true,
-          },
-        } satisfies EngineEvent);
+      } finally {
+        clearInterval(heartbeat);
+        session.executing = false;
       }
     }),
   );
@@ -376,7 +461,13 @@ export function createPipelineRouter(
           data: { message: "Running verification checks..." },
         } satisfies EngineEvent);
 
-        const verifyResult = await runVerificationGate(project.rootPath);
+        let verifyResult;
+        try {
+          verifyResult = await runVerificationGate(project.rootPath);
+        } catch {
+          // Web-only projects may not have a real filesystem
+          verifyResult = { passed: false, reason: "Verification skipped — no local filesystem for web-only project" };
+        }
 
         emitter.emit("event", {
           type: "gate_evaluated",
@@ -432,6 +523,7 @@ export function createPipelineRouter(
             data: {
               reviews: completedReviews,
               releaseState,
+              canRollback: releaseState.decision !== "ready",
             },
           } satisfies EngineEvent);
         }
@@ -521,7 +613,7 @@ export function createPipelineRouter(
         session.activeSpecId ?? undefined,
       );
 
-      if (!gateResult.canAdvance) {
+      if (!gateResult.allowed) {
         return void res.json({
           advanced: false,
           blockers: gateResult.blockers,
@@ -535,6 +627,112 @@ export function createPipelineRouter(
         phase: nextPhase,
         gateResult,
       });
+    }),
+  );
+
+  // ─── POST /release ───
+  // Fire-and-forget: returns 202, emits release_summary via SSE
+  router.post(
+    "/release",
+    safe(async (req, res) => {
+      const projectId = req.params.id;
+      const userId = await getUserId(req);
+      if (!userId) return void res.status(401).json({ error: "Unauthorized" });
+
+      const session = engine.getSession(projectId, userId);
+      if (!session)
+        return void res.status(404).json({ error: "No active session" });
+
+      if (session.phase !== "release")
+        return void res.status(400).json({ error: "Must be in release phase" });
+
+      if (session.status !== "active")
+        return void res.status(400).json({ error: "Session already completed" });
+
+      const project = resolveProject(projectId);
+      if (!project)
+        return void res.status(404).json({ error: "Project not found" });
+
+      res.status(202).json({ status: "started" });
+
+      const emitter = engine.getEmitter(projectId, userId);
+
+      // Build release summary from session + plan state
+      let specTitle = "Untitled";
+      const planRepo = createPlanRepository(project.rootPath);
+      if (session.activePlanId) {
+        const plan = await planRepo.readMetadata(session.activePlanId);
+        if (plan) specTitle = plan.title;
+      }
+
+      const elapsedMs = session.executeStartedAt
+        ? Date.now() - session.executeStartedAt
+        : 0;
+
+      emitter.emit("event", {
+        type: "release_summary",
+        data: {
+          specTitle,
+          tasksCompleted: 0, // v1: not tracked past execute phase
+          tasksFailed: 0,
+          reviews: [],
+          totalCost: session.cost,
+          elapsedMs,
+        },
+      } satisfies EngineEvent);
+    }),
+  );
+
+  // ─── POST /release/complete ───
+  router.post(
+    "/release/complete",
+    safe(async (req, res) => {
+      const projectId = req.params.id;
+      const userId = await getUserId(req);
+      if (!userId) return void res.status(401).json({ error: "Unauthorized" });
+
+      const session = engine.getSession(projectId, userId);
+      if (!session)
+        return void res.status(404).json({ error: "No active session" });
+
+      if (session.status !== "active")
+        return void res.status(400).json({ error: "Session already completed" });
+
+      if (session.phase !== "release")
+        return void res.status(400).json({ error: "Must be in release phase" });
+
+      if (session.executing)
+        return void res.status(409).json({ error: "Execution still in progress" });
+
+      engine.completeSession(projectId, userId);
+      res.json({ status: "completed" });
+    }),
+  );
+
+  // ─── POST /rollback ───
+  router.post(
+    "/rollback",
+    safe(async (req, res) => {
+      const projectId = req.params.id;
+      const userId = await getUserId(req);
+      if (!userId) return void res.status(401).json({ error: "Unauthorized" });
+
+      const session = engine.getSession(projectId, userId);
+      if (!session)
+        return void res.status(404).json({ error: "No active session" });
+
+      if (session.phase !== "verify")
+        return void res.status(400).json({ error: "Can only rollback from verify phase" });
+
+      if (session.executing || session.streaming)
+        return void res.status(409).json({ error: "Operation in progress — wait for completion" });
+
+      const parsed = RollbackSchema.safeParse(req.body);
+      if (!parsed.success)
+        return void res.status(400).json({ error: "Invalid rollback target", details: parsed.error.flatten() });
+
+      engine.setPhase(projectId, userId, parsed.data.targetPhase);
+      res.json({ phase: parsed.data.targetPhase });
     }),
   );
 

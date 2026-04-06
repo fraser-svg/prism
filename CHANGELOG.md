@@ -4,6 +4,23 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.30.0] - 2026-04-06
+
+### Added
+- **Execute phase** — operators can now run plan tasks through the browser. Each task executes sequentially via the AI, with real-time SSE progress streaming showing per-task status, elapsed timer, and output previews.
+- **Release phase** — after verification, a release summary card shows spec title, cost breakdown, and elapsed time. "Complete Session" ends the pipeline cleanly.
+- **Rollback** — when verification fails, operators can roll back from verify to execute and iterate. POST /rollback with Zod-validated target phase.
+- **Execution guard** — POST /message returns 409 during active execution, preventing message interleaving.
+- **63 pipeline route tests** covering execute, release, rollback, and error paths (no plan found, empty phases, task failure halt, concurrent execution rejection).
+
+### Fixed
+- **Gate field mismatch** — `gateResult.canAdvance` corrected to `gateResult.allowed` (was silently failing every gate evaluation).
+- **TOCTOU race** on `session.executing` — flag now set before async plan reads, with reset on all early-return paths.
+- **Zod validation** — POST /rollback returns 400 with structured error instead of unhandled 500.
+- **SSE handler** — `execution_progress` event data path corrected in Zustand store.
+- **Store rollback** — `rollbackToExecute` now updates `pipelinePhase` and clears stale conversation history.
+- **Phase transition cleanup** — `canRollback` cleared on every `phase_changed` SSE event.
+
 ## [4.0.29.1] - 2026-04-06
 
 ### Changed

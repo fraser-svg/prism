@@ -15,6 +15,8 @@ import type {
   PipelineSessionCost,
   PreFilledField,
   PipelineHistoryEntry,
+  ExecutionTask,
+  ReleaseSummary,
 } from "./types";
 import type { PrismTransport } from "./transport";
 
@@ -101,11 +103,13 @@ export interface PrismStore {
   streamingMessage: string | null;
   statusMessage: string | null;
   autopilotEnabled: boolean;
-  executionProgress: { tasksTotal: number; tasksCompleted: number; currentTask: string | null };
+  executionProgress: { tasksTotal: number; tasksCompleted: number; currentTask: string | null; elapsedMs: number; tasks: ExecutionTask[] };
   sessionCost: PipelineSessionCost;
   preFilledFields: PreFilledField[];
   pipelineHistory: PipelineHistoryEntry[];
   pipelineError: string | null;
+  releaseSummary: ReleaseSummary | null;
+  canRollback: boolean;
 
   // Pipeline actions
   startPipelineSession: (projectId: string) => Promise<void>;
@@ -117,6 +121,9 @@ export interface PrismStore {
   loadPreFilledFields: (projectId: string) => Promise<void>;
   connectPipelineStream: (projectId: string) => () => void;
   disconnectPipelineStream: () => void;
+  completePipelineSession: (projectId: string) => Promise<void>;
+  rollbackToExecute: (projectId: string) => Promise<void>;
+  releasePipeline: (projectId: string) => Promise<void>;
 
   resetStore: () => void;
 }
@@ -179,11 +186,13 @@ export function createPrismStore(transport: PrismTransport) {
     streamingMessage: null,
     statusMessage: null,
     autopilotEnabled: false,
-    executionProgress: { tasksTotal: 0, tasksCompleted: 0, currentTask: null },
+    executionProgress: { tasksTotal: 0, tasksCompleted: 0, currentTask: null, elapsedMs: 0, tasks: [] },
     sessionCost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
     preFilledFields: [],
     pipelineHistory: [],
     pipelineError: null,
+    releaseSummary: null,
+    canRollback: false,
 
     loadPortfolio: async () => {
       set({ portfolioLoading: true, portfolioError: null });
@@ -536,6 +545,31 @@ export function createPrismStore(transport: PrismTransport) {
       set({ preFilledFields: (result.data as PreFilledField[]) || [] });
     },
 
+    completePipelineSession: async (projectId) => {
+      const result = await safeInvoke(() => transport.completePipelineSession(projectId));
+      if (result.error) {
+        set({ pipelineError: result.error });
+        return;
+      }
+      set({ pipelineSessionActive: false, pipelinePhase: null });
+    },
+
+    rollbackToExecute: async (projectId) => {
+      const result = await safeInvoke(() => transport.rollbackPipeline(projectId, "execute"));
+      if (result.error) {
+        set({ pipelineError: result.error });
+        return;
+      }
+      set({ canRollback: false, pipelinePhase: "execute", conversationHistory: [] });
+    },
+
+    releasePipeline: async (projectId) => {
+      const result = await safeInvoke(() => transport.releasePipeline(projectId));
+      if (result.error) {
+        set({ pipelineError: result.error });
+      }
+    },
+
     connectPipelineStream: (projectId) => {
       const es = transport.getPipelineStream(projectId);
       if (!es) return () => {};
@@ -554,13 +588,17 @@ export function createPrismStore(transport: PrismTransport) {
               return { conversationHistory: [...s.conversationHistory, { role: data.data.role, content: data.data.content, timestamp: new Date().toISOString() }] };
             });
           } else if (data.type === "phase_changed") {
-            set({ pipelinePhase: data.data?.phase, conversationHistory: [] });
+            set({ pipelinePhase: data.data?.phase, conversationHistory: [], canRollback: false });
           } else if (data.type === "cost_update") {
             set({ sessionCost: data.data });
           } else if (data.type === "status_update") {
             set({ statusMessage: data.data?.message });
           } else if (data.type === "execution_progress") {
-            set({ executionProgress: data.data?.progress });
+            set({ executionProgress: data.data });
+          } else if (data.type === "release_summary") {
+            set({ releaseSummary: data.data });
+          } else if (data.type === "gate_evaluated" && data.data?.canRollback !== undefined) {
+            set({ canRollback: data.data.canRollback });
           } else if (data.type === "error") {
             set({ pipelineError: data.data?.message });
           } else if (data.type === "snapshot") {
@@ -628,11 +666,13 @@ export function createPrismStore(transport: PrismTransport) {
         streamingMessage: null,
         statusMessage: null,
         autopilotEnabled: false,
-        executionProgress: { tasksTotal: 0, tasksCompleted: 0, currentTask: null },
+        executionProgress: { tasksTotal: 0, tasksCompleted: 0, currentTask: null, elapsedMs: 0, tasks: [] },
         sessionCost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
         preFilledFields: [],
         pipelineHistory: [],
         pipelineError: null,
+        releaseSummary: null,
+        canRollback: false,
       });
     },
   }));

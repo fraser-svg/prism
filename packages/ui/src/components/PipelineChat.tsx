@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { ConversationMessage, PipelineSessionCost } from "../types";
+import type { ConversationMessage, PipelineSessionCost, ExecutionTask, ReleaseSummary } from "../types";
 import { CostPill } from "./CostPill";
+import { ExecutionProgress } from "./ExecutionProgress";
 
 interface PipelineChatProps {
   projectId: string;
@@ -10,8 +11,13 @@ interface PipelineChatProps {
   autopilot: boolean;
   statusMessage: string | null;
   error: string | null;
+  executionProgress?: { tasksTotal: number; tasksCompleted: number; currentTask: string | null; elapsedMs: number; tasks: ExecutionTask[] };
+  releaseSummary?: ReleaseSummary | null;
+  canRollback?: boolean;
   onSendMessage: (message: string) => void;
   onToggleAutopilot: (enabled: boolean) => void;
+  onCompleteSession?: () => void;
+  onRollback?: () => void;
 }
 
 export function PipelineChat({
@@ -22,8 +28,13 @@ export function PipelineChat({
   autopilot,
   statusMessage,
   error,
+  executionProgress,
+  releaseSummary,
+  canRollback,
   onSendMessage,
   onToggleAutopilot,
+  onCompleteSession,
+  onRollback,
 }: PipelineChatProps) {
   const [draft, setDraft] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -160,6 +171,84 @@ export function PipelineChat({
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {/* Execution progress panel */}
+      {phase === "execute" && executionProgress && executionProgress.tasksTotal > 0 && (
+        <div className="border-t border-stone-200 px-4 py-4">
+          <div className="mx-auto max-w-2xl">
+            <ExecutionProgress
+              tasksTotal={executionProgress.tasksTotal}
+              tasksCompleted={executionProgress.tasksCompleted}
+              currentTask={executionProgress.currentTask}
+              elapsedMs={executionProgress.elapsedMs}
+              tasks={executionProgress.tasks}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Release summary card */}
+      {phase === "release" && releaseSummary && (
+        <div className="border-t border-stone-200 px-4 py-4">
+          <div className="mx-auto max-w-2xl rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <h3 className="font-semibold text-stone-800" style={{ fontSize: 15 }}>
+              {releaseSummary.specTitle}
+            </h3>
+            <div className="mt-2 flex flex-wrap items-center gap-3" style={{ fontSize: 13 }}>
+              <span className="text-stone-700">
+                {releaseSummary.tasksCompleted} tasks completed
+              </span>
+              {releaseSummary.tasksFailed > 0 && (
+                <span className="text-red-600">{releaseSummary.tasksFailed} failed</span>
+              )}
+              {releaseSummary.reviews.map((r) => (
+                <span
+                  key={r.type}
+                  className={`rounded-full px-2 py-0.5 ${
+                    r.verdict === "pass"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {r.type}: {r.verdict}
+                </span>
+              ))}
+              <CostPill
+                inputTokens={releaseSummary.totalCost.inputTokens}
+                outputTokens={releaseSummary.totalCost.outputTokens}
+                costUsd={releaseSummary.totalCost.costUsd}
+              />
+              <span className="font-mono text-stone-500">
+                {Math.floor(releaseSummary.elapsedMs / 60000)}m {Math.floor((releaseSummary.elapsedMs % 60000) / 1000)}s
+              </span>
+            </div>
+            {onCompleteSession && (
+              <button
+                className="mt-4 rounded-lg bg-stone-800 px-4 py-2 text-white transition-colors hover:bg-stone-700"
+                style={{ fontSize: 14 }}
+                onClick={onCompleteSession}
+              >
+                Complete Session
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Verify rollback button */}
+      {phase === "verify" && canRollback && onRollback && (
+        <div className="border-t border-stone-200 px-4 py-3">
+          <div className="mx-auto max-w-2xl">
+            <button
+              className="rounded-lg border border-stone-300 px-4 py-2 text-stone-700 transition-colors hover:bg-stone-100"
+              style={{ fontSize: 14 }}
+              onClick={onRollback}
+            >
+              Revise in Execute
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Status bar */}
       {statusMessage && (
