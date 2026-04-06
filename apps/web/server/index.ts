@@ -785,8 +785,8 @@ export function createApp(facade: WorkspaceFacade, clients: ClientRepository) {
 // --- Start server (only when run directly, not when imported for tests) ---
 const isMainModule = process.argv[1] && fileURLToPath(import.meta.url).includes(process.argv[1].replace(/\.[^.]+$/, ""));
 if (isMainModule || process.env.PRISM_START_SERVER === "true") {
-  let facade: WorkspaceFacade | null = null;
-  let clients: ClientRepository | null = null;
+  let facade: WorkspaceFacade;
+  let clients: ClientRepository;
 
   try {
     facade = new WorkspaceFacade();
@@ -806,16 +806,15 @@ if (isMainModule || process.env.PRISM_START_SERVER === "true") {
     console.log("Workspace initialized");
   } catch (err) {
     console.error("Failed to initialize workspace:", err);
+    process.exit(1);
   }
 
-  if (facade && clients) {
-    const { app } = createApp(facade, clients);
-    const PORT = Number(process.env.PORT) || 3001;
-    const HOST = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
-    app.listen(PORT, HOST, () => {
-      console.log(`Prism API server running at http://${HOST}:${PORT}`);
-    });
-  }
+  const { app } = createApp(facade, clients);
+  const PORT = Number(process.env.PORT) || 3001;
+  const HOST = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+  app.listen(PORT, HOST, () => {
+    console.log(`Prism API server running at http://${HOST}:${PORT}`);
+  });
 
   // Cleanup on exit
   process.on("SIGINT", () => {
