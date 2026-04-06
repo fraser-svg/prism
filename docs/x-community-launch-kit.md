@@ -1,16 +1,15 @@
 # X Community Launch Kit
 
-> Updated 2026-04-06 to reflect strategic course correction.
-> One-liner: **AI builds fast. Prism builds right.**
-> Live at: prismatic.build
+> Voice: Shaan Puri. Smart friend at a bar, not a thought leader on stage.
+> No em dashes. No AI patterns. No guru energy. Show, don't tell.
+> Style guide: ~/prism/shaan-puri-style-guide.md
 
-## @FKLWiseman — Personal Account
+## @FKLWiseman
 
 ### Bio
 ```
-Building @prismatic_build — the judgment layer above AI agents.
-AI builds fast. Prism builds right.
-Not an engineer. Building anyway.
+building @prismatic_build. the judgment layer above AI agents.
+not an engineer. building anyway.
 prismatic.build
 ```
 
@@ -18,119 +17,94 @@ prismatic.build
 ```
 I'm not an engineer.
 
-I'm building the judgment layer that sits above AI agents.
+I'm building the thing that sits above AI agents and makes sure they build the right thing.
 
-It doesn't write code. It makes sure the RIGHT code gets written.
-Socratic discovery. Quality gates. Intent memory. Client context that flows into every decision.
+Socratic discovery. Quality gates. Client context. Memory between sessions.
 
-It's called Prismatic. It's live now.
+It's called Prismatic. It's live.
 prismatic.build
-
-Follow along.
 ```
 
----
-
-## @prismatic_build — Brand Account
+## @prismatic_build
 
 ### Bio
 ```
 AI builds fast. Prism builds right.
-The judgment layer for agency operators — Socratic discovery, quality gates, intent memory.
-Live now. Free beta.
-Built by @FKLWiseman
+judgment layer for agency operators.
+free beta live now.
+built by @FKLWiseman
 ```
 
 ### Pinned Tweet
 ```
 AI builds fast. Prism builds right.
 
-The judgment layer for agency operators:
+Socratic discovery before building.
+Client context that flows into every decision.
+Quality gates that catch what you'd miss.
+Memory across sessions.
 
-→ Socratic discovery — finds the real problem before building
-→ Client context — uploads that inform every decision
-→ Quality gates — catches what you'd miss
-→ Intent memory — nothing forgotten between sessions
+Free beta. prismatic.build
 
-Free beta at prismatic.build
-
-$32B+ in AI builder valuations. None own the judgment layer. We do.
+$32B in AI builder valuations. None own the judgment layer.
 ```
 
 ---
 
-## Key Messaging (updated)
+## Voice Rules
 
-### The Positioning
-Prism is the **brain, not the hands**. Agent execution is commodity (Hermes MIT/26.8k stars, Claude Code, Cursor, Codex). Prism is the judgment layer above — the thing that makes sure fast also means right.
+Run every post through these before publishing:
 
-### The Category
-Intent-first product engineering for operators. Bottom-right quadrant (intent-first x for operators) is empty. Prism creates it.
+1. Would I say this out loud to a friend? If it sounds weird spoken, rewrite it.
+2. Can I cut 30% of the words? Do it.
+3. Does the first line make someone stop scrolling?
+4. Does it sound like a LinkedIn post? If yes, delete it.
+5. Is there a specific detail (name, number, date)? Add one.
+6. Would this work as a screenshot someone texts a friend?
 
-### The Market
-$32B+ in AI builder valuations (Lovable $6.6B, Cursor $10B+, Devin $10.2B, Replit $9B). None own judgment. None feel like a team.
+### Never use
+- Em dashes (use periods or line breaks)
+- "Journey", "landscape", "delve", "transformative", "game-changing"
+- "As a founder who..." (no credential-leading)
+- "Thread" with pointing emoji
+- "Follow me for more"
+- Hashtags in the body (maybe one at the very end, max)
+- Walls of text. Every paragraph is 1-3 lines.
+- Motivational speaker energy
+- Listicle threads
 
-### The Moat
-Intent memory compounds. Every session makes Prism better at understanding what this operator means. Cross-project learning, quality gate history, accumulated context = switching cost no competitor can replicate.
+### Always use
+- Specific numbers and names
+- Stories before opinions
+- Casual qualifiers ("honestly", "kinda", "tbh")
+- Self-deprecation when genuine
+- Plain words at a 5th grade reading level
+- Line breaks as timing beats
 
-### Key phrases to use
+---
+
+## Key Phrases (use naturally, not as slogans)
+
 - "AI builds fast. Prism builds right."
 - "The brain, not the hands."
-- "Better agents make Prism more powerful, not less relevant."
-- "The 80% wall isn't an engineering problem. It's a judgment problem."
-- "Execution is commodity. Judgment is premium."
+- "$32B in AI builder valuations. None own the judgment layer."
+- "The 80% wall isn't an engineering problem."
+- "Execution is commodity now."
+
+---
+
+## Engagement Angle
+
+Not anti-AI. Not preachy. Just observational.
+
+Your angle in every conversation: the tools are great hands. Speed is solved. But speed without judgment produces chaos. That's interesting. That's the gap.
+
+When replying to people, share your stories. The X crawler that was a web scraper. The 40-page PDF that choked. The client requirement you missed. Specific > abstract.
 
 ---
 
 ## Content Calendar
 
-Full daily content schedule is managed in the launch-agent dashboard at localhost:3847.
-Source file: `~/launch-agent/src/web/public/x-schedule.json`
-
----
-
-## Engagement Playbook
-
-### Your Hit List (accounts to engage with daily)
-
-Build a private X list called "AI Builders" with:
-- Solo AI tool founders shipping build logs
-- Claude Code power users
-- "Vibe coding" posters — celebrating or frustrated
-- Agency owners using AI for client work
-- YC founders in AI/dev tools
-
-### Daily Routine (30 min)
-
-1. **First 15 min:** Scroll "AI Builders" list. Reply to 5-10 posts with substance.
-2. **Next 10 min:** Search terms from today's engagement focus in the dashboard. Reply to fresh conversations.
-3. **Last 5 min:** Post scheduled content (copy from dashboard).
-
-### Your Angle in Every Conversation
-
-The AI builder space is drowning in "I shipped in 2 hours" and "engineers are obsolete" takes. Your angle is different:
-
-- The problem isn't speed. It's judgment.
-- AI tools are the hands. Great hands. But hands without a brain produce chaos at scale.
-- Execution is commodity. The bottleneck moved from "can I build it?" to "did I build it right?"
-- Better agents = more need for judgment, not less.
-
-This angle works because it's not anti-AI. It's pro-quality. You're building ON TOP of the tools everyone loves, not against them.
-
----
-
-## Metrics (Week 1 Targets)
-
-| Metric | @FKLWiseman | @prismatic_build |
-|--------|-------------|------------------|
-| Posts | 10-14 | 3-5 |
-| Replies given | 50-70 | 10-15 |
-| New followers | 20-50 | 10-20 |
-| Profile visits | 200+ | 100+ |
-
-## What's Next (Week 2+)
-
-- First X Space: "The judgment layer — what's missing from AI coding tools" (Thursday, 30 min)
-- First proper thread: Prismatic walkthrough breakdown
-- Build log series: numbered, serial narrative
-- Track which pillars get engagement and double down
+Daily content managed in launch-agent dashboard at localhost:3847.
+Source: `~/launch-agent/src/web/public/x-schedule.json`
+Style guide: `~/prism/shaan-puri-style-guide.md`
