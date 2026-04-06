@@ -4,6 +4,24 @@ All notable changes to Prism are documented here.
 
 ## [Unreleased]
 
+## [4.0.29.1] - 2026-04-06
+
+### Changed
+- **Strategic course correction** — resolved identity contradiction across all docs. Prism is the brain (judgment, memory, verification), not the hands (code generation, agent execution). "AI builds fast. Prism builds right."
+- **Builder → Foreman reframe** in VISION.md — honest temporal framing: "Today: direct API execution. Migration target: dispatches to external agents."
+- **Web-only pivot** — Electron/desktop marked SUPERSEDED in PLANS.md, web app is the product and the demo
+- **Brain-vs-hands filter** added to CLAUDE.md — every session now pre-screens work against the Decision Rubric
+- **Competitive context** — agent execution layer documented as commodity (Hermes MIT/26.8k stars). Prism's value is the judgment layer above.
+- **YC scoring expanded** — 7 dimensions (added defensibility clarity), score 20/35
+- **TODOS.md** — collapsed completed items, marked desktop work ON HOLD
+
+### Added
+- **docs/strategy/COMPETITIVE-INTELLIGENCE.md** — Hermes analysis, commodity agent thesis, "better agents = more Prism leverage"
+- **docs/strategy/AGENT-AGNOSTIC-ARCHITECTURE.md** — orchestration thesis with `[TARGET]` marker (strategic, not spec)
+- **docs/strategy/README.md** — strategy directory index with authority hierarchy
+- **docs/designs/strategic-course-correction.md** — decision record for the brain-vs-hands pivot
+- **scripts/lint-docs.sh** — 5 doc-drift assertions with broken-link detection, PASS 5/5
+
 ## [4.0.29.0] - 2026-04-05
 
 ### Added

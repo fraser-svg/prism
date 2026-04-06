@@ -1,28 +1,19 @@
 # Prism TODOs
 
-## ~~Path-Free Project Creation for Web~~ — UX FRICTION RESOLVED in fraser-svg/fix-project-folder-picker
-
-Server now auto-creates project directories under `~/Prismatic/{slug}` when `rootPath` is omitted. Users just type a project name and submit. Broken native Finder dialog removed.
+## ~~Path-Free Project Creation for Web~~ — DONE in fraser-svg/fix-project-folder-picker
 
 ### Remaining: Decouple project identity from filesystem paths (P2)
 
-**What:** Projects are still identified by filesystem paths on the server. For full path-free support, decouple project identity from `rootPath` entirely (e.g., support URL-only projects, GitHub repo URLs, or virtual projects with no filesystem backing).
-
-**Why:** Remote users on Railway still depend on the server's ephemeral filesystem. Auto-create under ~/Prismatic/ solves the UX problem but not the architectural coupling.
-
+**What:** Decouple project identity from `rootPath` for remote/hosted deployment.
 **When:** Before multi-tenant or hosted deployment where server filesystem is not user-owned.
 
-## ~~Portfolio MVP — Shared UI + Web App~~ — DONE in fraser-svg/portfolio-mvp
-
-`packages/ui/` extracted as shared React component library. `apps/web/` created (Vite + Express). `apps/desktop/` refactored to import from `@prism/ui`. Transport adapter pattern (`IpcTransport` / `FetchTransport`) enables both apps to share the same Zustand store.
+## ~~Portfolio MVP~~ — DONE in fraser-svg/portfolio-mvp
 
 ### P1 deferred items from portfolio-mvp
 
-- **Favicon**: Add `apps/web/public/favicon.svg` + `apps/desktop/` icon
-- **Skeleton loading**: Show placeholder cards while portfolio loads instead of blank screen
+- **Skeleton loading**: Show placeholder cards while portfolio loads
 - **Keyboard shortcuts**: `⌘K` to focus search, `⌘N` to open new project dialog
-- **Zustand persist**: Persist `searchQuery` + `activeProjectId` across page reloads in web app
-- **`dev:app` script**: Add root-level `npm run dev:app` that starts both web server and Vite concurrently
+- **Zustand persist**: Persist `searchQuery` + `activeProjectId` across page reloads
 
 ## Canonical Orchestration Spec — YAML Compiler (P1)
 
@@ -72,24 +63,13 @@ Server now auto-creates project directories under `~/Prismatic/{slug}` when `roo
 
 **Depends on:** Auto-inject PR (fraser-svg/api-key-vault) + evidence from internal users.
 
-## Doc Drift Lint (P2)
+## ~~Doc Drift Lint (P2)~~ — DONE in fraser-svg/vision-audit
 
-**What:** A validation script or CI check that greps for stale references (deleted files, Tauri, Prismatic, hosted-web-app language) across all active docs.
+Shipped as `scripts/lint-docs.sh` with 5 grep assertions and allowlist. See [strategic course correction](docs/designs/strategic-course-correction.md).
 
-**Why:** Doc drift is what created the cleanup need addressed in the `first10-users-audit` branch. Without automated checks, the same drift will recur as new docs are added. The validation commands already exist — this makes them permanent.
+## ~~Reduce verbose logs~~ — DONE in v3
 
-**When:** After the doc cleanup PR lands.
-
-**How:** Add a `scripts/lint-docs.sh` that runs the 5 grep-based validation commands from the cleanup plan. Wire into CI or pre-commit. Expect zero matches for: Tauri in active docs, Prismatic, deleted file references, creator-as-primary-ICP language. Allowlist: CHANGELOG.md (historical context), TODOS.md itself (describes what to grep for), references/ (external personality configs).
-
-**Depends on:** Doc cleanup PR (`fraser-svg/first10-users-audit`).
-
-## ~~Reduce verbose logs to milestone-only~~ — DONE in v3
-Replaced by `prism-registry.sh` JSON events. Only significant actions are logged.
-
-## ~~Active Review Orchestration (deferred to M3)~~ — DONE in v4.0.3.0
-
-M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` through SKILL.md at all 9 integration points. Guardian's review matrix is now exercised at every stage transition via the dual-write bridge.
+## ~~Active Review Orchestration~~ — DONE in v4.0.3.0
 
 ## Git Worktree Workers (deferred from v3)
 
@@ -101,9 +81,7 @@ M3 bridge CLI wires `record-review`, `check-reviews`, and `release-state` throug
 
 **How:** `git worktree add .prism/worktrees/{name} -b prism/worker/{name}` per worker, merge back with conflict reporting. Workers would run in isolated directories.
 
-## ~~Prompt Learning (deferred from v3)~~ — SUPERSEDED by Continuous Intelligence Layer
-
-Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue records proven libraries, patterns, and approaches with confidence labels (emerging/established/proven). It's broader than prompt learning — it covers packages, skills, and implementation patterns, not just prompts.
+## ~~Prompt Learning~~ — SUPERSEDED by Continuous Intelligence Layer
 
 ## Multi-Factor Complexity Heuristic (v3.1)
 
@@ -191,9 +169,7 @@ Superseded by the Skill Catalogue (`.prism/skill-catalogue.json`). The catalogue
 
 **Depends on:** Graduate Bridge Gates to Blocking.
 
-## ~~IntakeBrief Entity (P2 — Tier 1)~~ — DONE in v4.0.13.0
-
-Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepository` to `packages/memory/`. Part of the Trust-First Self-Healing Engine. **Completed:** v4.0.13.0 (2026-03-30)
+## ~~IntakeBrief Entity~~ — DONE in v4.0.13.0
 
 ## Typed DeploymentEntity in packages/core (P2 — Tier 1)
 
@@ -351,29 +327,17 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Autoresearch Level 1 shipped + Pipeline Visualizer Session History Sparklines.
 
-## Electron Auto-Update + Code Signing (P2)
+## Electron Auto-Update + Code Signing (P2) ⏸ ON HOLD
 
-**What:** Add electron-updater with code signing for macOS distribution.
+> On hold since 2026-04-04 — desktop/Electron is paused indefinitely. Web-only pivot.
 
-**Why:** Without auto-update, every bug fix requires users to manually download a new build. Without code signing, macOS Gatekeeper blocks the app entirely. Not needed for the YC demo (run from dev mode or local build), but required before any external user touches it.
+**Depends on:** Desktop shell resuming (currently superseded by web app).
 
-**When:** After MVP is shipped and before first external user.
+## Event-Log Schema Versioning (P2) ⏸ ON HOLD
 
-**How:** Add electron-updater, configure GitHub Releases as update source, set up Apple Developer signing with notarization. Build pipeline via electron-builder.
+> On hold since 2026-04-04 — desktop event types paused with Electron. Revisit when web app event log needs versioning.
 
-**Depends on:** Electron Portfolio MVP shipped.
-
-## Event-Log Schema Versioning (P2)
-
-**What:** Add a schemaVersion field to event-log entries and a migration path for desktop event types.
-
-**Why:** The unified event-log now serves both orchestrator internals and desktop UI. If the schema changes again, old entries need to remain readable. Without versioning, unrecognized entries could crash the drawer.
-
-**When:** Before the next event-log schema change after MVP.
-
-**How:** Add `schemaVersion: 1` to event entries. On read, check version and apply transforms for older entries. Keep a version changelog in event-log.ts comments.
-
-**Depends on:** Event-log desktop extension (Electron MVP PR).
+**Depends on:** Desktop shell resuming or web event-log needing schema versioning.
 
 ## Pipeline Visualizer: Session History Sparklines (P2)
 
@@ -411,17 +375,11 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Stitch SDK integration PR (fraser-svg/add-stitch-sdk) + Tool Routing TODO.
 
-## Provider Dashboard E2E Tests (P1)
+## Provider Dashboard E2E Tests (P1) ⏸ ON HOLD
 
-**What:** Playwright E2E tests for the Providers tab: render with 2+ providers, refresh triggers health checks and badge updates, provider disconnect turns badge red.
+> On hold since 2026-04-04 — was targeting Electron app. Needs rewrite for web app Providers tab when web pipeline E2E tests are prioritized.
 
-**Why:** The Providers dashboard is the YC demo surface for LLM agnosticism. Untested UI is demo risk. Unit tests cover adapters and router logic, but the full stack (IPC -> cabinet -> adapters -> UI badges) needs integration coverage. Eng review identified 3 E2E gaps.
-
-**When:** After Phase 3 (Provider Dashboard) implementation is complete, before YC demo.
-
-**How:** Add Playwright tests targeting the Electron app's Providers route. Test: (1) tab renders with provider list from cabinet, (2) refresh button calls `providers:check-health` IPC and updates badges, (3) simulated provider disconnect (mock adapter returning unavailable) shows red badge. Follows the same Electron E2E pattern as any future desktop tests.
-
-**Depends on:** LLM Decoupling PR 1 (fraser-svg/decouple-prism-llm) — Phase 3 dashboard shipped.
+**Depends on:** Web app Providers UI stabilized.
 
 ## Proof-Check Gate Accuracy Tracking (P2)
 
@@ -519,9 +477,9 @@ Added `IntakeBrief` type to `packages/core/src/entities.ts` and `IntakeBriefRepo
 
 **Depends on:** Context Dump evolution shipped + real sample documents collected.
 
-## ~~Web Execution Pipeline (P1)~~ — IN PROGRESS in fraser-svg/web-prism-pipeline
+## ~~Web Execution Pipeline (P1)~~ — DONE in fraser-svg/web-prism-pipeline
 
-Full Socratic pipeline (understand → identify_problem → spec → plan → execute → verify → release) wired into the web app via direct Anthropic API conversation engine. SSE streaming, smart discovery with pre-fill from context dump, autopilot mode, cost tracking, parallel review generation. Ship phase deferred (see below).
+Full Socratic pipeline wired into web app. SSE streaming, smart discovery, autopilot mode, cost tracking, parallel review generation. Ship phase deferred (see below).
 
 ### Ship Phase for Web Pipeline (P1)
 
@@ -547,9 +505,7 @@ Full Socratic pipeline (understand → identify_problem → spec → plan → ex
 
 **Depends on:** Web Execution Pipeline PR (fraser-svg/web-prism-pipeline) shipped + 5+ completed sessions.
 
-## ~~Socratic Discovery Skip (P1)~~ — ADDRESSED in fraser-svg/web-prism-pipeline
-
-Smart Discovery in the web pipeline pre-fills known fields from extracted knowledge (confidence >= 0.7), shows editable pre-fill cards, and only asks questions for unfilled fields. The `/prefilled` endpoint and `getPreFilledFields()` in the conversation engine implement this.
+## ~~Socratic Discovery Skip~~ — DONE in fraser-svg/web-prism-pipeline
 
 ## Knowledge Diff on Re-Extraction (P3)
 

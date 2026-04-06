@@ -4,7 +4,7 @@
 
 This directory defines the architecture of Prism Core.
 
-Prism Core is the owned local-first product brain that will later power the Prism Electron desktop workspace.
+Prism Core is the owned local-first product brain that powers the Prism web app.
 
 This is not a generic app folder.
 This is the contract for how Prism should think, remember, plan, execute, verify, and evolve.
@@ -147,7 +147,7 @@ Bias toward:
 - TypeScript for core logic
 - shell scripts where deterministic and simpler
 - local-first state
-- Electron readiness for future desktop shell
+- web app readiness (React SPA + Express API)
 - bounded workers
 - provider abstraction
 

@@ -1,10 +1,12 @@
 # Prism: The Dream Team
 
+> Last updated: 2026-04-06
+
 ## What Prism Is
 
 Prism gives every agency operator a world-class founding team.
 
-Not a code editor. Not a chatbot. Not a no-code tool. A team — one that understands your client's problem, challenges your assumptions, builds while you focus on the business, and never lets you get lost. The operator speaks in briefs, direction, and judgment calls. Prism translates that into delivered client software through an invisible team of experts that handles everything the operator shouldn't have to think about.
+Not a code editor. Not a chatbot. Not a no-code tool. (For the full exclusion list, see [DOCTRINE.md Section 4](DOCTRINE.md#4-what-prism-must-not-own).) A team — one that understands your client's problem, challenges your assumptions, ensures the right thing gets built correctly while you focus on the business, and never lets you get lost. The operator speaks in briefs, direction, and judgment calls. Prism translates that into delivered client software through an invisible team of experts that handles everything the operator shouldn't have to think about.
 
 The operator's job is taste, vision, and client relationships. Everything else is Prism's.
 
@@ -68,8 +70,8 @@ Once intent is clear, the architect researches approaches, evaluates tradeoffs, 
 
 The architect never builds without a plan. Never commits to an approach without researching alternatives. Never presents an unverified suggestion as viable.
 
-### The Builder (Invisible Construction)
-The builder writes code, runs tests, handles security, manages dependencies — all invisibly. The operator never sees code, diffs, or terminal output unless they ask. The builder speaks in outcomes: "The signup flow is working. Users can create an account in under 30 seconds."
+### The Foreman (Build Management)
+The foreman manages the build process, dispatches work to execution agents, and verifies their output — all invisibly. Today: direct API execution via Claude Code skills. Migration target: dispatches to external agents (Claude Code, Hermes, Codex), verifies results through Guardian, never writes code itself. The operator never sees code, diffs, or terminal output unless they ask. The foreman speaks in outcomes: "The signup flow is working. Users can create an account in under 30 seconds."
 
 ### The Guardian (Quality & Safety)
 The guardian runs continuously: code review, security scanning, test coverage, complexity monitoring. When something is wrong, the guardian speaks up. When everything is fine, silence. The operator should feel confident that someone competent is watching.
@@ -145,8 +147,8 @@ Prism runs as a Claude Code skill. The operator types `/prism` and enters a sess
 
 The typed core runtime (`packages/`) enforces the lifecycle, gates transitions, and persists durable artifacts alongside the skill.
 
-### Future: Electron Desktop Shell
-The future desktop product is an Electron app on top of Prism Core. See `docs/designs/prism-os-roadmap.md` for the full architecture. The desktop shell is a rendering client — all product logic lives in the core.
+### Current Product Surface: Web App
+The web app (`apps/web/`) is the product. All operator-facing functionality ships through the browser. The desktop shell (Electron) is on hold indefinitely — see [PLANS.md M5](../PLANS.md#m5-electron-portfolio-mvp--superseded). All product logic lives in the typed core (`packages/`), which the web app consumes.
 
 ## Market Context
 
@@ -212,11 +214,27 @@ Five archetypes:
 3. Operator says "Prism"
 4. Asker tries Prism, hits the first-session magic, stays
 
+## YC Pitch
+
+**One-liner:** AI builds fast. Prism builds right.
+
+**Wedge:** Agency operators delivering software for clients. They already use AI coding tools. They move fast but can't verify quality, catch scope drift, or finish reliably. Prism is the judgment layer that turns fast into right.
+
+**ICP:** Freelancers, studio owners, and owner-operators who use AI to deliver software outcomes for clients.
+
+**How:** Socratic discovery finds the real problem. Structured specs prevent scope drift. Quality gates catch errors before the client sees them. Intent memory means nothing is forgotten between sessions.
+
+**Moat:** Intent memory compounds over time. Every session makes Prism better at understanding what this operator means. Cross-project learning, quality gate history, and accumulated context create a switching cost no competitor can replicate by cloning the interface.
+
+**Why now:** AI coding agents are going commodity (Hermes: MIT, 26.8k stars). The execution layer is free. But fast without judgment produces chaos. The bottleneck moved from "can I build it?" to "can I build it correctly?" Prism is purpose-built for the judgment layer.
+
+**Category:** Intent-first product engineering for operators. Bottom-right quadrant: intent-first x for operators. Currently empty.
+
 ## Risks
 
 1. **Anthropic/OpenAI build it.** HIGH risk. Mitigation: the dream team orchestration and intent memory are the moat, not the AI backend. Speed matters.
 
-2. **Prompt enforcement ceiling.** MEDIUM risk. Claude may not reliably follow complex skill instructions. Mitigation: hooks-based enforcement as fallback; desktop shell reduces dependency on prompt compliance.
+2. **Prompt enforcement ceiling.** MEDIUM risk. Claude may not reliably follow complex skill instructions. Mitigation: hooks-based enforcement as fallback; typed core (`packages/`) enforces behavior deterministically, reducing dependency on prompt compliance.
 
 3. **AI compute costs.** MEDIUM risk. Mitigation: model costs dropping 50%/year; intent memory reduces redundant calls; usage-based pricing.
 

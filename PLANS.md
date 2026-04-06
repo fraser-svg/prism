@@ -2,12 +2,12 @@
 
 ## Current Phase
 
-Phase 4: Local-First Workspace Substrate (complete)
+Phase 6: Web App MVP (active)
 
 Purpose:
-- multi-project workspace management with SQLite, FTS5 search, health badges, and resume
-- write-through indexing from artifact repos into workspace-level SQLite
-- cross-project search and project templates
+- operator completes intake → discovery → spec → build → verify → ship entirely in the browser
+- no CLI fallback required for the core workflow
+- Fraser dogfoods daily for real client work
 
 ## Repo Truth
 
@@ -46,11 +46,11 @@ Prism Core responsibilities:
 - execution coordination
 - provider abstraction
 
-The future desktop app (Electron) is a client shell on top of this core, not a substitute for it. See `docs/designs/prism-os-roadmap.md` for the full target architecture.
+The web app (`apps/web/`) is the current client on top of this core. Desktop app (Electron) is on hold indefinitely — web-only for now. See `docs/designs/prism-os-roadmap.md` for the full target architecture.
 
 ## Milestones
 
-### M0. Build Brain
+### M0. Build Brain ✓ COMPLETE
 
 Goal:
 - establish the planning and architecture scaffolding for the repo
@@ -69,7 +69,7 @@ Exit criteria:
 - architecture direction is explicit
 - definition of done is written
 
-### M1. Prism Core Domain Model
+### M1. Prism Core Domain Model ✓ COMPLETE
 
 Goal:
 - define the core product and orchestration entities
@@ -140,66 +140,69 @@ Scope:
 - write-through indexing via onWrite callbacks
 
 Exit criteria:
-- Prism Core can power a real desktop workspace without losing continuity ✓
+- Prism Core can power a real multi-project workspace without losing continuity ✓
 
-### M5. Electron Portfolio MVP ← ACTIVE
+### M5. Electron Portfolio MVP 🚫 SUPERSEDED
+
+> Superseded by web-only pivot on 2026-04-04. Desktop shell is on hold indefinitely. See [strategic course correction](docs/designs/strategic-course-correction.md).
+
+Original goal was to build the desktop app as the YC demo. The web app is now the product and the demo.
+
+### M6. Web App MVP ← ACTIVE
 
 Goal:
-- build the desktop app that IS the YC demo
-- client management, project portfolio, 7-stage pipeline visualization, session drawer
-- local-first Electron + Vite + React + TypeScript at apps/desktop/
+- operator completes intake → discovery → spec → build → verify → ship entirely in the browser
+- no CLI fallback required for the core workflow
+- Fraser dogfoods daily for real client work
 
 Scope:
-- ClientAccount entity in packages/core, workspace migration, client repository
-- Electron main process with WorkspaceFacade + extractPipelineSnapshot via IPC
-- Portfolio view (grouped by client), Project Control Room (pipeline strip + detail), Session Drawer
-- Zustand state, scan-on-launch pipeline cache, unified event-log with desktop types
-- 7 stages shown honestly (existing backend phases), not faking 9
+- Web app at `apps/web/` (React SPA + Express API + SQLite)
+- Full Prism workflow accessible through browser UI
+- Session persistence, project management, artifact viewing
+- Deploy pipeline from browser
 
 Exit criteria:
-- create client, create project, see it in portfolio grouped correctly
-- click project, see 7-stage pipeline with real data from extractPipelineSnapshot()
-- open session drawer, trigger actions, see structured events
-- workspace restart preserves all state
-
-See `.context/attachments/plan.md` for full spec.
+- an operator can go from brief to deployed software without leaving the browser
+- Fraser uses it for real client work and captures evidence
+- demo-ready for YC application
 
 ## Priority Stack
 
 ### Now
 
-- M5 Electron Portfolio MVP — the desktop app IS the YC demo
-- Patrick session — first real user proof
-- Record a demo-ready walkthrough of the agency workflow
-- Sharpen the one-liner and YC application narrative around agency operators
+- M6 Web App MVP — the web app IS the product and the YC demo
+- Fraser dogfoods daily — use the web app for real client work
+- Reddit + ProductHunt launch with Fraser's proof
+- YC application with public traction data
+- Sharpen the one-liner: "AI builds fast. Prism builds right."
 
 ### Next
 
 - Graduate bridge gates from advisory to blocking (post-M3)
 - Deprecate OpenSpec for core spec storage
-- Implement 9-stage lifecycle migration (see docs/designs/prism-os-roadmap.md)
 - Deployment entity (Tier 1) — IntakeBrief shipped in v4.0.13.0
-- Extract packages/ui service boundary from desktop main process imports
 
 ### Later
 
 - FeedbackRecord entity (Tier 2) — SolutionThesis shipped in v4.0.13.0
-- Electron auto-update + code signing
+- 9-stage lifecycle migration (see docs/designs/prism-os-roadmap.md)
 - Sync/cloud features
 
 ### Not Now
 
-- full team collaboration
-- enterprise governance
-- broad provider explosion
-- browser-first product strategy
+- Desktop app / Electron shell (on hold indefinitely)
+- Full team collaboration
+- Enterprise governance
+- Broad provider explosion
+- Agent runtime / execution infrastructure
 
 ## Active Bets
 
-1. Local-first owned artifacts are a moat, not an inconvenience.
+1. The judgment/orchestration layer above agents is the durable value, not the agent itself.
 2. Typed workflow and memory models will outperform prompt-only coordination.
 3. Bounded workers plus deterministic scripts produce better reliability than giant agent prompts.
 4. Calm UX requires aggressive hiding of technical churn, not reduction of internal rigor.
+5. Better AI agents make Prism MORE powerful, not less relevant.
 
 ## Risks
 
@@ -209,11 +212,11 @@ See `.context/attachments/plan.md` for full spec.
 
 ## Immediate Next Moves
 
-1. Ship Electron Portfolio MVP (apps/desktop/) — the YC demo.
-2. Get Patrick through a full Prism session with structured session logging.
-3. Record demo walkthrough using the desktop app.
-4. Sharpen YC one-liner around agency operators hitting the 80% wall.
-5. Collect user proof from real dogfood sessions.
+1. Make the web app work end-to-end (intake → discovery → spec → build → verify → ship in browser).
+2. Fraser dogfoods daily for real client work — every broken thing becomes a bug.
+3. Get Patrick through a full Prism session with structured session logging.
+4. Record demo walkthrough using the web app.
+5. Reddit + ProductHunt launch with real proof. Then YC application.
 
 ## Working Rules
 
