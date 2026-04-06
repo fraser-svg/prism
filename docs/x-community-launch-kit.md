@@ -1,28 +1,50 @@
 # X Community Launch Kit
 
-> Voice: Shaan Puri. Smart friend at a bar, not a thought leader on stage.
-> No em dashes. No AI patterns. No guru energy. Show, don't tell.
-> Style guide: ~/prism/shaan-puri-style-guide.md
+> Updated 2026-04-06. Reflects competitive research + positioning fix.
+> Voice: ~/prism/shaan-puri-style-guide.md
+> Competitive intel: research shows Lovable, Cursor, Devin, GSD all ask clarifying questions now. Old "nobody asks before building" claim is dead.
+
+## Positioning (updated)
+
+**Old (dead):** "nobody asks before building" — provably false. Lovable, Cursor, Devin all ask now.
+
+**New (defensible):** "they clarify implementation. nobody clarifies intent."
+
+Every AI tool now asks WHAT to build. None ask WHETHER you should build it. Cursor asks "which approach?" Prism asks "is this the right problem?" Different altitude.
+
+**Key lines:**
+- "AI tools ask which database. Prism asks which problem."
+- "the bottleneck moved from 'can I build it' to 'should I build it'"
+- "faster hands need a smarter brain"
+- "better agents make the judgment layer more valuable, not less"
+
+**Never say:**
+- "not an engineer" (makes you look incompetent)
+- "I almost shipped the wrong thing" (makes YOU the problem)
+- "nobody asks before building" (factually wrong now)
+- "genuinely useful/interesting/smart" (dorky)
+- any em dashes
+
+**Always position as:** capable operator who runs an agency, sees the gap clearly, building the fix. Not a struggling beginner learning in public.
 
 ## @FKLWiseman
 
-### Bio
+### Bio (160 chars max)
 ```
-building @prismatic_build. the judgment layer above AI agents.
-not an engineer. building anyway.
+building @prismatic_build. judgment layer for AI-assisted building.
+runs a GTM agency. ships daily.
 prismatic.build
 ```
 
 ### Pinned Tweet
 ```
-I'm not an engineer.
+AI tools ask which database.
+Prism asks which problem.
 
-I'm building the thing that sits above AI agents and makes sure they build the right thing.
+building the judgment layer that sits above AI agents.
+socratic discovery. quality gates. client context. memory across sessions.
 
-Socratic discovery. Quality gates. Client context. Memory between sessions.
-
-It's called Prismatic. It's live.
-prismatic.build
+live now at prismatic.build
 ```
 
 ## @prismatic_build
@@ -31,7 +53,7 @@ prismatic.build
 ```
 AI builds fast. Prism builds right.
 judgment layer for agency operators.
-free beta live now.
+free beta live.
 built by @FKLWiseman
 ```
 
@@ -39,72 +61,23 @@ built by @FKLWiseman
 ```
 AI builds fast. Prism builds right.
 
-Socratic discovery before building.
-Client context that flows into every decision.
-Quality gates that catch what you'd miss.
-Memory across sessions.
+socratic discovery before building.
+client context that informs every decision.
+quality gates that catch what you'd miss.
+memory across sessions.
 
-Free beta. prismatic.build
-
-$32B in AI builder valuations. None own the judgment layer.
+free beta. prismatic.build
 ```
-
----
-
-## Voice Rules
-
-Run every post through these before publishing:
-
-1. Would I say this out loud to a friend? If it sounds weird spoken, rewrite it.
-2. Can I cut 30% of the words? Do it.
-3. Does the first line make someone stop scrolling?
-4. Does it sound like a LinkedIn post? If yes, delete it.
-5. Is there a specific detail (name, number, date)? Add one.
-6. Would this work as a screenshot someone texts a friend?
-
-### Never use
-- Em dashes (use periods or line breaks)
-- "Journey", "landscape", "delve", "transformative", "game-changing"
-- "As a founder who..." (no credential-leading)
-- "Thread" with pointing emoji
-- "Follow me for more"
-- Hashtags in the body (maybe one at the very end, max)
-- Walls of text. Every paragraph is 1-3 lines.
-- Motivational speaker energy
-- Listicle threads
-
-### Always use
-- Specific numbers and names
-- Stories before opinions
-- Casual qualifiers ("honestly", "kinda", "tbh")
-- Self-deprecation when genuine
-- Plain words at a 5th grade reading level
-- Line breaks as timing beats
-
----
-
-## Key Phrases (use naturally, not as slogans)
-
-- "AI builds fast. Prism builds right."
-- "The brain, not the hands."
-- "$32B in AI builder valuations. None own the judgment layer."
-- "The 80% wall isn't an engineering problem."
-- "Execution is commodity now."
-
----
-
-## Engagement Angle
-
-Not anti-AI. Not preachy. Just observational.
-
-Your angle in every conversation: the tools are great hands. Speed is solved. But speed without judgment produces chaos. That's interesting. That's the gap.
-
-When replying to people, share your stories. The X crawler that was a web scraper. The 40-page PDF that choked. The client requirement you missed. Specific > abstract.
-
----
 
 ## Content Calendar
 
-Daily content managed in launch-agent dashboard at localhost:3847.
+Daily content in dashboard at localhost:3847.
 Source: `~/launch-agent/src/web/public/x-schedule.json`
-Style guide: `~/prism/shaan-puri-style-guide.md`
+
+## Engagement Angle
+
+You run a GTM agency. You use AI daily for client work. You see the gap between speed and judgment firsthand. You're building the fix.
+
+Not anti-AI. Not struggling with AI. Using AI successfully AND seeing where it falls short. That's the credible angle.
+
+In replies: share from agency experience. "yeah we hit that on a client project" not "here's what I've learned about that." React, don't advise.
