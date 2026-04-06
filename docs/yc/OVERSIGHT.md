@@ -1,5 +1,7 @@
 # YC Oversight System
 
+> Last updated: 2026-04-06
+
 ## Purpose
 
 This system exists so Prism is built into a product that can get into YC, not just into an impressive technical project.
@@ -38,6 +40,7 @@ Prism must not drift into:
 - just an AI wrapper over foundation models
 - “multiple agents in one app”
 - a tool that generates but doesn't verify or judge
+- a worse version of a free, open-source agent (Hermes, etc.)
 
 ## When To Run YC Oversight
 
@@ -146,6 +149,7 @@ Use a 0-5 scale for each dimension:
 - user proof readiness
 - category story strength
 - spec-driven discipline
+- defensibility clarity
 
 Interpretation:
 - `0-1`: weak / unclear
@@ -153,6 +157,14 @@ Interpretation:
 - `3`: credible
 - `4`: strong
 - `5`: YC-ready for that dimension
+
+### Defensibility Clarity Scoring Guide
+
+- `0-1`: Cannot articulate why Prism isn't replaceable by a better agent
+- `2`: "We have memory" — true but vague
+- `3`: Clear separation of brain (Prism) vs. hands (agents), but no competitive analysis
+- `4`: Documented competitive landscape + architectural thesis for why better agents = more Prism leverage
+- `5`: Public narrative + investor-ready explanation of why the moat deepens as AI improves
 
 ## Hard Questions The Review Must Ask
 
@@ -163,6 +175,8 @@ Every review should pressure test:
 - What proof are we still missing?
 - What would a partner call “cool but not a company”?
 - Are we still building toward the wedge, or drifting sideways?
+- Can we explain why a better agent (Hermes, Codex) doesn't kill Prism?
+- Does our defensibility story survive AI models getting 10x better?
 
 ## Rule
 

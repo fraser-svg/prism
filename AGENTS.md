@@ -10,7 +10,7 @@ This repository is the owned Prism core first:
 - the runtime and artifact system
 - the product memory layer
 - the review and verification engine
-- the internal substrate that will later power the desktop product
+- the internal substrate that powers the web app
 
 Do not treat this repo like a generic AI app scaffold.
 Do not optimize for fast demos at the expense of product coherence.
@@ -183,15 +183,14 @@ Do not let the user experience collapse into "describe an app and hope."
 ## Repo Direction
 
 Near-term focus:
-- formalize Prism Core
+- make the web app work end-to-end
+- Fraser dogfoods daily for real client work
 - strengthen artifacts and memory
-- strengthen orchestration boundaries
 - strengthen verification and review
-- prepare for future Electron desktop evolution
 
 Not the near-term focus:
-- polishing the final desktop shell
-- building a browser-first product
+- desktop app / Electron shell (on hold indefinitely)
+- agent runtime / execution infrastructure
 - adding broad integrations without clear milestone need
 
 ## When In Doubt

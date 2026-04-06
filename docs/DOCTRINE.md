@@ -1,5 +1,7 @@
 # Prism Build Doctrine — 10x / 20x / 100x
 
+> Last updated: 2026-04-06
+
 > Prism wins by owning memory, judgment, and outcomes — while letting everything else be replaced.
 
 This document is the **strategic authority** for Prism. It defines what Prism is becoming, what must be built, what must not be built, and how every decision is tested. CLAUDE.md, PLANS.md, and /yc-brain reference this document — it is not decorative.
@@ -13,8 +15,8 @@ Prism today is a Claude Code skill system with a typed core underneath. The skil
 The path forward:
 - **Typed core** (`packages/*`) is the durable layer being built underneath the skill
 - **Dual-write bridge** (M3) keeps both paths working during migration
-- **Electron desktop shell** (post-YC) will be the first client that consumes the typed core directly
-- **SKILL.md** remains the user-facing interface until the desktop shell ships
+- **Web app** (`apps/web/`) is the current client consuming the typed core. Desktop shell is on hold indefinitely (see [PLANS.md M5](../PLANS.md#m5-electron-portfolio-mvp--superseded))
+- **SKILL.md** remains the CLI interface alongside the web app
 
 This is not hypocrisy — it is sequencing. The doctrine points north. We are not at the north pole yet. Temporal markers on every rule below prevent misapplication.
 
@@ -26,17 +28,25 @@ This is not hypocrisy — it is sequencing. The doctrine points north. We are no
 
 Prism must sit **above models, above agents, above tools**. It must never sit inside a model, as a wrapper around a model, or as "another agent."
 
+> *Example: Prism tells Claude Code what to build and checks if the output is correct. It never calls the Anthropic API directly.*
+
 ### 0.2 Fundamental Truth `[NOW]`
 
 > Models produce output. Prism produces **outcomes**.
 
+> *Example: Claude generates a login page. Prism verifies it handles password reset, rate limiting, and session expiry.*
+
 ### 0.3 System Responsibility `[NOW]`
 
-Prism is responsible for: defining the problem, shaping the solution, ensuring correctness, managing execution, deciding release readiness, capturing reality post-launch, driving iteration.
+Prism is responsible for: defining the problem, shaping the solution, ensuring correctness, orchestrating execution by external agents and verifying outcomes, deciding release readiness, capturing reality post-launch, driving iteration.
+
+> *Example: Prism defines "build a client portal with auth." An agent writes the code. Prism runs Guardian to verify.*
 
 ### 0.4 Replaceability Rule `[TARGET]`
 
 Everything external must be replaceable — OpenAI, Anthropic, GitHub, Vercel, Cursor, Replit. Prism routes between them, evaluates them, and learns from them.
+
+> *Example: If Anthropic doubles prices, Prism switches the build worker to Gemini. No user sees the difference.*
 
 ---
 
@@ -76,7 +86,7 @@ What happened after launch? What should change next? Feedback ingestion, outcome
 
 ### 2.2 20x Prism (6–12 months) `[MIGRATION]`
 
-> An autonomous product system that runs and improves software.
+> An autonomous product system that observes, learns from, and improves how software is built.
 
 **New capabilities:** Feedback ingestion layer. Outcome tracking. Iteration engine. Strategy layer (challenge direction, suggest better solutions, identify risks). Adaptive verification. Cross-project memory.
 
@@ -108,13 +118,25 @@ Each capability is modular: generation, coding, deployment, verification.
 
 Agents = generate. Prism = judge. Never mix.
 
+> *Example: Prism dispatches a build to Claude Code, receives the output, runs Guardian verification. Prism never writes code directly.*
+
 ### 3.4 Memory-First Design `[NOW]`
 
 Memory is structured, queryable, persistent, central.
 
+> *Example: When a client returns for a second project, Prism remembers their tech stack, preferences, and past decisions.*
+
 ### 3.5 Closed Loop `[MIGRATION]`
 
 Every project must start with intent and end with iteration.
+
+### 3.6 Agent-Agnostic Execution `[TARGET]`
+
+Prism is agent-agnostic at the execution layer. Any agent (Claude Code, Hermes, Codex, Cursor) can be the hands. Prism's value is independent of which agent executes. Better agents make Prism more powerful, not less relevant.
+
+> *Example: An operator's project uses Claude Code for backend and Hermes for frontend automation. Prism orchestrates both.*
+
+See [Agent-Agnostic Architecture](strategy/AGENT-AGNOSTIC-ARCHITECTURE.md) for the strategic thesis (context, not spec).
 
 ---
 
@@ -124,6 +146,9 @@ To avoid being destroyed by frontier model progress:
 
 - Raw code generation `[NOW]`
 - Raw agent execution `[NOW]`
+- Agent runtime / execution infrastructure `[NOW]`
+- General-purpose tool surface `[NOW]`
+- Self-modifying behavior without review `[NOW]`
 - Model-specific features `[NOW]`
 - Chat-based building UX `[NOW]`
 - Generic no-code builder positioning `[NOW]`
@@ -138,6 +163,8 @@ These layers are being eaten by OpenAI (Codex), Anthropic (Claude Code), GitHub 
 ## 5. The Compounding Engine `[MIGRATION]`
 
 Every run must improve the system. Learn which provider works best, which patterns fail, which specs succeed, which decisions correlate with outcomes. Store patterns, failures, improvements. Apply better routing, better defaults, better verification.
+
+> *Example: After 10 builds, Prism knows that React + Supabase projects need auth middleware checked. It adds this to QA automatically.*
 
 As models improve: without Prism → faster output, more chaos, more inconsistency. With Prism → better routing, better decisions, better outcomes, faster iteration loops. **AI progress = Prism leverage.**
 
@@ -229,5 +256,7 @@ If AI models get 10x better tomorrow, does this feature:
 Build Prism as: a system that owns outcomes, not outputs. A system that improves with AI, not competes with it. A system that remembers, judges, and evolves work over time.
 
 Do NOT build: a demo, a wrapper, a toy.
+
+> *Example: "Should we build a code editor?" Survival test: models already have editors. STOP.*
 
 > **Build the operating system for turning intent into reality.**
