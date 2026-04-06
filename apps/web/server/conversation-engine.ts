@@ -43,12 +43,15 @@ export interface PipelineSession {
   phase: WorkflowPhase;
   conversationHistory: ConversationMessage[];
   activeSpecId: string | null;
+  activePlanId: string | null;
   autopilot: boolean;
   cost: SessionCost;
   status: "active" | "completed" | "abandoned";
   createdAt: string;
   updatedAt: string;
   streaming: boolean;
+  executing: boolean;
+  executeStartedAt?: number;
 }
 
 export interface SessionSnapshot {
@@ -74,6 +77,8 @@ export interface EngineEvent {
     | "gate_evaluated"
     | "status_update"
     | "cost_update"
+    | "execution_progress"
+    | "release_summary"
     | "error"
     | "snapshot";
   data: Record<string, unknown>;
@@ -274,6 +279,15 @@ export class ConversationEngine {
       autopilot: session.autopilot,
       cost: { ...session.cost },
       status: session.status,
+      ...(session.executing && session.executeStartedAt
+        ? {
+            executionProgress: {
+              tasksTotal: 0,
+              tasksCompleted: 0,
+              currentTask: null,
+            },
+          }
+        : {}),
     };
   }
 
@@ -291,12 +305,14 @@ export class ConversationEngine {
       phase: "understand",
       conversationHistory: [],
       activeSpecId: null,
+      activePlanId: null,
       autopilot: false,
       cost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
       status: "active",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       streaming: false,
+      executing: false,
     };
 
     this.sessions.set(key, session);
@@ -329,6 +345,17 @@ export class ConversationEngine {
     const session = this.getSession(projectId, userId);
     if (!session) return;
     session.activeSpecId = specId;
+    this.persistSession(session);
+  }
+
+  setActivePlanId(
+    projectId: string,
+    userId: string,
+    planId: string,
+  ): void {
+    const session = this.getSession(projectId, userId);
+    if (!session) return;
+    session.activePlanId = planId;
     this.persistSession(session);
   }
 
@@ -813,6 +840,7 @@ export class ConversationEngine {
           phase: row.phase as WorkflowPhase,
           conversationHistory: history,
           activeSpecId: (row.active_spec_id as string) ?? null,
+          activePlanId: null, // In-memory only, lost on restart
           autopilot: (row.autopilot as number) === 1,
           cost: {
             inputTokens: row.total_input_tokens as number,
@@ -823,6 +851,7 @@ export class ConversationEngine {
           createdAt: row.created_at as string,
           updatedAt: row.updated_at as string,
           streaming: false,
+          executing: false,
         };
 
         this.sessions.set(
