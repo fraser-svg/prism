@@ -13,7 +13,7 @@ vi.mock("@prism/orchestrator", () => ({
   createPlan: vi.fn().mockResolvedValue({ id: "plan-1" }),
   runVerificationGate: vi.fn().mockResolvedValue({ passed: true }),
   recordReview: vi.fn().mockResolvedValue({ id: "review-1" }),
-  evaluateTransition: vi.fn().mockResolvedValue({ canAdvance: true, blockers: [] }),
+  evaluateTransition: vi.fn().mockResolvedValue({ allowed: true, blockers: [], evidence: [] }),
   skillSpecToCore: vi.fn((x: unknown) => x),
   skillPlanToCore: vi.fn((x: unknown) => x),
   skillReviewToCore: vi.fn((x: unknown) => x),
@@ -23,6 +23,21 @@ vi.mock("@prism/guardian", () => ({
   getRequiredReviewMatrix: vi.fn().mockReturnValue([]),
   checkRequiredReviews: vi.fn(),
   deriveReleaseState: vi.fn(),
+}));
+
+vi.mock("@prism/memory", () => ({
+  createPlanRepository: vi.fn().mockReturnValue({
+    readMetadata: vi.fn().mockResolvedValue({
+      id: "plan-1",
+      title: "Test Plan",
+      specId: "spec-1",
+      phases: [
+        { id: "p1", title: "Phase 1", description: "First phase", dependsOn: [] },
+        { id: "p2", title: "Phase 2", description: "Second phase", dependsOn: ["p1"] },
+      ],
+    }),
+    list: vi.fn().mockResolvedValue(["plan-1"]),
+  }),
 }));
 
 // ─── Helpers ───
@@ -63,7 +78,9 @@ function createMockEngine() {
     getSnapshot: vi.fn().mockReturnValue(null),
     setPhase: vi.fn(),
     setActiveSpecId: vi.fn(),
+    setActivePlanId: vi.fn(),
     setAutopilot: vi.fn(),
+    completeSession: vi.fn(),
     getConversationHistory: vi.fn().mockReturnValue([]),
     getHistory: vi.fn().mockReturnValue([]),
     getPreFilledFields: vi.fn().mockResolvedValue({}),
@@ -136,6 +153,9 @@ describe("auth: all endpoints reject unauthenticated requests", () => {
     "/verify",
     "/record-review",
     "/advance",
+    "/release",
+    "/release/complete",
+    "/rollback",
     "/autopilot",
   ];
 
@@ -312,6 +332,7 @@ describe("POST /execute", () => {
       id: "session-1",
       phase: "plan",
       streaming: false,
+      executing: false,
     });
     const res = await jsonPost("/execute");
     expect(res.status).toBe(400);
@@ -319,16 +340,280 @@ describe("POST /execute", () => {
     expect(body.error).toContain("Must be in execute phase");
   });
 
-  it("returns 202 when in execute phase", async () => {
+  it("returns 409 when already executing", async () => {
     mockEngine.getSession.mockReturnValueOnce({
       id: "session-1",
       phase: "execute",
       streaming: false,
+      executing: true,
+      activeSpecId: "spec-1",
+      activePlanId: "plan-1",
+    });
+    const res = await jsonPost("/execute");
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("already in progress");
+  });
+
+  it("returns 202 when in execute phase with plan", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "execute",
+      streaming: false,
+      executing: false,
+      activeSpecId: "spec-1",
+      activePlanId: "plan-1",
+      cost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
     });
     const res = await jsonPost("/execute");
     expect(res.status).toBe(202);
     const body = await res.json();
     expect(body.status).toBe("started");
+  });
+});
+
+// ─── POST /execute error paths ───
+
+describe("POST /execute — error paths", () => {
+  it("returns 400 when no plan is found", async () => {
+    const { createPlanRepository } = await import("@prism/memory");
+    (createPlanRepository as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+      readMetadata: vi.fn().mockResolvedValue(null),
+      list: vi.fn().mockResolvedValue([]),
+    });
+
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "execute",
+      streaming: false,
+      executing: false,
+      activeSpecId: "spec-1",
+      activePlanId: null,
+      cost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+    });
+    const res = await jsonPost("/execute");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("No plan found");
+  });
+
+  it("returns 400 when plan has empty phases", async () => {
+    const { createPlanRepository } = await import("@prism/memory");
+    (createPlanRepository as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+      readMetadata: vi.fn().mockResolvedValue({
+        id: "plan-1",
+        title: "Empty Plan",
+        specId: "spec-1",
+        phases: [],
+      }),
+      list: vi.fn().mockResolvedValue(["plan-1"]),
+    });
+
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "execute",
+      streaming: false,
+      executing: false,
+      activeSpecId: "spec-1",
+      activePlanId: "plan-1",
+      cost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+    });
+    const res = await jsonPost("/execute");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("No plan found");
+  });
+
+  it("halts execution and emits error when a task fails", async () => {
+    mockEngine.sendMessage
+      .mockResolvedValueOnce({ content: "done", toolUse: null }) // task 1 succeeds
+      .mockRejectedValueOnce(new Error("LLM timeout")); // task 2 fails
+
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "execute",
+      streaming: false,
+      executing: false,
+      activeSpecId: "spec-1",
+      activePlanId: "plan-1",
+      cost: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+    });
+    const res = await jsonPost("/execute");
+    expect(res.status).toBe(202);
+    // Wait for the async execution loop to finish
+    await vi.waitFor(() => {
+      expect(mockEngine.sendMessage).toHaveBeenCalledTimes(2);
+    }, { timeout: 5000 });
+    // setPhase should NOT have been called (halted, didn't advance to verify)
+    expect(mockEngine.setPhase).not.toHaveBeenCalled();
+  });
+});
+
+// ─── POST /rollback — executing guard ───
+
+describe("POST /rollback — executing guard", () => {
+  it("returns 409 when execution is in progress", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "verify",
+      streaming: false,
+      executing: true,
+    });
+    const res = await jsonPost("/rollback", { targetPhase: "execute" });
+    expect(res.status).toBe(409);
+  });
+});
+
+// ─── POST /message executing guard ───
+
+describe("POST /message — executing guard", () => {
+  it("returns 409 when execution is in progress", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "execute",
+      streaming: false,
+      executing: true,
+    });
+    const res = await jsonPost("/message", { message: "hello" });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("Execution in progress");
+  });
+});
+
+// ─── POST /release ───
+
+describe("POST /release", () => {
+  it("returns 400 when not in release phase", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "verify",
+      status: "active",
+      streaming: false,
+    });
+    const res = await jsonPost("/release");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Must be in release phase");
+  });
+
+  it("returns 400 when session already completed", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "release",
+      status: "completed",
+      streaming: false,
+    });
+    const res = await jsonPost("/release");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Session already completed");
+  });
+
+  it("returns 202 when in release phase", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "release",
+      status: "active",
+      streaming: false,
+      activePlanId: "plan-1",
+      cost: { inputTokens: 100, outputTokens: 50, costUsd: 0.01 },
+      executeStartedAt: Date.now() - 5000,
+    });
+    const res = await jsonPost("/release");
+    expect(res.status).toBe(202);
+    const body = await res.json();
+    expect(body.status).toBe("started");
+  });
+});
+
+// ─── POST /release/complete ───
+
+describe("POST /release/complete", () => {
+  it("returns 400 when not in release phase", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "verify",
+      status: "active",
+    });
+    const res = await jsonPost("/release/complete");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when session already completed", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "release",
+      status: "completed",
+    });
+    const res = await jsonPost("/release/complete");
+    expect(res.status).toBe(400);
+  });
+
+  it("completes the session and returns status", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "release",
+      status: "active",
+    });
+    const res = await jsonPost("/release/complete");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("completed");
+    expect(mockEngine.completeSession).toHaveBeenCalledWith("proj-1", "test-user");
+  });
+});
+
+// ─── POST /rollback ───
+
+describe("POST /rollback", () => {
+  it("returns 400 when not in verify phase", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "execute",
+      streaming: false,
+      executing: false,
+    });
+    const res = await jsonPost("/rollback", { targetPhase: "execute" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Can only rollback from verify");
+  });
+
+  it("returns 409 when operation in progress", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "verify",
+      streaming: true,
+      executing: false,
+    });
+    const res = await jsonPost("/rollback", { targetPhase: "execute" });
+    expect(res.status).toBe(409);
+  });
+
+  it("rejects invalid targetPhase", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "verify",
+      streaming: false,
+      executing: false,
+    });
+    const res = await jsonPost("/rollback", { targetPhase: "understand" });
+    expect(res.status).toBe(400); // Zod validation error
+  });
+
+  it("rolls back to execute phase", async () => {
+    mockEngine.getSession.mockReturnValueOnce({
+      id: "session-1",
+      phase: "verify",
+      streaming: false,
+      executing: false,
+    });
+    const res = await jsonPost("/rollback", { targetPhase: "execute" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.phase).toBe("execute");
+    expect(mockEngine.setPhase).toHaveBeenCalledWith("proj-1", "test-user", "execute");
   });
 });
 

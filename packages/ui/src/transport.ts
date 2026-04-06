@@ -51,6 +51,9 @@ export interface PrismTransport {
   getPipelineHistory(projectId: string): Promise<IpcResult>;
   getPipelinePreFilled(projectId: string): Promise<IpcResult>;
   getPipelineStream(projectId: string): EventSource | null;
+  releasePipeline(projectId: string): Promise<IpcResult>;
+  completePipelineSession(projectId: string): Promise<IpcResult>;
+  rollbackPipeline(projectId: string, targetPhase: string): Promise<IpcResult>;
 }
 
 /** Electron IPC transport — delegates to window.prism.* preload API */
@@ -96,6 +99,9 @@ export class IpcTransport implements PrismTransport {
   getPipelineHistory() { return Promise.resolve({ error: "Not available in desktop mode" }); }
   getPipelinePreFilled() { return Promise.resolve({ error: "Not available in desktop mode" }); }
   getPipelineStream() { return null; }
+  releasePipeline() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  completePipelineSession() { return Promise.resolve({ error: "Not available in desktop mode" }); }
+  rollbackPipeline() { return Promise.resolve({ error: "Not available in desktop mode" }); }
 }
 
 /** HTTP fetch transport — calls Express API endpoints */
@@ -249,5 +255,14 @@ export class FetchTransport implements PrismTransport {
   getPipelineStream(projectId: string): EventSource | null {
     if (typeof EventSource === "undefined") return null;
     return new EventSource(`${this.baseUrl}/api/projects/${projectId}/pipeline/stream`);
+  }
+  releasePipeline(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/release`, { method: "POST" });
+  }
+  completePipelineSession(projectId: string) {
+    return this.request(`/projects/${projectId}/pipeline/release/complete`, { method: "POST" });
+  }
+  rollbackPipeline(projectId: string, targetPhase: string) {
+    return this.request(`/projects/${projectId}/pipeline/rollback`, { method: "POST", body: JSON.stringify({ targetPhase }) });
   }
 }

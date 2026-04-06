@@ -210,3 +210,18 @@ export interface PipelineHistoryEntry {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ExecutionTask {
+  name: string;
+  status: "pending" | "running" | "completed" | "failed";
+  outputPreview: string | null;
+}
+
+export interface ReleaseSummary {
+  specTitle: string;
+  tasksCompleted: number;
+  tasksFailed: number;
+  reviews: Array<{ type: string; verdict: string }>;
+  totalCost: { inputTokens: number; outputTokens: number; costUsd: number };
+  elapsedMs: number;
+}
